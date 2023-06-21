@@ -8,7 +8,6 @@
         + evening()
 - Board
     + List<Area> areas
-    + 
 - Area
     + List<Clearing> connected_clearing
     + List<Forest> connected_forest
@@ -22,7 +21,7 @@
         + bool exists_vagabond
 - Slot
     + Building building
-Building
+- Building
     + type: {EMPTY, RUIN, SAWMILL, WORKSHOP, RECRUITER, ROOST, BASE}
 - Warrior
     + faction: {Marquise, Decree, Alliance, Vagabond}
@@ -87,18 +86,62 @@ Building
         <!-- Evening -->
         + score_points
     - Alliance
-        + Map<Int, Function> baseTracker
-        + Map<Int, Pair<Int, Function>> sympathyTracker 
-            <!-- Map<trackId> -->
+        + Map<suit, boolean> base_tracker
+        + Map<Int, Pair<Int, Function>> SYMPATHY
+        + sympathy_tracker
         + List<Card> supporters
         + officers
+        <!-- Birdsong -->
         + revolt()
+          + remove_supporters()
+          + place_base()
+          + place_warriors()
+          + add_officer()
         + spread_sympathy()
+          + place_sympathy()
+        <!-- Daylight -->
+        + craft()
+        + mobilize()
+        + train()
+        <!-- Evening --> 
+        + move()
+        + battle()
+        + recruit()
+        + organize()
+        + base_removed()
+        + draw()
     - Vagabond
-        + Map<Int, Function>
+        + item_capacity
+        + Map<Item, Int> left_side_items_tracker
+        + Map<Faction, Int> relationship_tracker
+        + List<Faction> hostile
+        + List<Item> items
+        + List<Item> exhausted_items
+        + List<Item> damaged_items
+        <!-- Birdsong -->
+        + slip()
+        + refresh()
+        <!-- Daylight -->
+        + move()
+          + check_hostile_clearing()
+        + explore()
+        + battle()
+          + check_hostile_warrior()
+        + strike()
+        + aid()
+        + quest()
+        + craft()
+        + repair()
+        + special_action()
+        <!-- Evening --> 
+        + repair_all()
+        + draw()
+        + remove_items()
 
 - Card
     + req_craft
     + effect()
     + List<Item> items
 - Item
+    + name
+    + effect? 
