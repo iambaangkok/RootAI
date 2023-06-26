@@ -8,9 +8,10 @@
         + evening()
 - Board
     + List<Area> areas
+    
 - Area
-    + List<Clearing> connected_clearing
-    + List<Forest> connected_forest
+    - List<Clearing> connected_clearing
+    - List<Forest> connected_forest
     - Clearing
         + suit: {FOX, RABBIT, MOUSE}
         + List<Slot> slots

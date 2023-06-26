@@ -1,25 +1,27 @@
 import pygame
-from pygame.font import Font
+from pygame import Vector2, Surface
+from pygame.time import Clock
 
 from src.config import Config, Colors
+from src.game.Area import Area
 from src.game.Board import Board
 
 
 class Game:
     def __init__(self):
         pygame.init()
-        self.screen = pygame.display.set_mode((Config.SCREEN_WIDTH, Config.SCREEN_HEIGHT))
-        self.clock = pygame.time.Clock()
-        self.running = True
+        self.screen: Surface = pygame.display.set_mode((Config.SCREEN_WIDTH, Config.SCREEN_HEIGHT))
+        self.clock: Clock = pygame.time.Clock()
+        self.running: bool = True
 
-        self.delta_time = 0
-        self.fps = 0.0
+        self.delta_time: float = 0.0
+        self.fps: float = 0.0
 
         # Board Game Components
-        self.board = Board()
-
-        # Misc UI
-        self.font = Font("../assets/fonts/UbuntuMono-Regular.ttf", 16)
+        self.board: Board = Board()
+        self.areas: list[Area] = [
+            Area(Vector2(Board.rect.x + Board.rect.width*0.12, Board.rect.y + Board.rect.height*0.18))
+        ]
 
     def init(self):
         pass
@@ -42,15 +44,19 @@ class Game:
         self.screen.fill("black")
 
         self.board.draw(self.screen)
+
         self.draw_fps_text()
         self.draw_delta_time_text()
+
+        for area in self.areas:
+            area.draw(self.screen)
 
     def draw_fps_text(self):
         margin_right = 20
         margin_top = 20
         text = "fps: {fps:.2f}".format(fps=self.fps)
 
-        surface = self.font.render(text, True, Colors.WHITE)
+        surface = Config.FONT_1.render(text, True, Colors.WHITE)
         surface_rect = surface.get_rect()
         surface_rect.right = Config.SCREEN_WIDTH - margin_right
         surface_rect.top = margin_top
@@ -60,9 +66,9 @@ class Game:
     def draw_delta_time_text(self):
         margin_right = 20
         margin_top = 40
-        text = "delta_time: {delta_time:.2f}".format(delta_time=self.delta_time)
+        text = "delta_time: {delta_time:.3f}".format(delta_time=self.delta_time)
 
-        surface = self.font.render(text, True, Colors.WHITE)
+        surface = Config.FONT_1.render(text, True, Colors.WHITE)
         surface_rect = surface.get_rect()
         surface_rect.right = Config.SCREEN_WIDTH - margin_right
         surface_rect.top = margin_top
