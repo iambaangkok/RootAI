@@ -2,7 +2,7 @@ import pygame.font
 from pygame.font import Font
 
 
-SCREEN_WIDTH = 1280
+SCREEN_WIDTH = 1680
 SCREEN_HEIGHT = 960
 
 FRAME_RATE = 60

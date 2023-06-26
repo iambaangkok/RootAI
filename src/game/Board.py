@@ -6,11 +6,9 @@ from src.game.Area import Area
 
 
 class Board:
-    margin_x: float = 240
-    margin_top: float = 40
-    margin_bottom: float = 120
-    rect: Rect = Rect((margin_x, margin_top),
-                      (Config.SCREEN_WIDTH - margin_x * 2, Config.SCREEN_HEIGHT - margin_top - margin_bottom))
+    dimension: float = 800
+    rect: Rect = Rect(((Config.SCREEN_WIDTH - dimension)/2, (Config.SCREEN_HEIGHT - dimension)/2),
+                      (dimension, dimension))
 
     def __init__(self, areas: list[Area]):
         self.name: str = "Forest"
