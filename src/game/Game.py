@@ -18,10 +18,29 @@ class Game:
         self.fps: float = 0.0
 
         # Board Game Components
-        self.board: Board = Board()
-        self.areas: list[Area] = [
-            Area(Vector2(Board.rect.x + Board.rect.width*0.12, Board.rect.y + Board.rect.height*0.18))
+
+        areas_offset_y = 0.05
+        areas_radius = Board.rect.width * Area.size_ratio
+        areas: list[Area] = [
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.12, Board.rect.y + Board.rect.height * (0.20 - areas_offset_y)), areas_radius),
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.45, Board.rect.y + Board.rect.height * (0.15 - areas_offset_y)), areas_radius),
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.88, Board.rect.y + Board.rect.height * (0.18 - areas_offset_y)), areas_radius),
+
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.30, Board.rect.y + Board.rect.height * (0.33 - areas_offset_y)), areas_radius),
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.70, Board.rect.y + Board.rect.height * (0.30 - areas_offset_y)), areas_radius),
+
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.13, Board.rect.y + Board.rect.height * (0.47 - areas_offset_y)), areas_radius),
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.60, Board.rect.y + Board.rect.height * (0.50 - areas_offset_y)), areas_radius),
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.84, Board.rect.y + Board.rect.height * (0.45 - areas_offset_y)), areas_radius),
+
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.32, Board.rect.y + Board.rect.height * (0.64 - areas_offset_y)), areas_radius),
+
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.12, Board.rect.y + Board.rect.height * (0.80 - areas_offset_y)), areas_radius),
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.53, Board.rect.y + Board.rect.height * (0.82 - areas_offset_y)), areas_radius),
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.88, Board.rect.y + Board.rect.height * (0.80 - areas_offset_y)), areas_radius),
         ]
+
+        self.board: Board = Board(areas)
 
     def init(self):
         pass
@@ -47,9 +66,6 @@ class Game:
 
         self.draw_fps_text()
         self.draw_delta_time_text()
-
-        for area in self.areas:
-            area.draw(self.screen)
 
     def draw_fps_text(self):
         margin_right = 20

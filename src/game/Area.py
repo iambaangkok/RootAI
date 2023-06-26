@@ -2,17 +2,15 @@ import pygame
 from pygame import Color, Vector2, Surface
 
 from src.config import Config, Colors
-from src.game.Board import Board
 
 
 class Area:
     area_count: int = 0
     size_ratio: float = 0.07
 
-    def __init__(self, position: Vector2):
-
+    def __init__(self, position: Vector2, radius: float):
         self.position: Vector2 = position
-        self.radius: float = Board.rect.width * Area.size_ratio
+        self.radius: float = radius
         self.color: Color = Colors.WHITE
 
         self.connected_clearings: list = []
@@ -36,4 +34,3 @@ class Area:
         surface_rect.centerx = self.position.x
         surface_rect.top = self.position.y + self.radius + margin_top
         screen.blit(surface, surface_rect)
-
