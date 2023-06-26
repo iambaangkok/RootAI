@@ -19,7 +19,7 @@ class Game:
         self.board = Board()
 
         # Misc UI
-        self.font = Font("./assets/fonts/UbuntuMono-Regular.ttf", 16)
+        self.font = Font("../assets/fonts/UbuntuMono-Regular.ttf", 16)
 
     def init(self):
         pass
