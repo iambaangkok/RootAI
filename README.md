@@ -20,5 +20,9 @@
    - set Script path: `..\src\main.py`
    - set Environment > Working directory to absolute path to `src`
      - eg. `D:\GitHub\RootAI\src`
-2. Run `Run main.py` to run the game
+2. Go to Settings > CodeStyle > Cogs icon > Import scheme > import `codestyle.xml` 
+
+### Running the Game
+1. Run `Run main.py` to run the game
+
 
