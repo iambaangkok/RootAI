@@ -32,6 +32,7 @@ class Board:
         pygame.draw.rect(screen, self.color, Board.rect, width=1)
 
         self.draw_areas(screen)
+        self.draw_paths_clearing(screen)
 
     def draw_areas(self, screen: Surface):
         for area in self.areas:
