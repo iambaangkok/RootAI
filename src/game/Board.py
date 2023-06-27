@@ -3,6 +3,7 @@ from pygame import Rect, Color, Surface, Vector2
 
 from src.config import Config, Colors
 from src.game.Area import Area
+from src.utils.geometry import get_path_points
 
 
 class Board:
@@ -29,8 +30,8 @@ class Board:
     def draw(self, screen: Surface):
         pygame.draw.rect(screen, self.color, Board.rect, width=1)
 
-        self.draw_areas(screen)
         self.draw_paths_clearing(screen)
+        self.draw_areas(screen)
 
     def draw_areas(self, screen: Surface):
         for area in self.areas:
@@ -38,9 +39,13 @@ class Board:
 
     def draw_paths_clearing(self, screen: Surface):
         for path in self.paths:
+            area_a = self.areas[path[0]]
+            area_b = self.areas[path[1]]
+            additional_shift = 5
+            pos_a, pos_b = get_path_points(area_a.position, area_b.position, area_a.radius + additional_shift)
+
             pygame.draw.line(
-                screen, Colors.WHITE,
-                self.areas[path[0]].position,
-                self.areas[path[1]].position
+                screen, Colors.WHITE, pos_a, pos_b, width=5
             )
         pass
+
