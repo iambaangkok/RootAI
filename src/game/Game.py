@@ -5,6 +5,8 @@ from pygame.time import Clock
 from src.config import Config, Colors
 from src.game.Area import Area
 from src.game.Board import Board
+from src.game.Building import Building
+from src.game.Suit import Suit
 
 
 class Game:
@@ -22,44 +24,41 @@ class Game:
         areas_offset_y = 0.05
         areas_radius = Board.rect.width * Area.size_ratio
         areas: list[Area] = [
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.12, Board.rect.y + Board.rect.height * (0.20 - areas_offset_y)), areas_radius),
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.48, Board.rect.y + Board.rect.height * (0.15 - areas_offset_y)), areas_radius),
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.88, Board.rect.y + Board.rect.height * (0.18 - areas_offset_y)), areas_radius),
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.12, Board.rect.y + Board.rect.height * (0.20 - areas_offset_y)), areas_radius,
+                 Suit.FOX, [Building.EMPTY]),
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.55, Board.rect.y + Board.rect.height * (0.15 - areas_offset_y)), areas_radius,
+                 Suit.RABBIT, [Building.EMPTY, Building.EMPTY]),
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.88, Board.rect.y + Board.rect.height * (0.25 - areas_offset_y)), areas_radius,
+                 Suit.MOUSE, [Building.EMPTY, Building.EMPTY]),
 
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.33, Board.rect.y + Board.rect.height * (0.33 - areas_offset_y)), areas_radius),
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.70, Board.rect.y + Board.rect.height * (0.30 - areas_offset_y)), areas_radius),
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.43, Board.rect.y + Board.rect.height * (0.35 - areas_offset_y)), areas_radius,
+                 Suit.RABBIT, [Building.EMPTY, Building.RUIN]),
 
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.13, Board.rect.y + Board.rect.height * (0.47 - areas_offset_y)), areas_radius),
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.55, Board.rect.y + Board.rect.height * (0.50 - areas_offset_y)), areas_radius),
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.84, Board.rect.y + Board.rect.height * (0.45 - areas_offset_y)), areas_radius),
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.10, Board.rect.y + Board.rect.height * (0.45 - areas_offset_y)), areas_radius,
+                 Suit.MOUSE, [Building.EMPTY, Building.EMPTY]),
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.34, Board.rect.y + Board.rect.height * (0.58 - areas_offset_y)), areas_radius,
+                 Suit.FOX, [Building.EMPTY, Building.RUIN]),
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.66, Board.rect.y + Board.rect.height * (0.53 - areas_offset_y)), areas_radius,
+                 Suit.MOUSE, [Building.EMPTY, Building.EMPTY, Building.RUIN]),
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.90, Board.rect.y + Board.rect.height * (0.56 - areas_offset_y)), areas_radius,
+                 Suit.FOX, [Building.EMPTY, Building.RUIN]),
 
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.32, Board.rect.y + Board.rect.height * (0.64 - areas_offset_y)), areas_radius),
-
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.12, Board.rect.y + Board.rect.height * (0.80 - areas_offset_y)), areas_radius),
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.53, Board.rect.y + Board.rect.height * (0.82 - areas_offset_y)), areas_radius),
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.88, Board.rect.y + Board.rect.height * (0.80 - areas_offset_y)), areas_radius),
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.12, Board.rect.y + Board.rect.height * (0.83 - areas_offset_y)), areas_radius,
+                 Suit.RABBIT, [Building.EMPTY]),
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.39, Board.rect.y + Board.rect.height * (0.88 - areas_offset_y)), areas_radius,
+                 Suit.FOX, [Building.EMPTY, Building.EMPTY]),
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.62, Board.rect.y + Board.rect.height * (0.80 - areas_offset_y)), areas_radius,
+                 Suit.MOUSE, [Building.EMPTY, Building.EMPTY]),
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.84, Board.rect.y + Board.rect.height * (0.88 - areas_offset_y)), areas_radius,
+                 Suit.RABBIT, [Building.EMPTY]),
         ]
 
         self.board: Board = Board(areas)
 
-        self.board.add_path(0, 1)
-        self.board.add_path(0, 5)
-        self.board.add_path(1, 2)
-        self.board.add_path(1, 3)
-        self.board.add_path(1, 4)
-        self.board.add_path(2, 7)
-        self.board.add_path(3, 4)
-        self.board.add_path(3, 5)
-        self.board.add_path(3, 6)
-        self.board.add_path(4, 7)
-        self.board.add_path(5, 8)
-        self.board.add_path(5, 9)
-        self.board.add_path(6, 8)
-        self.board.add_path(6, 7)
-        self.board.add_path(7, 11)
-        self.board.add_path(8, 10)
-        self.board.add_path(9, 10)
-        self.board.add_path(10, 11)
+        paths = [(0, 1), (0, 3), (0, 4), (1, 2), (2, 3), (2, 7), (3, 5), (4, 5), (4, 8), (5, 6), (5, 8), (5, 10), (6, 7), (6, 11), (7, 11), (8, 9),
+                 (9, 10), (10, 11)] 
+        for path in paths:
+            self.board.add_path(path[0], path[1])
 
     def init(self):
         pass
