@@ -42,10 +42,11 @@ class Board:
             area_a = self.areas[path[0]]
             area_b = self.areas[path[1]]
             additional_shift = 5
+            line_width = 5
             pos_a, pos_b = get_path_points(area_a.position, area_b.position, area_a.radius + additional_shift)
 
             pygame.draw.line(
-                screen, Colors.WHITE, pos_a, pos_b, width=5
+                screen, Colors.GREY_DARK_2, pos_a, pos_b, line_width
             )
         pass
 
