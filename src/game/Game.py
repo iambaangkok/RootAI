@@ -23,14 +23,14 @@ class Game:
         areas_radius = Board.rect.width * Area.size_ratio
         areas: list[Area] = [
             Area(Vector2(Board.rect.x + Board.rect.width * 0.12, Board.rect.y + Board.rect.height * (0.20 - areas_offset_y)), areas_radius),
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.45, Board.rect.y + Board.rect.height * (0.15 - areas_offset_y)), areas_radius),
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.48, Board.rect.y + Board.rect.height * (0.15 - areas_offset_y)), areas_radius),
             Area(Vector2(Board.rect.x + Board.rect.width * 0.88, Board.rect.y + Board.rect.height * (0.18 - areas_offset_y)), areas_radius),
 
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.30, Board.rect.y + Board.rect.height * (0.33 - areas_offset_y)), areas_radius),
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.33, Board.rect.y + Board.rect.height * (0.33 - areas_offset_y)), areas_radius),
             Area(Vector2(Board.rect.x + Board.rect.width * 0.70, Board.rect.y + Board.rect.height * (0.30 - areas_offset_y)), areas_radius),
 
             Area(Vector2(Board.rect.x + Board.rect.width * 0.13, Board.rect.y + Board.rect.height * (0.47 - areas_offset_y)), areas_radius),
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.60, Board.rect.y + Board.rect.height * (0.50 - areas_offset_y)), areas_radius),
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.55, Board.rect.y + Board.rect.height * (0.50 - areas_offset_y)), areas_radius),
             Area(Vector2(Board.rect.x + Board.rect.width * 0.84, Board.rect.y + Board.rect.height * (0.45 - areas_offset_y)), areas_radius),
 
             Area(Vector2(Board.rect.x + Board.rect.width * 0.32, Board.rect.y + Board.rect.height * (0.64 - areas_offset_y)), areas_radius),
@@ -41,6 +41,25 @@ class Game:
         ]
 
         self.board: Board = Board(areas)
+
+        self.board.add_path(0, 1)
+        self.board.add_path(0, 5)
+        self.board.add_path(1, 2)
+        self.board.add_path(1, 3)
+        self.board.add_path(1, 4)
+        self.board.add_path(2, 7)
+        self.board.add_path(3, 4)
+        self.board.add_path(3, 5)
+        self.board.add_path(3, 6)
+        self.board.add_path(4, 7)
+        self.board.add_path(5, 8)
+        self.board.add_path(5, 9)
+        self.board.add_path(6, 8)
+        self.board.add_path(6, 7)
+        self.board.add_path(7, 11)
+        self.board.add_path(8, 10)
+        self.board.add_path(9, 10)
+        self.board.add_path(10, 11)
 
     def init(self):
         pass
