@@ -1,14 +1,24 @@
 import pygame
-from pygame import Rect, Color, Surface, Vector2
+from pygame import Rect, Color, Surface
 
 from src.config import Config, Colors
 from src.game.Area import Area
 from src.utils.geometry import get_path_points
 
+FACTION_NAMES = ['Marquise de Cat', 'The Decree', 'Woodland Alliance', 'Vagabond']
+FACTION_ALIAS = ['MC', 'D', 'WA', 'V']
+FACTION_COLORS = [Colors.ORANGE, Colors.BLUE, Colors.GREEN, Colors.GREY]
+FACTION_SIZE = 4
+ITEM_SUPPLY = [['bag', 'boots', 'crossbow', 'knife', 'keg', 'coin'], ['bag', 'boots', 'hammer', 'knife', 'keg', 'coin']]
+
+
+def add_tuple(a, b):
+    return tuple(map(lambda i, j: i + j, a, b))
+
 
 class Board:
     dimension: float = 800
-    rect: Rect = Rect(((Config.SCREEN_WIDTH - dimension)/2, (Config.SCREEN_HEIGHT - dimension)/2),
+    rect: Rect = Rect(((Config.SCREEN_WIDTH - dimension) / 2, (Config.SCREEN_HEIGHT - dimension) / 2 - 50),
                       (dimension, dimension))
 
     def __init__(self, areas: list[Area]):
@@ -16,6 +26,7 @@ class Board:
         self.color: Color = Colors.GREEN
         self.areas: list[Area] = areas
         self.paths: list[tuple[int, int]] = []
+        self.faction_points: list[int] = [0, 0, 0, 0]
 
     def add_path(self, area_1: int, area_2: int):
         if ((area_1, area_2) in self.paths) or \
@@ -32,6 +43,7 @@ class Board:
 
         self.draw_paths_clearing(screen)
         self.draw_areas(screen)
+        self.draw_board_info(screen)
 
     def draw_areas(self, screen: Surface):
         for area in self.areas:
@@ -50,3 +62,101 @@ class Board:
             )
         pass
 
+    def draw_board_info(self, screen):
+        starting_point = ((Config.SCREEN_WIDTH - self.dimension) / 2, (Config.SCREEN_HEIGHT - 130))
+        size = (self.dimension, 130)
+
+        self.draw_victory_point_tracker(screen, starting_point,
+                                        (size[0] / 3, size[1] / 3))
+        self.draw_turn_tracker(screen, add_tuple(starting_point, (size[0] / 3, 0)), (size[0] / 3, size[1] / 3))
+        self.draw_item_supply(screen, add_tuple(starting_point, (size[0] / 3 * 2, 0)), (size[0] / 3, size[1]))
+
+        pass
+
+    def draw_victory_point_tracker(self, screen, starting_point, size):
+
+        self.faction_points = [25, 80, 15, 50]
+
+        # Box
+        box = Rect(starting_point, size)
+        pygame.draw.rect(screen, self.color, box, width=1)
+
+        # Text
+        points_text = Config.FONT_LG_BOLD.render("VPs", True, Colors.WHITE)
+        shift = (10, size[1] / 2 - points_text.get_height() / 2)
+
+        screen.blit(points_text, add_tuple(starting_point, shift))
+
+        # 2*2 Grid
+        for ind in range(4):
+            rendered_text = Config.FONT_LG_BOLD.render("{}".format(self.faction_points[ind]), True, FACTION_COLORS[ind])
+            pos = (starting_point[0] + ind * 45 + points_text.get_width() + 20, starting_point[1])
+            screen.blit(rendered_text, add_tuple(pos, shift))
+
+        pass
+        # 1 * 4 Grid
+        # margin_left = 150
+        # for ind in range(4):
+        #     rendered_text = Config.FONT_LG.render("{}".format(self.faction_points[ind]), True, FACTION_COLORS[ind])
+        #     screen.blit(rendered_text,
+        #                 (((Config.SCREEN_WIDTH - self.dimension) // 2 + margin_left) + (self.dimension - margin_left) // 4 * ind,
+        #                  (Config.SCREEN_HEIGHT - 40) - rendered_text.get_height() // 2 + 10))
+
+        # 4 * 1 Grid
+        # for ind in range(4):
+        #     rendered_text = Config.FONT_MD.render("\t\tVP: {}".format(self.faction_points[ind]), True, FACTION_COLORS[ind])
+        #     screen.blit(rendered_text,
+        #                 (((Config.SCREEN_WIDTH - self.dimension) // 2),
+        #                  (Config.SCREEN_HEIGHT - 90) - rendered_text.get_height() // 2 + (90//4 + 3) * ind))
+
+    def draw_turn_tracker(self, screen, starting_point, size):
+
+        # Box
+        box = Rect(starting_point, size)
+        pygame.draw.rect(screen, self.color, box, width=1)
+
+        # Get from Game.py
+        turn_faction = 0
+        turn_num = 2
+
+        turn = Config.FONT_MD_BOLD.render("Turn {}:".format(turn_num), True, Colors.WHITE)
+        shift = (10, size[1] / 2 - turn.get_height() / 2)
+
+        screen.blit(turn, add_tuple(starting_point, shift))
+
+        turn_text = Config.FONT_MD_BOLD.render("{}'s turn".format(FACTION_ALIAS[turn_faction]), True, FACTION_COLORS[turn_faction])
+        pos = (starting_point[0] + turn.get_width() + 10, starting_point[1])
+        screen.blit(turn_text, add_tuple(pos, shift))
+
+        pass
+
+    def draw_item_supply(self, screen, starting_point, size):
+
+        # Box
+        box = Rect(starting_point, size)
+        pygame.draw.rect(screen, self.color, box, width=1)
+
+        item_supply_text = Config.FONT_MD_BOLD.render("Item Supply", True, Colors.WHITE)
+        shift = (10, 10)
+
+        screen.blit(item_supply_text, add_tuple(starting_point, shift))
+
+        available = [[True, False, True, True, False, True], [False, False, True, True, True, False]]
+
+        img_size = (40, 40)
+        img_pos = add_tuple(starting_point, (10, item_supply_text.get_height() + 10))
+
+        for i in range(2):
+            for j in range(6):
+                item_image = pygame.image.load("../assets/images/{}.png".format(ITEM_SUPPLY[i][j]))
+                item_image = pygame.transform.scale(item_image, img_size)
+                if available[i][j]:
+                    screen.blit(item_image,
+                                (img_pos[0] + img_size[0] * j, img_pos[1] + img_size[0] * i))
+                else:
+                    alpha = 128
+                    item_image.set_alpha(alpha)
+                    screen.blit(item_image,
+                                (img_pos[0] + img_size[0] * j, img_pos[1] + img_size[0] * i))
+
+        pass
