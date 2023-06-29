@@ -32,16 +32,16 @@ class Game:
                  Suit.MOUSE, [Building.EMPTY, Building.EMPTY]),
 
             Area(Vector2(Board.rect.x + Board.rect.width * 0.43, Board.rect.y + Board.rect.height * (0.35 - areas_offset_y)), areas_radius,
-                 Suit.RABBIT, [Building.EMPTY, Building.RUIN]),
+                 Suit.RABBIT, [Building.EMPTY]),
 
             Area(Vector2(Board.rect.x + Board.rect.width * 0.10, Board.rect.y + Board.rect.height * (0.45 - areas_offset_y)), areas_radius,
                  Suit.MOUSE, [Building.EMPTY, Building.EMPTY]),
             Area(Vector2(Board.rect.x + Board.rect.width * 0.34, Board.rect.y + Board.rect.height * (0.58 - areas_offset_y)), areas_radius,
-                 Suit.FOX, [Building.EMPTY, Building.RUIN]),
+                 Suit.FOX, [Building.EMPTY]),
             Area(Vector2(Board.rect.x + Board.rect.width * 0.66, Board.rect.y + Board.rect.height * (0.53 - areas_offset_y)), areas_radius,
                  Suit.MOUSE, [Building.EMPTY, Building.EMPTY, Building.RUIN]),
             Area(Vector2(Board.rect.x + Board.rect.width * 0.90, Board.rect.y + Board.rect.height * (0.56 - areas_offset_y)), areas_radius,
-                 Suit.FOX, [Building.EMPTY, Building.RUIN]),
+                 Suit.FOX, [Building.EMPTY]),
 
             Area(Vector2(Board.rect.x + Board.rect.width * 0.12, Board.rect.y + Board.rect.height * (0.83 - areas_offset_y)), areas_radius,
                  Suit.RABBIT, [Building.EMPTY]),
@@ -56,7 +56,7 @@ class Game:
         self.board: Board = Board(areas)
 
         paths = [(0, 1), (0, 3), (0, 4), (1, 2), (2, 3), (2, 7), (3, 5), (4, 5), (4, 8), (5, 6), (5, 8), (5, 10), (6, 7), (6, 11), (7, 11), (8, 9),
-                 (9, 10), (10, 11)] 
+                 (9, 10), (10, 11)]
         for path in paths:
             self.board.add_path(path[0], path[1])
 
