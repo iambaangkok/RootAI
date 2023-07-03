@@ -6,6 +6,7 @@ from src.config import Config, Colors
 from src.game.Area import Area
 from src.game.Board import Board
 from src.game.Building import Building
+from src.game.MarquiseBoard import MarquiseBoard
 from src.game.Suit import Suit
 from src.game.Token import Token
 from src.game.Warrior import Warrior
@@ -65,6 +66,7 @@ class Game:
 
 
         self.board: Board = Board(areas)
+        self.marquise = MarquiseBoard()
 
         paths = [(0, 1), (0, 3), (0, 4), (1, 2), (2, 3), (2, 7), (3, 5), (4, 5), (4, 8), (5, 6), (5, 8), (5, 10), (6, 7), (6, 11), (7, 11), (8, 9),
                  (9, 10), (10, 11)]
@@ -92,6 +94,7 @@ class Game:
         self.screen.fill("black")
 
         self.board.draw(self.screen)
+        self.marquise.draw(self.screen)
 
         self.draw_fps_text()
         self.draw_delta_time_text()

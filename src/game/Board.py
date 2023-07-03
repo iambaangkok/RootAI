@@ -64,12 +64,14 @@ class Board:
 
     def draw_board_info(self, screen):
         starting_point = ((Config.SCREEN_WIDTH - self.dimension) / 2, (Config.SCREEN_HEIGHT - 130))
-        size = (self.dimension, 130)
 
-        self.draw_victory_point_tracker(screen, starting_point,
-                                        (size[0] / 3, size[1] / 3))
-        self.draw_turn_tracker(screen, add_tuple(starting_point, (size[0] / 3, 0)), (size[0] / 3, size[1] / 3))
-        self.draw_item_supply(screen, add_tuple(starting_point, (size[0] / 3 * 2, 0)), (size[0] / 3, size[1]))
+        size = (self.dimension, 130)
+        block_one_third = (size[0] / 3, size[1] / 3)
+        block_full = (size[0] / 3, size[1])
+
+        self.draw_victory_point_tracker(screen, starting_point, block_one_third)
+        self.draw_turn_tracker(screen, add_tuple(starting_point, (size[0] / 3, 0)), block_one_third)
+        self.draw_item_supply(screen, add_tuple(starting_point, (size[0] / 3 * 2, 0)), block_full)
 
         pass
 
@@ -119,18 +121,20 @@ class Board:
         turn_faction = 0
         turn_num = 2
 
-        turn = Config.FONT_MD_BOLD.render("Turn {}:".format(turn_num), True, Colors.WHITE)
-        shift = (10, size[1] / 2 - turn.get_height() / 2)
+        turn_text = Config.FONT_MD_BOLD.render("Turn {}:".format(turn_num), True, Colors.WHITE)
+        shift = (10, size[1] / 2 - turn_text.get_height() / 2)
 
-        screen.blit(turn, add_tuple(starting_point, shift))
+        screen.blit(turn_text, add_tuple(starting_point, shift))
 
-        turn_text = Config.FONT_MD_BOLD.render("{}'s turn".format(FACTION_ALIAS[turn_faction]), True, FACTION_COLORS[turn_faction])
-        pos = (starting_point[0] + turn.get_width() + 10, starting_point[1])
-        screen.blit(turn_text, add_tuple(pos, shift))
+        player_turn_text = Config.FONT_MD_BOLD.render("{}'s turn".format(FACTION_ALIAS[turn_faction]), True, FACTION_COLORS[turn_faction])
+        pos = (starting_point[0] + turn_text.get_width() + 10, starting_point[1])
+        screen.blit(player_turn_text, add_tuple(pos, shift))
 
         pass
 
     def draw_item_supply(self, screen, starting_point, size):
+
+        available = [[True, False, True, True, False, True], [False, False, True, True, True, False]]
 
         # Box
         box = Rect(starting_point, size)
@@ -140,8 +144,6 @@ class Board:
         shift = (10, 10)
 
         screen.blit(item_supply_text, add_tuple(starting_point, shift))
-
-        available = [[True, False, True, True, False, True], [False, False, True, True, True, False]]
 
         img_size = (40, 40)
         img_pos = add_tuple(starting_point, (10, item_supply_text.get_height() + 10))
