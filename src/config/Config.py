@@ -9,8 +9,8 @@ FRAME_RATE = 60
 
 pygame.font.init()
 FONT_1 = Font("../assets/fonts/UbuntuMono-Regular.ttf", 16)
-FONT_SM = Font("../assets/fonts/UbuntuMono-Regular.ttf", 16)
-FONT_SM_BOLD = Font("../assets/fonts/UbuntuMono-Bold.ttf", 16)
+FONT_SM = Font("../assets/fonts/UbuntuMono-Regular.ttf", 20)
+FONT_SM_BOLD = Font("../assets/fonts/UbuntuMono-Bold.ttf", 20)
 FONT_MD = Font("../assets/fonts/UbuntuMono-Regular.ttf", 28)
 FONT_MD_BOLD = Font("../assets/fonts/UbuntuMono-Bold.ttf", 28)
 FONT_LG = Font("../assets/fonts/UbuntuMono-Regular.ttf", 32)

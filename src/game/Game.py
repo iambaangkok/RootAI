@@ -7,6 +7,8 @@ from src.game.Area import Area
 from src.game.Board import Board
 from src.game.Building import Building
 from src.game.Suit import Suit
+from src.game.Token import Token
+from src.game.Warrior import Warrior
 
 
 class Game:
@@ -25,7 +27,7 @@ class Game:
         areas_radius = Board.rect.width * Area.size_ratio
         areas: list[Area] = [
             Area(Vector2(Board.rect.x + Board.rect.width * 0.12, Board.rect.y + Board.rect.height * (0.20 - areas_offset_y)), areas_radius,
-                 Suit.FOX, [Building.EMPTY]),
+                 Suit.FOX, [Building.ROOST]),
             Area(Vector2(Board.rect.x + Board.rect.width * 0.55, Board.rect.y + Board.rect.height * (0.15 - areas_offset_y)), areas_radius,
                  Suit.RABBIT, [Building.EMPTY, Building.EMPTY]),
             Area(Vector2(Board.rect.x + Board.rect.width * 0.88, Board.rect.y + Board.rect.height * (0.25 - areas_offset_y)), areas_radius,
@@ -39,19 +41,28 @@ class Game:
             Area(Vector2(Board.rect.x + Board.rect.width * 0.34, Board.rect.y + Board.rect.height * (0.58 - areas_offset_y)), areas_radius,
                  Suit.FOX, [Building.EMPTY]),
             Area(Vector2(Board.rect.x + Board.rect.width * 0.66, Board.rect.y + Board.rect.height * (0.53 - areas_offset_y)), areas_radius,
-                 Suit.MOUSE, [Building.EMPTY, Building.EMPTY, Building.RUIN]),
+                 Suit.MOUSE, [Building.EMPTY, Building.EMPTY]),
             Area(Vector2(Board.rect.x + Board.rect.width * 0.90, Board.rect.y + Board.rect.height * (0.56 - areas_offset_y)), areas_radius,
-                 Suit.FOX, [Building.EMPTY]),
+                 Suit.FOX, [Building.WORKSHOP]),
 
             Area(Vector2(Board.rect.x + Board.rect.width * 0.12, Board.rect.y + Board.rect.height * (0.83 - areas_offset_y)), areas_radius,
                  Suit.RABBIT, [Building.EMPTY]),
             Area(Vector2(Board.rect.x + Board.rect.width * 0.39, Board.rect.y + Board.rect.height * (0.88 - areas_offset_y)), areas_radius,
                  Suit.FOX, [Building.EMPTY, Building.EMPTY]),
             Area(Vector2(Board.rect.x + Board.rect.width * 0.62, Board.rect.y + Board.rect.height * (0.80 - areas_offset_y)), areas_radius,
-                 Suit.MOUSE, [Building.EMPTY, Building.EMPTY]),
+                 Suit.MOUSE, [Building.RECRUITER, Building.EMPTY]),
             Area(Vector2(Board.rect.x + Board.rect.width * 0.84, Board.rect.y + Board.rect.height * (0.88 - areas_offset_y)), areas_radius,
-                 Suit.RABBIT, [Building.EMPTY]),
+                 Suit.RABBIT, [Building.SAWMILL]),
         ]
+
+        areas[-1].add_token(Token.CASTLE)
+        areas[-1].add_token(Token.WOOD, 3)
+
+        for i in range(1, len(areas)):
+            areas[i].add_warrior(Warrior.MARQUIS, 1)
+
+        areas[0].add_warrior(Warrior.EYRIE, 6)
+
 
         self.board: Board = Board(areas)
 
