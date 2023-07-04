@@ -6,12 +6,6 @@ from src.game.Building import Building
 from src.game.Item import Item
 from src.utils import text
 
-BUILDING_TRACKER = {
-    Building.SAWMILL: 2,
-    Building.WORKSHOP: 5,
-    Building.RECRUITER: 3
-}
-
 BUILDING_COST = [0, 1, 2, 3, 3, 4]
 BUILDING_REWARD = {
     Building.SAWMILL: [0, 1, 2, 3, 4, 5],
@@ -35,9 +29,15 @@ class MarquiseBoard:
     starting_point = (0, 0)
     dimension = (0, 0)
 
+    BUILDING_TRACKER = {
+        Building.SAWMILL: 2,
+        Building.WORKSHOP: 5,
+        Building.RECRUITER: 3
+    }
+
     def __init__(self):
         self.items = None
-        self.name: str = "Marquise"
+        self.name: str = "Marquise de Cat"
         self.color: Color = Colors.ORANGE
 
     def draw(self, screen: Surface):
@@ -52,13 +52,13 @@ class MarquiseBoard:
         screen.blit(points_text, add_tuple(self.starting_point, shift))
 
         for i in range(3):
-            self.draw_tracker(screen, BUILDING_TRACKER_NAME[i], add_tuple(self.starting_point, (5, 50 * i + points_text.get_height() + 20))
+            self.draw_tracker(screen, BUILDING_TRACKER_NAME[i], add_tuple(self.starting_point, (5, 45 * i + points_text.get_height() + 20))
                               )
 
-        self.draw_crafted_items(screen, add_tuple(self.starting_point, (5, 50 * 3 + points_text.get_height() + 20)))
-        self.draw_crafted_cards(screen, add_tuple(self.starting_point, (5, 50 * 4 + points_text.get_height() + 20)))
-        self.draw_warriors_reserve(screen, add_tuple(self.starting_point, (5, 50 * 4 + 25 + points_text.get_height() + 20)))
-        self.draw_cards_in_hand(screen, add_tuple(self.starting_point, (5, 50 * 5 + points_text.get_height() + 20)))
+        self.draw_crafted_items(screen, add_tuple(self.starting_point, (5, 45 * 3 + points_text.get_height() + 20)))
+        self.draw_crafted_cards(screen, add_tuple(self.starting_point, (5, 45 * 5 + points_text.get_height() + 20)))
+        self.draw_warriors_reserve(screen, add_tuple(self.starting_point, (5, 45 * 6 + 25 + points_text.get_height() + 20)))
+        self.draw_cards_in_hand(screen, add_tuple(self.starting_point, (5, 45 * 6 + 50 + points_text.get_height() + 20)))
 
     def draw_tracker(self, screen, title, starting_point):
 
@@ -79,7 +79,7 @@ class MarquiseBoard:
         new_img.set_alpha(alpha)
 
         for j in range(6):
-            if j < BUILDING_TRACKER[title]:
+            if j < self.BUILDING_TRACKER[title]:
                 draw_img = new_img
             else:
                 draw_img = img
@@ -93,7 +93,16 @@ class MarquiseBoard:
 
     def draw_crafted_items(self, screen, starting_point):
 
-        self.items = [Item.KEG, Item.KNIFE]
+        self.items = {
+            Item.KEG: 5,
+            Item.BAG: 7,
+            Item.KNIFE: 4,
+            Item.BOOTS: 3,
+            Item.HAMMER: 2,
+            Item.CROSSBOW: 1,
+            Item.COIN: 0,
+            Item.TORCH: 3,
+        }
 
         # Text
         title_text = Config.FONT_SM_BOLD.render("Crafted Items", True, Colors.ORANGE)
@@ -104,22 +113,43 @@ class MarquiseBoard:
         img_size = (40, 40)
 
         ind = 0
-        for j in self.items:
-            img = pygame.image.load("../assets/images/{}.png".format(j))
+        for key in self.items:
+            value = self.items[key]
+            row = ind // 5
+            col = ind % 5
+
+            img = pygame.image.load("../assets/images/{}.png".format(key))
             img = pygame.transform.scale(img, img_size)
 
             screen.blit(img,
-                        (starting_point[0] + (img_size[0] + 10) * ind + 10 + 150, starting_point[1]))
+                        (starting_point[0] + (img_size[0] + 10) * col + 10 + 150, starting_point[1] + (img_size[0] + 5) * row))
+
+            quantity = Config.FONT_SM_BOLD.render("x{}".format(value), True, (206, 215, 132))
+            quantity = text.add_outline_to_image(quantity, 2, Colors.GREY_DARK_2)
+            screen.blit(quantity, (starting_point[0] + (img_size[0] + 10) * col + 10 + 150, starting_point[1] + (img_size[0] + 5) * row))
             ind = ind + 1
 
     def draw_crafted_cards(self, screen, starting_point):
 
-        self.card_list = [1,55,32,2]
+        self.card_list = [1, 55, 32, 2, 4, 15, 25, 35, 45, 99, 66, 22, 3, 5, 5, 2, 54, 8, 9, 58, 48, 2, 82, 98]
         # Text
-        title_text = Config.FONT_SM_BOLD.render("Crafted Cards: {}".format(self.card_list), True, Colors.ORANGE)
+        title_text = Config.FONT_SM_BOLD.render("Crafted Cards", True, Colors.ORANGE)
         shift = (10, 10)
 
         screen.blit(title_text, add_tuple(starting_point, shift))
+
+        block_size = (20, 20)
+
+        ind = 0
+
+        for key in self.card_list:
+            row = ind // 8
+            col = ind % 8
+
+            card_ind = Config.FONT_SM_BOLD.render('{0:02d}'.format(key), True, (206, 215, 132))
+            card_ind = text.add_outline_to_image(card_ind, 2, Colors.GREY_DARK_2)
+            screen.blit(card_ind, (starting_point[0] + (block_size[0] + 10) * col + 10 + 150, starting_point[1] + (block_size[0] + 5) * row))
+            ind = ind + 1
         pass
 
     def draw_warriors_reserve(self, screen, starting_point):
