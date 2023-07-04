@@ -3,6 +3,7 @@ from pygame import Rect, Color, Surface
 
 from src.config import Config, Colors
 from src.game.Area import Area
+from src.game.Item import Item
 from src.utils.geometry import get_path_points
 
 FACTION_NAMES = ['Marquise de Cat', 'The Decree', 'Woodland Alliance', 'Vagabond']
@@ -10,6 +11,8 @@ FACTION_ALIAS = ['MC', 'D', 'WA', 'V']
 FACTION_COLORS = [Colors.ORANGE, Colors.BLUE, Colors.GREEN, Colors.GREY]
 FACTION_SIZE = 4
 ITEM_SUPPLY = [['bag', 'boots', 'crossbow', 'knife', 'keg', 'coin'], ['bag', 'boots', 'hammer', 'knife', 'keg', 'coin']]
+
+ITEM = [[Item.BAG, Item.BOOTS, Item.CROSSBOW, Item.KNIFE, Item.KEG, Item.COIN], ['bag', 'boots', 'hammer', 'knife', 'keg', 'coin']]
 
 
 def add_tuple(a, b):

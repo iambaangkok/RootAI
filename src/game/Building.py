@@ -1,11 +1,11 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class Building(Enum):
-    EMPTY = 1
-    RUIN = 2
-    SAWMILL = 3
-    WORKSHOP = 4
-    RECRUITER = 5
-    ROOST = 6
-    BASE = 7
+class Building(StrEnum):
+    EMPTY = 'empty'
+    RUIN = 'ruin'
+    SAWMILL = 'sawmill'
+    WORKSHOP = 'workshop'
+    RECRUITER = 'recruiter'
+    ROOST = 'roost'
+    BASE = 'base'
