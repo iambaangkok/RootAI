@@ -1,18 +1,18 @@
-from pygame import Surface, Vector2
+from pygame import Surface, Vector2, Color
 
 from src.config import Config, Colors
 from src.utils import text_utils
 
 
-def draw_key_value(screen: Surface, starting_point: Vector2, key: str, value: int):
-    title_text = Config.FONT_SM_BOLD.render("{}: {}".format(key, value), True, Colors.ORANGE)
+def draw_key_value(screen: Surface, starting_point: Vector2, color: Color, key: str, value: int):
+    title_text = Config.FONT_SM_BOLD.render("{}: {}".format(key, value), True, color)
     shift: Vector2 = Vector2(10, 10)
     screen.blit(title_text, starting_point + shift)
 
 
-def draw_cards(screen: Surface, starting_point: Vector2, text: str, cards: list[int]):
+def draw_cards(screen: Surface, starting_point: Vector2, color: Color, text: str, cards: list[int]):
     # Text
-    title_text = Config.FONT_SM_BOLD.render(text, True, Colors.ORANGE)
+    title_text = Config.FONT_SM_BOLD.render(text, True, color)
     shift: Vector2 = Vector2(10, 10)
 
     screen.blit(title_text, starting_point + shift)
