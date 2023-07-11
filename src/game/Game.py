@@ -64,9 +64,8 @@ class Game:
 
         areas[0].add_warrior(Warrior.EYRIE, 6)
 
-
         self.board: Board = Board(areas)
-        self.marquise = MarquiseBoard()
+        self.marquise = MarquiseBoard("Marquis de Cat", Colors.ORANGE, 14, Vector2(0, 0))
 
         paths = [(0, 1), (0, 3), (0, 4), (1, 2), (2, 3), (2, 7), (3, 5), (4, 5), (4, 8), (5, 6), (5, 8), (5, 10), (6, 7), (6, 11), (7, 11), (8, 9),
                  (9, 10), (10, 11)]

@@ -4,7 +4,7 @@ from pygame import Rect, Color, Surface
 from src.config import Config, Colors
 from src.game.Area import Area
 from src.game.Item import Item
-from src.utils.geometry import get_path_points
+from src.utils.geometry_utils import get_path_points
 
 FACTION_NAMES = ['Marquise de Cat', 'The Decree', 'Woodland Alliance', 'Vagabond']
 FACTION_ALIAS = ['MC', 'D', 'WA', 'V']
