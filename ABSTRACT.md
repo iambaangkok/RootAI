@@ -3,11 +3,9 @@ We aim to develop an artificial intelligence (AI) system capable of playing the 
 
 Root is a partially observable asymmetric game where each player have different game mechanics and goals. This can be applied to real world problems where different parties have different goals, but they are in the same area, thus they have to compete to take hold of limited resources needed to complete their goals.
 
-Currently, there are fewer AI that are asymmetric. (is this true?) ... WIP
+To build the AI, we will have an agent play against another agent so they can both learn. Each agent will have different versions built from different algorithms, including Monte Carlo Tree Search, Neural Network Reinforcement Learning, random, weighted-random, hard-coded, human player, etc.
 
-To build the AI, we will use multi-agent reinforcement learning concept. We will have an agent play against another agent so they can both learn. Each agent will have different versions built from different algorithms, including Monte Carlo Tree Search, Neural Network Reinforcement Learning, random, weighted-random, hard-coded, human player, etc.
-
-
+[REMOVE] Currently, there are fewer AI that are asymmetric. (is this true?) ... WIP
 
 #### Checklist
 - [x] A brief introduction to the topic that you're investigating.
