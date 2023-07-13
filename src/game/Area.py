@@ -14,16 +14,16 @@ class Area:
     area_count: int = 0
     size_ratio: float = 0.07
 
-    def __init__(self, position: Vector2, radius: float, suit: Suit, buildings: list[Building]):
+    def __init__(self, position: Vector2, radius: float, suit: Suit, buildings: [Building]):
         self.position: Vector2 = position
         self.radius: float = radius
         self.suit: Suit = suit
-        self.buildings: list[Building] = buildings
+        self.buildings: [Building] = buildings
 
         self.color: Color = Colors.WHITE
 
-        self.connected_clearings: list = []
-        self.connected_forests: list = []
+        self.connected_clearings: [] = []
+        self.connected_forests: [] = []
 
         self.area_index: int = Area.area_count
         Area.area_count += 1

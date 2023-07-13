@@ -7,17 +7,17 @@ from src.game.FactionBoard import FactionBoard
 from src.utils import text_utils
 
 BUILDING_COST = [0, 1, 2, 3, 3, 4]
-BUILDING_REWARD = {
+BUILDING_REWARD_VP = {
     Building.SAWMILL: [0, 1, 2, 3, 4, 5],
     Building.WORKSHOP: [0, 2, 2, 3, 4, 5],
     Building.RECRUITER: [0, 1, 2, 3, 3, 4]
 }
 
-BUILDING_DRAW_REWARD = [
-    [0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0],
-    [0, 0, 1, 0, 1, 0],
-]
+BUILDING_REWARD_CARD = {
+    Building.SAWMILL: [0, 0, 0, 0, 0, 0],
+    Building.WORKSHOP: [0, 0, 0, 0, 0, 0],
+    Building.RECRUITER: [0, 0, 1, 1, 2, 2]
+}
 BUILDING_TRACKER_NAME = [Building.SAWMILL, Building.WORKSHOP, Building.RECRUITER]
 
 
@@ -56,15 +56,28 @@ class MarquiseBoard(FactionBoard):
         new_img = img.copy()
         new_img.set_alpha(alpha)
 
+        gap = 10
+        offset_x = 100
+
         for j in range(6):
             if j < self.building_trackers[title]:
                 draw_img = new_img
             else:
                 draw_img = img
             screen.blit(draw_img,
-                        (starting_point.x + (img_size.x + 10) * j + 10 + 100, starting_point.y))
+                        (starting_point.x + (img_size.x + gap) * j + gap + offset_x, starting_point.y))
 
-            reward = Config.FONT_SM_BOLD.render("+" + str(BUILDING_REWARD[title][j]), True, (206, 215, 132))
-            reward = text_utils.add_outline_to_image(reward, 2, Colors.GREY_DARK_2)
+            if BUILDING_REWARD_VP[title][j] > 0:
+                
+                reward = Config.FONT_SM_BOLD.render("+" + str(BUILDING_REWARD_VP[title][j]), True, (206, 215, 132))
+                reward = text_utils.add_outline_to_image(reward, 2, Colors.GREY_DARK_2)
 
-            screen.blit(reward, (starting_point.x + (img_size.x + 10) * j + 10 + 100, starting_point.y))
+                screen.blit(reward, (starting_point.x + (img_size.x + gap) * j + gap + offset_x, starting_point.y))
+
+            if BUILDING_REWARD_CARD[title][j] > 0:
+
+                reward = Config.FONT_SM_BOLD.render("+" + str(BUILDING_REWARD_CARD[title][j]), True, (206, 215, 132))
+                reward = text_utils.add_outline_to_image(reward, 2, Colors.BLUE)
+
+                screen.blit(reward, (starting_point.x + (img_size.x + gap) * j + gap + offset_x,
+                                     starting_point.y + img_size.y - Config.FONT_SM_BOLD.get_height()))

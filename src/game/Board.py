@@ -24,12 +24,12 @@ class Board:
     rect: Rect = Rect(((Config.SCREEN_WIDTH - dimension) / 2, (Config.SCREEN_HEIGHT - dimension) / 2 - 50),
                       (dimension, dimension))
 
-    def __init__(self, areas: list[Area]):
+    def __init__(self, areas: [Area]):
         self.name: str = "Forest"
         self.color: Color = Colors.GREEN
-        self.areas: list[Area] = areas
-        self.paths: list[tuple[int, int]] = []
-        self.faction_points: list[int] = [0, 0, 0, 0]
+        self.areas: [Area] = areas
+        self.paths: [tuple[int, int]] = []
+        self.faction_points: [int] = [0, 0, 0, 0]
 
     def add_path(self, area_1: int, area_2: int):
         if ((area_1, area_2) in self.paths) or \

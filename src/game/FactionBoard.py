@@ -25,9 +25,9 @@ class FactionBoard:
             Item.TORCH: 3,
         }
         # = {}
-        self.crafted_cards: list[int] = [1, 55, 32, 2, 4, 15, 25, 35, 45, 99, 66, 22, 3, 5, 5, 2]
+        self.crafted_cards: [int] = [1, 55, 32, 2, 4, 15, 25, 35, 45, 99, 66, 22, 3, 5, 5, 2]
         # = []
-        self.cards_in_hand: list[int] = [1, 55, 32, 2, 4, 15, 25, 35, 45, 99, 66, 22, 3, 5, 5, 2]
+        self.cards_in_hand: [int] = [1, 55, 32, 2, 4, 15, 25, 35, 45, 99, 66, 22, 3, 5, 5, 2]
         # = []
 
         self.reserved_warriors: int = reserved_warriors
