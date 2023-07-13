@@ -70,14 +70,14 @@ class MarquiseBoard(FactionBoard):
             if BUILDING_REWARD_VP[title][j] > 0:
 
                 reward = Config.FONT_SM_BOLD.render("+" + str(BUILDING_REWARD_VP[title][j]), True, (206, 215, 132))
-                reward = text_utils.add_outline_to_image(reward, 2, Colors.GREY_DARK_2)
+                reward = text_utils.add_outline(reward, 2, Colors.GREY_DARK_2)
 
                 screen.blit(reward, (starting_point.x + (img_size.x + gap) * j + gap + offset_x, starting_point.y))
 
             if BUILDING_REWARD_CARD[title][j] > 0:
 
                 reward = Config.FONT_SM_BOLD.render("+" + str(BUILDING_REWARD_CARD[title][j]), True, (206, 215, 132))
-                reward = text_utils.add_outline_to_image(reward, 2, Colors.BLUE)
+                reward = text_utils.add_outline(reward, 2, Colors.BLUE)
 
                 screen.blit(reward, (starting_point.x + (img_size.x + gap) * j + gap + offset_x,
                                      starting_point.y + img_size.y - Config.FONT_SM_BOLD.get_height()))

@@ -26,6 +26,6 @@ def draw_cards(screen: Surface, starting_point: Vector2, color: Color, text: str
         col = ind % 8
 
         card_ind = Config.FONT_SM_BOLD.render('{0:02d}'.format(key), True, (206, 215, 132))
-        card_ind = text_utils.add_outline_to_image(card_ind, 2, Colors.GREY_DARK_2)
+        card_ind = text_utils.add_outline(card_ind, 2, Colors.GREY_DARK_2)
         screen.blit(card_ind, (starting_point.x + (block_size.x + 10) * col + 10 + 150, starting_point.y + (block_size.x + 5) * row))
         ind = ind + 1

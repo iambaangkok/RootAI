@@ -76,7 +76,7 @@ class FactionBoard:
                         (starting_point.x + (img_size.x + 10) * col + 10 + 150, starting_point.y + (img_size.x + 5) * row))
 
             quantity = Config.FONT_SM_BOLD.render("x{}".format(value), True, (206, 215, 132))
-            quantity = text_utils.add_outline_to_image(quantity, 2, Colors.GREY_DARK_2)
+            quantity = text_utils.add_outline(quantity, 2, Colors.GREY_DARK_2)
             screen.blit(quantity, (starting_point.x + (img_size.x + 10) * col + 10 + 150, starting_point.y + (img_size.x + 5) * row))
             ind = ind + 1
 

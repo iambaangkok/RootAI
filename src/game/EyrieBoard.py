@@ -83,13 +83,13 @@ class EyrieBoard(FactionBoard):
                         (starting_point.x + (img_size.x + gap) * j + gap + offset_x, starting_point.y))
             if ROOST_REWARD_VP[j] > 0:
                 reward_vp = Config.FONT_SM_BOLD.render("+" + str(ROOST_REWARD_VP[j]), True, (206, 215, 132))
-                reward_vp = text_utils.add_outline_to_image(reward_vp, 2, Colors.GREY_DARK_2)
+                reward_vp = text_utils.add_outline(reward_vp, 2, Colors.GREY_DARK_2)
 
                 screen.blit(reward_vp, (starting_point.x + (img_size.x + gap) * j + gap + offset_x, starting_point.y))
 
             if ROOST_REWARD_CARD[j] > 0:
                 reward_card = Config.FONT_SM_BOLD.render("+" + str(ROOST_REWARD_CARD[j]), True, (206, 215, 132))
-                reward_card = text_utils.add_outline_to_image(reward_card, 2, Colors.BLUE)
+                reward_card = text_utils.add_outline(reward_card, 2, Colors.BLUE)
 
                 screen.blit(reward_card, (starting_point.x + (img_size.x + gap) * j + gap + offset_x,
                                           starting_point.y + img_size.y - Config.FONT_SM_BOLD.get_height()))
