@@ -4,7 +4,7 @@ from pygame import Rect, Color, Surface
 from src.config import Config, Colors
 from src.game.Area import Area
 from src.game.Item import Item
-from src.utils.geometry import get_path_points
+from src.utils.geometry_utils import get_path_points
 
 FACTION_NAMES = ['Marquise de Cat', 'The Decree', 'Woodland Alliance', 'Vagabond']
 FACTION_ALIAS = ['MC', 'D', 'WA', 'V']
@@ -24,12 +24,12 @@ class Board:
     rect: Rect = Rect(((Config.SCREEN_WIDTH - dimension) / 2, (Config.SCREEN_HEIGHT - dimension) / 2 - 50),
                       (dimension, dimension))
 
-    def __init__(self, areas: list[Area]):
+    def __init__(self, areas: [Area]):
         self.name: str = "Forest"
         self.color: Color = Colors.GREEN
-        self.areas: list[Area] = areas
-        self.paths: list[tuple[int, int]] = []
-        self.faction_points: list[int] = [0, 0, 0, 0]
+        self.areas: [Area] = areas
+        self.paths: [tuple[int, int]] = []
+        self.faction_points: [int] = [0, 0, 0, 0]
 
     def add_path(self, area_1: int, area_2: int):
         if ((area_1, area_2) in self.paths) or \

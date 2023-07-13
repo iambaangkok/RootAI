@@ -6,6 +6,8 @@ from src.config import Config, Colors
 from src.game.Area import Area
 from src.game.Board import Board
 from src.game.Building import Building
+from src.game.EyrieBoard import EyrieBoard
+from src.game.FactionBoard import FactionBoard
 from src.game.MarquiseBoard import MarquiseBoard
 from src.game.Suit import Suit
 from src.game.Token import Token
@@ -26,7 +28,7 @@ class Game:
 
         areas_offset_y = 0.05
         areas_radius = Board.rect.width * Area.size_ratio
-        areas: list[Area] = [
+        areas: [Area] = [
             Area(Vector2(Board.rect.x + Board.rect.width * 0.12, Board.rect.y + Board.rect.height * (0.20 - areas_offset_y)), areas_radius,
                  Suit.FOX, [Building.ROOST]),
             Area(Vector2(Board.rect.x + Board.rect.width * 0.55, Board.rect.y + Board.rect.height * (0.15 - areas_offset_y)), areas_radius,
@@ -64,14 +66,15 @@ class Game:
 
         areas[0].add_warrior(Warrior.EYRIE, 6)
 
-
         self.board: Board = Board(areas)
-        self.marquise = MarquiseBoard()
 
         paths = [(0, 1), (0, 3), (0, 4), (1, 2), (2, 3), (2, 7), (3, 5), (4, 5), (4, 8), (5, 6), (5, 8), (5, 10), (6, 7), (6, 11), (7, 11), (8, 9),
                  (9, 10), (10, 11)]
         for path in paths:
             self.board.add_path(path[0], path[1])
+
+        self.marquise = MarquiseBoard("Marquise de Cat", Colors.ORANGE, 14, Vector2(0, 0.0 * Config.SCREEN_HEIGHT))
+        self.eyrie = EyrieBoard("Eyrie Dynasties", Colors.BLUE, 24, Vector2(0, 0.5 * Config.SCREEN_HEIGHT))
 
     def init(self):
         pass
@@ -95,6 +98,7 @@ class Game:
 
         self.board.draw(self.screen)
         self.marquise.draw(self.screen)
+        self.eyrie.draw(self.screen)
 
         self.draw_fps_text()
         self.draw_delta_time_text()

@@ -14,16 +14,16 @@ class Area:
     area_count: int = 0
     size_ratio: float = 0.07
 
-    def __init__(self, position: Vector2, radius: float, suit: Suit, buildings: list[Building]):
+    def __init__(self, position: Vector2, radius: float, suit: Suit, buildings: [Building]):
         self.position: Vector2 = position
         self.radius: float = radius
         self.suit: Suit = suit
-        self.buildings: list[Building] = buildings
+        self.buildings: [Building] = buildings
 
         self.color: Color = Colors.WHITE
 
-        self.connected_clearings: list = []
-        self.connected_forests: list = []
+        self.connected_clearings: [] = []
+        self.connected_forests: [] = []
 
         self.area_index: int = Area.area_count
         Area.area_count += 1
@@ -86,7 +86,7 @@ class Area:
 
         for i, building in enumerate(self.buildings):
             rect = Rect(0, 0, dimension, dimension)
-            rect.topleft = self.position.__add__(starting_offset).__add__(Vector2(i * dimension + i * gap, 0))
+            rect.topleft = self.position + starting_offset + Vector2(i * dimension + i * gap, 0)
 
             color = Colors.WHITE
             width = 1
@@ -129,7 +129,7 @@ class Area:
         text = ""
 
         offset: Vector2 = Vector2(self.radius - radius)
-        position = self.position.__add__(offset)
+        position = self.position + offset
 
         if self.suit is Suit.MOUSE:
             color = Colors.MOUSE
@@ -159,7 +159,7 @@ class Area:
         text = ""
 
         offset: Vector2 = Vector2(self.radius - radius, -1 * (self.radius - radius))
-        position = self.position.__add__(offset)
+        position = self.position + offset
 
         ruler = self.ruler()
         if ruler is Warrior.MARQUIS:
@@ -196,7 +196,7 @@ class Area:
 
         surface = Config.FONT_SM.render(text, True, color)
         surface_rect = surface.get_rect()
-        surface_rect.center = Rect(self.position.__add__(starting_offset).__add__(Vector2(gap*0, 0)), (0, 0)).center
+        surface_rect.center = Rect(self.position + starting_offset + (Vector2(gap * 0, 0)), (0, 0)).center
 
         screen.blit(surface, surface_rect)
 
@@ -206,7 +206,7 @@ class Area:
 
         surface = Config.FONT_SM.render(text, True, color)
         surface_rect = surface.get_rect()
-        surface_rect.center = Rect(self.position.__add__(starting_offset).__add__(Vector2(gap * 1, 0)), (0, 0)).center
+        surface_rect.center = Rect(self.position + starting_offset + (Vector2(gap * 1, 0)), (0, 0)).center
 
         screen.blit(surface, surface_rect)
 
@@ -220,7 +220,7 @@ class Area:
         if self.token_count[Token.WOOD] > 0:
             rad = math.radians(45)
             offset = Vector2(math.cos(rad) * offset_ratio * self.radius, -1 * math.sin(rad) * offset_ratio * self.radius)
-            position = self.position.__add__(offset)
+            position = self.position + offset
 
             color = Colors.ORANGE
             width = 1
@@ -236,7 +236,7 @@ class Area:
         if self.token_count[Token.CASTLE] > 0:
             rad = math.radians(10)
             offset = Vector2(math.cos(rad) * offset_ratio * self.radius, -1 * math.sin(rad) * offset_ratio * self.radius)
-            position = self.position.__add__(offset)
+            position = self.position + offset
 
             color = Colors.ORANGE
             width = 1
