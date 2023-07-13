@@ -80,12 +80,30 @@ class Game:
         pass
 
     def update(self):
+
+        # 1. whose turn is this?
+        # 2.
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
+            # if marquise turn
+            self.check_event_marquise(event)
+
 
         self.fps = self.calculate_fps()
 
+
+    def check_event_marquise(self, event: pygame.event.Event):
+        # which phase
+        # birdsong
+        # daylight
+            # move
+                # from where
+                    # to where
+                        # how many
+        print(self.board.areas[0].connected_clearings[0])
+        pass
     def calculate_fps(self):
         if self.delta_time != 0:
             return 1.0 / self.delta_time
