@@ -74,7 +74,7 @@ class MarquiseBoard:
         img = pygame.image.load("../assets/images/marquise/{}.png".format(title))
         img = pygame.transform.scale(img, img_size)
         img.set_alpha(alpha)
-        alpha = 128
+        alpha = 100
         new_img = img.copy()
         new_img.set_alpha(alpha)
 
@@ -86,8 +86,7 @@ class MarquiseBoard:
             screen.blit(draw_img,
                         (starting_point[0] + (img_size[0] + 10) * j + 10 + 100, starting_point[1]))
 
-            reward = Config.FONT_SM_BOLD.render("+" + str(BUILDING_REWARD[title][j]), True, (206, 215, 132))
-            reward = text.add_outline_to_image(reward, 2, Colors.GREY_DARK_2)
+            reward = text.sm_bold_outline("+" + str(BUILDING_REWARD[title][j]), (206, 215, 132), True)
 
             screen.blit(reward, (starting_point[0] + (img_size[0] + 10) * j + 10 + 100, starting_point[1]))
 
@@ -124,8 +123,7 @@ class MarquiseBoard:
             screen.blit(img,
                         (starting_point[0] + (img_size[0] + 10) * col + 10 + 150, starting_point[1] + (img_size[0] + 5) * row))
 
-            quantity = Config.FONT_SM_BOLD.render("x{}".format(value), True, (206, 215, 132))
-            quantity = text.add_outline_to_image(quantity, 2, Colors.GREY_DARK_2)
+            quantity = text.sm_bold_outline("x{}".format(value), Colors.WHITE, True)
             screen.blit(quantity, (starting_point[0] + (img_size[0] + 10) * col + 10 + 150, starting_point[1] + (img_size[0] + 5) * row))
             ind = ind + 1
 
@@ -146,8 +144,7 @@ class MarquiseBoard:
             row = ind // 8
             col = ind % 8
 
-            card_ind = Config.FONT_SM_BOLD.render('{0:02d}'.format(key), True, (206, 215, 132))
-            card_ind = text.add_outline_to_image(card_ind, 2, Colors.GREY_DARK_2)
+            card_ind = text.sm_bold_outline('{0:02d}'.format(key), Colors.WHITE, True)
             screen.blit(card_ind, (starting_point[0] + (block_size[0] + 10) * col + 10 + 150, starting_point[1] + (block_size[0] + 5) * row))
             ind = ind + 1
         pass
