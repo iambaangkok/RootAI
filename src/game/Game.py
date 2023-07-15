@@ -8,6 +8,7 @@ from src.game.Board import Board
 from src.game.Building import Building
 from src.game.EyrieBoard import EyrieBoard
 from src.game.FactionBoard import FactionBoard
+from src.game.MarquiseActionBoard import MarquiseActionBoard
 from src.game.MarquiseBoard import MarquiseBoard
 from src.game.Suit import Suit
 from src.game.Token import Token
@@ -74,6 +75,7 @@ class Game:
             self.board.add_path(path[0], path[1])
 
         self.marquise = MarquiseBoard("Marquise de Cat", Colors.ORANGE, 14, Vector2(0, 0.0 * Config.SCREEN_HEIGHT))
+        self.marquise_action = MarquiseActionBoard(Vector2(0.75 * Config.SCREEN_WIDTH, 0.0 * Config.SCREEN_HEIGHT))
         self.eyrie = EyrieBoard("Eyrie Dynasties", Colors.BLUE, 24, Vector2(0, 0.5 * Config.SCREEN_HEIGHT))
 
     def init(self):
@@ -89,19 +91,36 @@ class Game:
                 self.running = False
             # if marquise turn
             self.check_event_marquise(event)
-
-
         self.fps = self.calculate_fps()
 
-
     def check_event_marquise(self, event: pygame.event.Event):
+        if event.type == pygame.KEYDOWN:
+            self.marquise_action.move_arrow(event.key)
+
         # which phase
-        # birdsong
+        phase = ''
+
+
+
+        if phase == 'Birdsong':
+            # Place one wood at each sawmill
+            for area in self.board.areas:
+                area.token_count[Token.WOOD] += area.buildings.count(Building.SAWMILL)
+        # elif phase == 'Daylight':
+
+
+
+
         # daylight
             # move
                 # from where
                     # to where
                         # how many
+
+
+
+
+
         print(self.board.areas[0].connected_clearings[0])
         pass
     def calculate_fps(self):
@@ -117,6 +136,8 @@ class Game:
         self.board.draw(self.screen)
         self.marquise.draw(self.screen)
         self.eyrie.draw(self.screen)
+
+        self.marquise_action.draw(self.screen)
 
         self.draw_fps_text()
         self.draw_delta_time_text()
