@@ -64,7 +64,7 @@ class EyrieBoard(FactionBoard):
         img_size: Vector2 = Vector2(40)
 
         alpha = 200
-        img = pygame.image.load("../assets/images/marquise/sawmill.png")
+        img = pygame.image.load("../assets/images/eyrie/roost.png")
         img = pygame.transform.scale(img, img_size)
         img.set_alpha(alpha)
         alpha = 128
