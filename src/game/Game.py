@@ -1,3 +1,5 @@
+from enum import StrEnum
+
 import pygame
 from pygame import Vector2, Surface
 from pygame.time import Clock
@@ -14,6 +16,17 @@ from src.game.Token import Token
 from src.game.Warrior import Warrior
 
 
+class Faction(StrEnum):
+    MARQUISE = "marquise"
+    EYRIE = "eyrie"
+
+class Phase(StrEnum):
+    BIRDSONG = "birdsong"
+    DAYLIGHT = "daylight"
+    EVENING = "evening"
+    TURMOIL = "turmoil"
+
+
 class Game:
     def __init__(self):
         pygame.init()
@@ -23,6 +36,10 @@ class Game:
 
         self.delta_time: float = 0.0
         self.fps: float = 0.0
+
+        # Game Data
+        self.turn_count: int = 0
+        self.turn_player: Faction = Faction.MARQUISE
 
         # Board Game Components
 
@@ -89,7 +106,10 @@ class Game:
             if event.type == pygame.QUIT:
                 self.running = False
             # if marquise turn
-            self.check_event_marquise(event)
+            if self.turn_player == Faction.MARQUISE:
+                self.check_event_marquise(event)
+            else:
+                self.check_event_eyrie(event)
         self.fps = self.calculate_fps()
 
     def check_event_marquise(self, event: pygame.event.Event):
@@ -112,6 +132,10 @@ class Game:
         # from where
         # to where
         # how many
+
+        pass
+
+    def check_event_eyrie(self, event: pygame.event.Event):
 
         pass
 
