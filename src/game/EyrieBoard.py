@@ -5,7 +5,9 @@ from pygame import Color, Vector2, Surface
 
 from src.config import Config, Colors
 from src.game.FactionBoard import FactionBoard
+from src.game.Suit import Suit
 from src.utils import text_utils
+from src.utils.draw_utils import draw_key_value, draw_key_multi_value
 
 ROOST_REWARD_VP = [0, 1, 2, 3, 4, 4, 5]
 ROOST_REWARD_CARD = [0, 0, 1, 1, 1, 2, 2]
@@ -48,10 +50,17 @@ class EyrieBoard(FactionBoard):
             DecreeAction.BUILD: []
         }
 
+    def get_active_leader(self):
+        for leader in self.leaders.keys():
+            if self.leaders[leader] == LeaderStatus.ACTIVE:
+                return leader
+
     def draw(self, screen: Surface):
         super().draw(screen)
 
         self.draw_roost_tracker(screen, self.starting_point + Vector2(5, 45 * 6 + 25 + self.text_surface.get_height() + 20))
+        self.draw_decree(screen, self.starting_point + Vector2(5, 45 * 7 + 10 + self.text_surface.get_height() + 20))
+        self.draw_leader(screen, self.starting_point + Vector2(5, 45 * 8 + 10 + self.text_surface.get_height() + 20))
 
     def draw_roost_tracker(self, screen: Surface, starting_point: Vector2):
 
@@ -93,3 +102,41 @@ class EyrieBoard(FactionBoard):
 
                 screen.blit(reward_card, (starting_point.x + (img_size.x + gap) * j + gap + offset_x,
                                           starting_point.y + img_size.y - Config.FONT_SM_BOLD.get_height()))
+
+    def draw_leader(self, screen: Surface, starting_point: Vector2):
+        shift = Vector2(FactionBoard.dimension.x * 0.05, - FactionBoard.dimension.y * 0.04)
+        text = Config.FONT_1.render("{}".format("leader"), True, Colors.BLUE)
+        screen.blit(text, starting_point + shift)
+        shift = Vector2(FactionBoard.dimension.x * 0.05, 0)
+        text = Config.FONT_1.render("{}".format(self.get_active_leader()), True, Colors.BLUE)
+        screen.blit(text, starting_point + shift)
+
+    def draw_decree(self, screen: Surface, starting_point: Vector2):
+
+        # DecreeAction
+        width = FactionBoard.dimension.x / len(self.decree) - FactionBoard.dimension.x * 0.08
+        offset_x = FactionBoard.dimension.x * 0.3
+        offset_y = Config.FONT_1.get_height()
+
+        for index, decree_action in enumerate(self.decree.keys()):
+            title_text = Config.FONT_1.render(decree_action, True, Colors.BLUE)
+            shift: Vector2 = Vector2(index * width + offset_x, offset_y)
+
+            screen.blit(title_text, starting_point + shift)
+
+        for i, suit in enumerate(Suit):
+            # draw_key_multi_value(screen, Config.FONT_1, starting_point,
+            #                         Vector2(shift.x, index * offset_y ), width, Colors.BLUE, "Bird", self.decree[decree_action])
+            color = Colors.BIRD
+            if suit == Suit.FOX:
+                color = Colors.FOX
+            elif suit == Suit.MOUSE:
+                color = Colors.MOUSE
+            elif suit == Suit.RABBIT:
+                color = Colors.RABBIT
+
+            for j, decree_action in enumerate(self.decree.keys()):
+                title_text = Config.FONT_1.render(str(len(self.decree[decree_action])), True, color)
+                shift: Vector2 = Vector2(j * width + offset_x, (i+2) * offset_y)
+
+                screen.blit(title_text, starting_point + shift)

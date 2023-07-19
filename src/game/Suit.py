@@ -1,7 +1,8 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class Suit(Enum):
-    FOX = 1
-    RABBIT = 2
-    MOUSE = 3
+class Suit(StrEnum):
+    BIRD = "bird"
+    FOX = "fox"
+    RABBIT = "rabbit"
+    MOUSE = "mouse"

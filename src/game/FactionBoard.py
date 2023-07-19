@@ -9,7 +9,7 @@ from src.utils.draw_utils import draw_key_value, draw_cards
 
 
 class FactionBoard:
-    dimension = (Config.SCREEN_WIDTH * 0.25, Config.SCREEN_HEIGHT * 0.5)
+    dimension = Vector2(Config.SCREEN_WIDTH * 0.25, Config.SCREEN_HEIGHT * 0.5)
 
     def __init__(self, name: str, color: Color, reserved_warriors: int, starting_point: Vector2):
         self.name: str = name
@@ -37,7 +37,7 @@ class FactionBoard:
 
     def draw(self, screen: Surface):
         pygame.draw.rect(screen, self.color, Rect(self.starting_point,
-                                                  (screen.get_width() * 0.25, screen.get_height() * 0.5)), width=3)
+                                                  (FactionBoard.dimension.x, FactionBoard.dimension.y)), width=3)
 
         # Text
         shift: Vector2 = Vector2(10, 10)
@@ -84,13 +84,13 @@ class FactionBoard:
         draw_cards(screen, starting_point, self.color, "Crafted Cards:", self.crafted_cards)
 
     def draw_crafted_cards_count(self, screen: Surface, starting_point):
-        draw_key_value(screen, starting_point, self.color, "Crafted Cards Count", len(self.crafted_cards))
+        draw_key_value(screen, Config.FONT_SM_BOLD, starting_point, Vector2(10, 10), self.color, "Crafted Cards Count", len(self.crafted_cards))
 
     def draw_cards_in_hand(self, screen: Surface, starting_point: Vector2):
         draw_cards(screen, starting_point, self.color, "Cards In-Hand:", self.cards_in_hand)
 
     def draw_cards_in_hand_count(self, screen: Surface, starting_point):
-        draw_key_value(screen, starting_point, self.color, "Cards In-Hand Count", len(self.cards_in_hand))
+        draw_key_value(screen, Config.FONT_SM_BOLD, starting_point, Vector2(10, 10), self.color, "Cards In-Hand Count", len(self.cards_in_hand))
 
     def draw_reserved_warriors(self, screen: Surface, starting_point: Vector2):
         title_text = Config.FONT_SM_BOLD.render("Reserved Warriors: {}".format(self.reserved_warriors), True, self.color)

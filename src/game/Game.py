@@ -121,7 +121,6 @@ class Game:
 
 
 
-        print(self.board.areas[0].connected_clearings[0])
         pass
     def calculate_fps(self):
         if self.delta_time != 0:
