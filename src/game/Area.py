@@ -31,12 +31,10 @@ class Area:
         self.token_count = {}
         for token in Token:
             self.token_count[token] = 0
-        print(self.token_count)
 
         self.warrior_count = {}
         for warrior in Warrior:
             self.warrior_count[warrior] = 0
-        print(self.warrior_count)
 
     def __del__(self):
         Area.area_count -= 1

@@ -29,6 +29,11 @@ class Phase(StrEnum):
     EVENING = "evening"
     TURMOIL = "turmoil"
 
+class Action:
+    def __init__(self, name: str, function: any = None):
+        self.name: str = name
+        self.function: any = function
+
 
 MARQUISE_ACTIONS = {
     Phase.BIRDSONG: [['Next']],
@@ -55,8 +60,8 @@ class Game:
         self.turn_player: Faction = Faction.MARQUISE
         self.phase: Phase = Phase.BIRDSONG
         self.sub_phase = 0
-        # Board Game Components
 
+        # Board Game Components
         self.draw_pile: [PlayingCard] = [
             PlayingCard(0, PlayingCardName.AMBUSH, Suit.BIRD, PlayingCardPhase.BATTLE),
             PlayingCard(1, PlayingCardName.AMBUSH, Suit.BIRD, PlayingCardPhase.BATTLE),
@@ -116,7 +121,7 @@ class Game:
         ]
         self.discard_pile: [PlayingCard] = []
 
-        # Board and Areas
+        # Board, Areas (Clearings)
         areas_offset_y = 0.05
         areas_radius = Board.rect.width * Area.size_ratio
         areas: [Area] = [
@@ -164,6 +169,7 @@ class Game:
         for path in paths:
             self.board.add_path(path[0], path[1])
 
+        # Faction Board
         self.marquise = MarquiseBoard("Marquise de Cat", Colors.ORANGE, 14, Vector2(0, 0.0 * Config.SCREEN_HEIGHT))
         self.eyrie = EyrieBoard("Eyrie Dynasties", Colors.BLUE, 24, Vector2(0, 0.5 * Config.SCREEN_HEIGHT))
 
@@ -173,24 +179,53 @@ class Game:
         self.action_col_width = 100
         self.action_col = 1
 
+        # Actions
+        self.marquise_actions: {Phase: [[Action]]} = {
+            Phase.BIRDSONG: [[Action('Next', self.marquise_birdsong_next)]],
+            Phase.DAYLIGHT: [
+                [Action('Craft'), Action('Next')],
+                [Action('Battle'), Action('March'), Action('Recruit'), Action('Build'), Action('Overwork'), Action('Next')]
+            ],
+            Phase.EVENING: [[Action('Next')]]
+        }
+
+        self.current_action: Action = self.marquise_actions[Phase.BIRDSONG][self.sub_phase][0]
+
     def init(self):
         pass
 
     def update(self):
-
-        # 1. whose turn is this?
-        # 2.
-
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
+
             if event.type == pygame.KEYDOWN:
                 self.move_arrow(event.key)
+            # Whose turn is this?
             if self.turn_player == Faction.MARQUISE and event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
                 self.check_event_marquise(event)
             else:
                 self.check_event_eyrie(event)
+
         self.fps = self.calculate_fps()
+
+    def move_arrow(self, direction):
+        update_arrow = {
+            pygame.K_UP: Vector2(0, -1),
+            pygame.K_DOWN: Vector2(0, 1),
+            pygame.K_LEFT: Vector2(-1, 0),
+            pygame.K_RIGHT: Vector2(1, 0)
+        }
+
+        row = len(self.marquise_actions[self.phase][self.sub_phase]) // self.action_col + 1
+
+        if direction in update_arrow.keys():
+            new_arrow_index = self.action_arrow_pos + update_arrow[direction]
+            if len(self.marquise_actions[self.phase][self.sub_phase]) > new_arrow_index[0] + new_arrow_index[1] * self.action_col >= 0 \
+                    and self.action_col > new_arrow_index[0] >= 0 \
+                    and row > new_arrow_index[1] >= 0:
+                self.action_arrow_pos = new_arrow_index
+                self.current_action = self.marquise_actions[self.phase][self.sub_phase][int(self.action_arrow_pos.y)]
 
     def check_event_marquise(self, event: pygame.event.Event):
 
@@ -252,7 +287,13 @@ class Game:
                 self.sub_phase = 0
                 self.action_arrow_pos = Vector2(0,0)
         # elif phase == 'Daylight':
+        # Which phase
+        if self.phase == Phase.BIRDSONG:
+            if event.type == pygame.K_RETURN:
+                self.current_action.function()
 
+        elif self.phase == Phase.DAYLIGHT:
+            pass
         # daylight
         # move
         # from where
@@ -260,6 +301,13 @@ class Game:
         # how many
 
         pass
+
+    def marquise_birdsong_next(self):
+        # Place one wood at each sawmill
+        for area in self.board.areas:
+            area.token_count[Token.WOOD] += area.buildings.count(Building.SAWMILL)
+        # Next phase
+        self.phase = Phase.DAYLIGHT
 
     def check_event_eyrie(self, event: pygame.event.Event):
 
@@ -309,32 +357,23 @@ class Game:
         self.screen.blit(surface, surface_rect)
 
     def draw_action(self, screen: Surface):
-
+        # Phase
         phase = Config.FONT_MD_BOLD.render("{}".format(self.phase), True, Colors.ORANGE)
+        phase_rect = phase.get_rect()
         starting_point = Vector2(0.75 * Config.SCREEN_WIDTH, 0.0 * Config.SCREEN_HEIGHT)
         shift = Vector2(10, 0.05 * Config.SCREEN_HEIGHT)
-        screen.blit(phase, starting_point + shift)
+        phase_rect.topleft = starting_point + shift
+        screen.blit(phase, phase_rect)
+
+        # Action
+        action = Config.FONT_SM.render("({})".format(self.current_action.name), True, Colors.WHITE)
+        action_rect = action.get_rect()
+        shift = Vector2(10, 0)
+        action_rect.bottomleft = phase_rect.bottomright + shift
+        screen.blit(action, action_rect)
 
         self.draw_arrow(screen, starting_point)
         self.draw_action_list(screen, starting_point)
-
-    def move_arrow(self, direction):
-
-        UPDATE_ARROW = {
-            pygame.K_UP: Vector2(0, -1),
-            pygame.K_DOWN: Vector2(0, 1),
-            pygame.K_LEFT: Vector2(-1, 0),
-            pygame.K_RIGHT: Vector2(1, 0)
-        }
-
-        row = len(MARQUISE_ACTIONS[self.phase][self.sub_phase]) // self.action_col + 1
-
-        if direction in UPDATE_ARROW.keys():
-            new_arrow_index = self.action_arrow_pos + UPDATE_ARROW[direction]
-            if len(MARQUISE_ACTIONS[self.phase][self.sub_phase]) > new_arrow_index[0] + new_arrow_index[1] * self.action_col >= 0 \
-                    and self.action_col > new_arrow_index[0] >= 0 \
-                    and row > new_arrow_index[1] >= 0:
-                self.action_arrow_pos = new_arrow_index
 
     def draw_arrow(self, screen, starting_point):
         arrow = Config.FONT_1.render(">", True, Colors.WHITE)
@@ -345,11 +384,11 @@ class Game:
     def draw_action_list(self, screen, starting_point):
         shift = Vector2(10 + 16, 0.09 * Config.SCREEN_HEIGHT)
 
-        actions = MARQUISE_ACTIONS[self.phase][self.sub_phase]
+        actions = self.marquise_actions[self.phase][self.sub_phase]
 
         ind = 0
         for action in actions:
-            action_text = Config.FONT_1.render(action, True, Colors.WHITE)
+            action_text = Config.FONT_1.render(action.name, True, Colors.WHITE)
             screen.blit(action_text, starting_point + shift + Vector2(ind % self.action_col * self.action_col_width,
                                                                       ind // self.action_col * self.action_row_width))
             ind = ind + 1
