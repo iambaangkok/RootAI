@@ -34,7 +34,7 @@ MARQUISE_ACTIONS = {
         ['Craft', 'Next'],
         ['Battle', 'March', 'Recruit', 'Build', 'Overwork', 'Next']
     ],
-    Phase.EVENING: [['Next']]
+    Phase.EVENING: [['End']]
 }
 
 
@@ -51,8 +51,8 @@ class Game:
         # Game Data
         self.turn_count: int = 0
         self.turn_player: Faction = Faction.MARQUISE
-        self.phase: Phase = Phase.DAYLIGHT
-        self.sub_phase = 1
+        self.phase: Phase = Phase.BIRDSONG
+        self.sub_phase = 0
         # Board Game Components
 
         areas_offset_y = 0.05
@@ -124,7 +124,7 @@ class Game:
                 self.running = False
             if event.type == pygame.KEYDOWN:
                 self.move_arrow(event.key)
-            if self.turn_player == Faction.MARQUISE:
+            if self.turn_player == Faction.MARQUISE and event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
                 self.check_event_marquise(event)
             else:
                 self.check_event_eyrie(event)
@@ -132,15 +132,63 @@ class Game:
 
     def check_event_marquise(self, event: pygame.event.Event):
 
-        # which phase
-        phase = 'Daylight'
+        action = MARQUISE_ACTIONS[self.phase][self.sub_phase][int(self.action_arrow_pos.x) * self.action_col + int(self.action_arrow_pos.y)]
+        move_available_clearing = []
+        battle_available_clearing = []
+        build_available_clearing = []
+        overwork_available = []
 
-        if phase == 'Daylight':
+        for area in self.board.areas:
+            if area.ruler() == Warrior.MARQUIS:
+                move_available_clearing.append([(area, connected_area) for connected_area in area.connected_clearings])
+                build_available_clearing.append(area)
+            else:
+                for connected_area in area.connected_clearings:
+                    if connected_area.ruler() == Warrior.MARQUIS:
+                        move_available_clearing.append((area, connected_area))
+
+            if area.warrior_count[Warrior.MARQUIS] > 0 and area.warrior_count[Warrior.EYRIE] > 0:
+                battle_available_clearing.append(area)
+
+            # if area.buildings.count(Building.SAWMILL) > 0 and len(list(filter(lambda x: (x.suit == area.suit), self.marquise.cards_in_hand))) > 0:
+            #     overwork_available.append([(area, card) for card in list(filter(lambda x: (x.suit == area.suit), self.marquise.cards_in_hand))])
+
+        # print(move_available_clearing)
+        # print(battle_available_clearing)
+        # print(build_available_clearing)
+        # which phase
+
+        if self.phase == Phase.BIRDSONG:
             # Place one wood at each sawmill
             for area in self.board.areas:
                 area.token_count[Token.WOOD] += area.buildings.count(Building.SAWMILL)
-
-
+            if action == 'Next':
+                self.phase = Phase.DAYLIGHT
+                self.sub_phase = 0
+                self.action_arrow_pos = Vector2(0, 0)
+        elif self.phase == Phase.DAYLIGHT:
+            if self.sub_phase == 0:
+                if action == 'Next':
+                    self.sub_phase = 1
+                    self.action_arrow_pos = Vector2(0, 0)
+            elif self.sub_phase == 1:
+                # if action == 'march':
+                # elif action == 'battle':
+                # elif action == 'recruit':
+                # elif action == 'build':
+                # elif action == 'overwork':
+                # else
+                if action == 'Next':
+                    self.phase = Phase.EVENING
+                    self.sub_phase = 0
+                    self.action_arrow_pos = Vector2(0, 0)
+        else:
+            # Draw card
+            if action == 'End':
+                self.turn_player = Faction.EYRIE
+                self.phase = Phase.DAYLIGHT
+                self.sub_phase = 0
+                self.action_arrow_pos = Vector2(0,0)
         # elif phase == 'Daylight':
 
         # daylight
