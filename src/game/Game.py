@@ -1,4 +1,6 @@
+import logging
 from enum import StrEnum
+from random import shuffle
 
 import pygame
 from pygame import Vector2, Surface
@@ -8,7 +10,7 @@ from src.config import Config, Colors
 from src.game.Area import Area
 from src.game.Board import Board
 from src.game.Building import Building
-from src.game.EyrieBoard import EyrieBoard
+from src.game.EyrieBoard import EyrieBoard, DecreeAction
 from src.game.FactionBoard import FactionBoard
 from src.game.Item import Item
 from src.game.MarquiseBoard import MarquiseBoard
@@ -16,6 +18,8 @@ from src.game.PlayingCard import PlayingCard, PlayingCardName, PlayingCardPhase
 from src.game.Suit import Suit
 from src.game.Token import Token
 from src.game.Warrior import Warrior
+
+logger = logging.getLogger('logger')
 
 
 class Faction(StrEnum):
@@ -28,6 +32,7 @@ class Phase(StrEnum):
     DAYLIGHT = "daylight"
     EVENING = "evening"
     TURMOIL = "turmoil"
+
 
 class Action:
     def __init__(self, name: str, function: any = None):
@@ -57,9 +62,10 @@ class Game:
 
         # Game Data
         self.turn_count: int = 0
-        self.turn_player: Faction = Faction.MARQUISE
+        self.turn_player: Faction = Faction.EYRIE
         self.phase: Phase = Phase.BIRDSONG
         self.sub_phase = 0
+        self.is_in_action_sub_phase: bool = False
 
         # Board Game Components
         self.draw_pile: [PlayingCard] = [
@@ -154,14 +160,6 @@ class Game:
                  Suit.RABBIT, [Building.SAWMILL]),
         ]
 
-        areas[-1].add_token(Token.CASTLE)
-        areas[-1].add_token(Token.WOOD, 3)
-
-        for i in range(1, len(areas)):
-            areas[i].add_warrior(Warrior.MARQUIS, 1)
-
-        areas[0].add_warrior(Warrior.EYRIE, 6)
-
         self.board: Board = Board(areas)
 
         paths = [(0, 1), (0, 3), (0, 4), (1, 2), (2, 3), (2, 7), (3, 5), (4, 5), (4, 8), (5, 6), (5, 8), (5, 10), (6, 7), (6, 11), (7, 11), (8, 9),
@@ -188,24 +186,78 @@ class Game:
             ],
             Phase.EVENING: [[Action('Next')]]
         }
+        self.eyrie_base_actions: {Phase: [[Action]]} = {
+            Phase.BIRDSONG: [
+                [Action('Next', self.eyrie_birdsong_1_next)],
+                [Action('Add Card To Decree')],
+                [Action('Next')]],
+            Phase.DAYLIGHT: [
+                [Action('Craft'), Action('Next')],
+                [Action('Resolve the Decree'), Action('Next')]
+            ],
+            Phase.EVENING: [[Action('Next')]]
+        }
+        self.actions: {Phase: [[Action]]} = {}
+        if self.turn_player == Faction.MARQUISE:
+            self.actions = self.marquise_actions
+        elif self.turn_player == Faction.EYRIE:
+            self.actions = self.eyrie_base_actions
 
-        self.current_action: Action = self.marquise_actions[Phase.BIRDSONG][self.sub_phase][0]
+        self.eyrie_action_sub_phase_actions: [Action] = []
+
+        # # Add Card To Decree
+        self.added_bird_card: bool = False
+        self.addable_count: int = 2
+
+        self.current_action: Action = self.actions[Phase.BIRDSONG][self.sub_phase][0]
+
+        # Setup Game
+        self.setup_board()
+
+    #####
+    # Setup Board
+    def setup_board(self):
+        self.board.areas[-1].add_token(Token.CASTLE)
+
+        for i in range(1, len(self.board.areas)):
+            self.board.areas[i].add_warrior(Warrior.MARQUIS, 1)
+
+        self.board.areas[0].add_warrior(Warrior.EYRIE, 6)
+
+        # Take Cards
+        self.shuffle_draw_pile()
+        starting_card_amount: int = 5
+        for i in range(starting_card_amount):
+            self.take_card_from_draw_pile(self.marquise)
+            self.take_card_from_draw_pile(self.eyrie)
+
+    def shuffle_draw_pile(self):
+        shuffle(self.draw_pile)
+
+    #####
 
     def init(self):
         pass
 
+    #####
+    # Update
     def update(self):
         for event in pygame.event.get():
+            if self.turn_player == Faction.MARQUISE:
+                self.actions = self.marquise_actions
+            elif self.turn_player == Faction.EYRIE:
+                self.actions = self.eyrie_base_actions
+
             if event.type == pygame.QUIT:
                 self.running = False
-
             if event.type == pygame.KEYDOWN:
                 self.move_arrow(event.key)
             # Whose turn is this?
-            if self.turn_player == Faction.MARQUISE and event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-                self.check_event_marquise(event)
-            else:
-                self.check_event_eyrie(event)
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+                if self.turn_player == Faction.MARQUISE:
+                    self.check_event_marquise(event)
+                else:
+                    self.check_event_eyrie(event)
 
         self.fps = self.calculate_fps()
 
@@ -216,8 +268,7 @@ class Game:
             pygame.K_LEFT: Vector2(-1, 0),
             pygame.K_RIGHT: Vector2(1, 0)
         }
-
-        row = len(self.marquise_actions[self.phase][self.sub_phase]) // self.action_col + 1
+        row = len(self.actions[self.phase][self.sub_phase]) // self.action_col + 1
 
         if direction in update_arrow.keys():
             new_arrow_index = self.action_arrow_pos + update_arrow[direction]
@@ -225,7 +276,7 @@ class Game:
                     and self.action_col > new_arrow_index[0] >= 0 \
                     and row > new_arrow_index[1] >= 0:
                 self.action_arrow_pos = new_arrow_index
-                self.current_action = self.marquise_actions[self.phase][self.sub_phase][int(self.action_arrow_pos.y)]
+                self.current_action = self.actions[self.phase][self.sub_phase][int(self.action_arrow_pos.y)]
 
     def check_event_marquise(self, event: pygame.event.Event):
 
@@ -285,7 +336,7 @@ class Game:
                 self.turn_player = Faction.EYRIE
                 self.phase = Phase.DAYLIGHT
                 self.sub_phase = 0
-                self.action_arrow_pos = Vector2(0,0)
+                self.action_arrow_pos = Vector2(0, 0)
         # elif phase == 'Daylight':
         # Which phase
         if self.phase == Phase.BIRDSONG:
@@ -309,15 +360,51 @@ class Game:
         # Next phase
         self.phase = Phase.DAYLIGHT
 
+    #####
+    # Eyrie
     def check_event_eyrie(self, event: pygame.event.Event):
+        self.current_action.function()
 
-        pass
+    def eyrie_birdsong_1_next(self):
+        if len(self.eyrie.cards_in_hand) == 0:
+            self.take_card_from_draw_pile(self.eyrie)
+        self.sub_phase = 1
+
+        logger.info("eyrie_birdsong_1_next")
+
+    def eyrie_add_card_to_decree(self, card: PlayingCard, decree_action: DecreeAction):
+        self.eyrie.decree[decree_action].append(card)
+        self.eyrie.cards_in_hand.remove(card)
+
+    #####
+
+    def generate_actions_from_action(self, action: Action) -> [Action]:
+        a = DecreeAction.MOVE
+        actions: [Action] = []
+        if action.name == 'Add Card To Decree':
+            if self.addable_count > 0:
+                for card in self.eyrie.cards_in_hand:
+                    for decree_action in DecreeAction:
+                        actions.append(
+                            Action('Add {} to {}'.format(card.name, decree_action), lambda: self.eyrie_add_card_to_decree(card, decree_action)))
+
+        return actions
+
+    def can_take_card_from_draw_pile(self, amount: int = 1) -> bool:
+        return len(self.draw_pile) >= amount
+
+    def take_card_from_draw_pile(self, faction_board: FactionBoard, amount: int = 1):
+        if self.can_take_card_from_draw_pile(amount):
+            faction_board.cards_in_hand.extend(self.draw_pile[0:amount])
+            self.draw_pile = self.draw_pile[amount:]
 
     def calculate_fps(self):
         if self.delta_time != 0:
             return 1.0 / self.delta_time
         else:
             return 0.0
+
+    #####
 
     def render(self):
         # Fill Black
@@ -358,7 +445,10 @@ class Game:
 
     def draw_action(self, screen: Surface):
         # Phase
-        phase = Config.FONT_MD_BOLD.render("{}".format(self.phase), True, Colors.ORANGE)
+        color = Colors.ORANGE
+        if self.turn_player == Faction.EYRIE:
+            color = Colors.BLUE
+        phase = Config.FONT_MD_BOLD.render("{} ({})".format(self.phase, self.sub_phase), True, color)
         phase_rect = phase.get_rect()
         starting_point = Vector2(0.75 * Config.SCREEN_WIDTH, 0.0 * Config.SCREEN_HEIGHT)
         shift = Vector2(10, 0.05 * Config.SCREEN_HEIGHT)
@@ -377,14 +467,14 @@ class Game:
 
     def draw_arrow(self, screen, starting_point):
         arrow = Config.FONT_1.render(">", True, Colors.WHITE)
-        shift = Vector2(10, 0.09 * Config.SCREEN_HEIGHT)
+        shift = Vector2(10, 0.13 * Config.SCREEN_HEIGHT)
         screen.blit(arrow, starting_point + shift + Vector2(self.action_arrow_pos[0] * self.action_col_width,
                                                             self.action_arrow_pos[1] * self.action_row_width))
 
     def draw_action_list(self, screen, starting_point):
-        shift = Vector2(10 + 16, 0.09 * Config.SCREEN_HEIGHT)
+        shift = Vector2(10 + 16, 0.13 * Config.SCREEN_HEIGHT)
 
-        actions = self.marquise_actions[self.phase][self.sub_phase]
+        actions = self.actions[self.phase][self.sub_phase]
 
         ind = 0
         for action in actions:

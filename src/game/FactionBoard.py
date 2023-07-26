@@ -4,6 +4,7 @@ from pygame import Rect, Color, Surface, Vector2
 from src.config import Config, Colors
 from src.game.Building import Building
 from src.game.Item import Item
+from src.game.PlayingCard import PlayingCard
 from src.utils import text_utils
 from src.utils.draw_utils import draw_key_value, draw_cards
 
@@ -15,19 +16,19 @@ class FactionBoard:
         self.name: str = name
         self.color: Color = color
         self.items: {Item: int} = {
-            Item.KEG: 5,
-            Item.BAG: 7,
-            Item.KNIFE: 4,
-            Item.BOOTS: 3,
-            Item.HAMMER: 2,
-            Item.CROSSBOW: 1,
+            Item.KEG: 0,
+            Item.BAG: 0,
+            Item.KNIFE: 0,
+            Item.BOOTS: 0,
+            Item.HAMMER: 0,
+            Item.CROSSBOW: 0,
             Item.COIN: 0,
-            Item.TORCH: 3,
+            Item.TORCH: 0,
         }
         # = {}
-        self.crafted_cards: [int] = [1, 55, 32, 2, 4, 15, 25, 35, 45, 99, 66, 22, 3, 5, 5, 2]
+        self.crafted_cards: [PlayingCard] = []
         # = []
-        self.cards_in_hand: [int] = [1, 55, 32, 2, 4, 15, 25, 35, 45, 99, 66, 22, 3, 5, 5, 2]
+        self.cards_in_hand: [PlayingCard] = []
         # = []
 
         self.reserved_warriors: int = reserved_warriors

@@ -189,24 +189,26 @@ class Area:
         )
 
         # text Marquis
-        color = Colors.ORANGE
-        text = str(self.warrior_count[Warrior.MARQUIS])
+        if self.warrior_count[Warrior.MARQUIS] > 0:
+            color = Colors.ORANGE
+            text = str(self.warrior_count[Warrior.MARQUIS])
 
-        surface = Config.FONT_SM.render(text, True, color)
-        surface_rect = surface.get_rect()
-        surface_rect.center = Rect(self.position + starting_offset + (Vector2(gap * 0, 0)), (0, 0)).center
+            surface = Config.FONT_SM.render(text, True, color)
+            surface_rect = surface.get_rect()
+            surface_rect.center = Rect(self.position + starting_offset + (Vector2(gap * 0, 0)), (0, 0)).center
 
-        screen.blit(surface, surface_rect)
+            screen.blit(surface, surface_rect)
 
         # text Eyrie
-        color = Colors.BLUE
-        text = str(self.warrior_count[Warrior.EYRIE])
+        if self.warrior_count[Warrior.EYRIE] > 0:
+            color = Colors.BLUE
+            text = str(self.warrior_count[Warrior.EYRIE])
 
-        surface = Config.FONT_SM.render(text, True, color)
-        surface_rect = surface.get_rect()
-        surface_rect.center = Rect(self.position + starting_offset + (Vector2(gap * 1, 0)), (0, 0)).center
+            surface = Config.FONT_SM.render(text, True, color)
+            surface_rect = surface.get_rect()
+            surface_rect.center = Rect(self.position + starting_offset + (Vector2(gap * 1, 0)), (0, 0)).center
 
-        screen.blit(surface, surface_rect)
+            screen.blit(surface, surface_rect)
 
     def draw_tokens(self, screen):
         size_ratio: float = 0.2

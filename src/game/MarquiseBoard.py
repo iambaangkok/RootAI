@@ -74,7 +74,7 @@ class MarquiseBoard(FactionBoard):
         img = pygame.image.load("../assets/images/marquise/{}.png".format(title))
         img = pygame.transform.scale(img, img_size)
         img.set_alpha(alpha)
-        alpha = 128
+        alpha = 64
         new_img = img.copy()
         new_img.set_alpha(alpha)
 

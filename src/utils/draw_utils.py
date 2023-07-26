@@ -2,6 +2,7 @@ from pygame import Surface, Vector2, Color
 from pygame.font import Font
 
 from src.config import Config, Colors
+from src.game.PlayingCard import PlayingCard
 from src.utils import text_utils
 
 
@@ -19,7 +20,7 @@ def draw_key_multi_value(screen: Surface, font: Font, starting_point: Vector2, s
         screen.blit(value_text, starting_point + shift + index * gap)
 
 
-def draw_cards(screen: Surface, starting_point: Vector2, color: Color, text: str, cards: list[int]):
+def draw_cards(screen: Surface, starting_point: Vector2, color: Color, text: str, cards: list[PlayingCard]):
     # Text
     title_text = Config.FONT_SM_BOLD.render(text, True, color)
     shift: Vector2 = Vector2(10, 10)
@@ -34,7 +35,7 @@ def draw_cards(screen: Surface, starting_point: Vector2, color: Color, text: str
         row = ind // 8
         col = ind % 8
 
-        card_ind = Config.FONT_SM_BOLD.render('{0:02d}'.format(key), True, (206, 215, 132))
+        card_ind = Config.FONT_SM_BOLD.render('{0:02d}'.format(key.card_id), True, (206, 215, 132))
         card_ind = text_utils.add_outline(card_ind, 2, Colors.GREY_DARK_2)
         screen.blit(card_ind, (starting_point.x + (block_size.x + 10) * col + 10 + 150, starting_point.y + (block_size.x + 5) * row))
         ind = ind + 1
