@@ -2,8 +2,8 @@ import logging
 
 from src.game.Game import Game
 
-logger = logging.getLogger('logger')
-logger.setLevel(logging.DEBUG)
+logging.basicConfig(level=logging.NOTSET)
+LOGGER = logging.getLogger('LOGGER')
 
 game = Game()
 game.run()

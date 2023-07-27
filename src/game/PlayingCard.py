@@ -50,11 +50,11 @@ class PlayingCardName(StrEnum):
 
 
 class PlayingCardPhase(StrEnum):
-    IMMEDIATE = "immediate"
-    BATTLE = "battle"
-    BIRDSONG = "birdsong"
-    DAYLIGHT = "daylight"
-    EVENING = "evening"
+    IMMEDIATE = "IMMEDIATE"
+    BATTLE = "BATTLE"
+    BIRDSONG = "BIRDSONG"
+    DAYLIGHT = "DAYLIGHT"
+    EVENING = "EVENING"
 
 
 class PlayingCard:

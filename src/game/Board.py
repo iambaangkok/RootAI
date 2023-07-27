@@ -1,3 +1,5 @@
+import math
+
 import pygame
 from pygame import Rect, Color, Surface
 
@@ -24,12 +26,12 @@ class Board:
     rect: Rect = Rect(((Config.SCREEN_WIDTH - dimension) / 2, (Config.SCREEN_HEIGHT - dimension) / 2 - 50),
                       (dimension, dimension))
 
-    def __init__(self, areas: [Area]):
+    def __init__(self, areas: list[Area]):
         self.name: str = "Forest"
         self.color: Color = Colors.GREEN
-        self.areas: [Area] = areas
-        self.paths: [tuple[int, int]] = []
-        self.faction_points: [int] = [0, 0, 0, 0]
+        self.areas: list[Area] = areas
+        self.paths: list[tuple[int, int]] = []
+        self.faction_points: list[int] = [0, 0, 0, 0]  # TODO: refactor this into {Faction: int}
 
     def add_path(self, area_1: int, area_2: int):
         if ((area_1, area_2) in self.paths) or \
@@ -41,6 +43,23 @@ class Board:
         self.areas[area_1].connected_clearings.append(self.areas[area_2])
         self.areas[area_2].connected_clearings.append(self.areas[area_1])
 
+    def get_min_token_areas(self) -> list[Area]:
+        min_token_areas: list[Area] = []
+        min_token = math.inf
+        for area in self.areas:
+            if min_token > area.sum_all_tokens():
+                min_token = area.sum_all_tokens()
+
+        return [area for area in self.areas if area.sum_all_tokens() == min_token]
+
+
+
+
+    def item_available(self, item: Item) -> bool:  # TODO: refactor available items and implement this
+        return True
+
+    #####
+    # Render
     def draw(self, screen: Surface):
         pygame.draw.rect(screen, self.color, Board.rect, width=1)
 

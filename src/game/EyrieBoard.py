@@ -5,6 +5,7 @@ from pygame import Color, Vector2, Surface
 
 from src.config import Config, Colors
 from src.game.FactionBoard import FactionBoard
+from src.game.PlayingCard import PlayingCard
 from src.game.Suit import Suit
 from src.utils import text_utils
 from src.utils.draw_utils import draw_key_value, draw_key_multi_value
@@ -14,23 +15,23 @@ ROOST_REWARD_CARD = [0, 0, 1, 1, 1, 2, 2]
 
 
 class DecreeAction(StrEnum):
-    RECRUIT = "recruit"
-    MOVE = "move"
-    BATTLE = "battle"
-    BUILD = "build"
+    RECRUIT = "RECRUIT"
+    MOVE = "MOVE"
+    BATTLE = "BATTLE"
+    BUILD = "BUILD"
 
 
 class EyrieLeader(StrEnum):
-    COMMANDER = "commander"
-    DESPOT = "despot"
-    BUILDER = "builder"
-    CHARISMATIC = "charismatic"
+    COMMANDER = "COMMANDER"
+    DESPOT = "DESPOT"
+    BUILDER = "BUILDER"
+    CHARISMATIC = "CHARISMATIC"
 
 
 class LeaderStatus(StrEnum):
-    ACTIVE = "active"
-    INACTIVE = "inactive"
-    USED = "used"
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    USED = "USED"
 
 
 class EyrieBoard(FactionBoard):
@@ -43,14 +44,14 @@ class EyrieBoard(FactionBoard):
             EyrieLeader.BUILDER: LeaderStatus.INACTIVE,
             EyrieLeader.CHARISMATIC: LeaderStatus.ACTIVE
         }
-        self.decree: {DecreeAction: [int]} = {
+        self.decree: {DecreeAction: list[int]} = {
             DecreeAction.RECRUIT: [],
             DecreeAction.MOVE: [],
             DecreeAction.BATTLE: [],
             DecreeAction.BUILD: []
         }
 
-    def get_active_leader(self):
+    def get_active_leader(self) -> EyrieLeader:
         for leader in self.leaders.keys():
             if self.leaders[leader] == LeaderStatus.ACTIVE:
                 return leader

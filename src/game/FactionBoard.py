@@ -25,13 +25,13 @@ class FactionBoard:
             Item.COIN: 0,
             Item.TORCH: 0,
         }
-        # = {}
-        self.crafted_cards: [PlayingCard] = []
-        # = []
-        self.cards_in_hand: [PlayingCard] = []
-        # = []
+        self.crafted_cards: list[PlayingCard] = []
+        self.cards_in_hand: list[PlayingCard] = []
 
         self.reserved_warriors: int = reserved_warriors
+
+        self.victory_point = 0
+
         self.starting_point: Vector2 = starting_point
 
         self.text_surface: Surface = Config.FONT_MD_BOLD.render(name, True, color)
