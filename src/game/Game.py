@@ -356,7 +356,7 @@ class Game:
         # Next phase
         self.phase = Phase.DAYLIGHT
 
-    def get_workshop_count_by_suit(self) -> {Suit: int}:  # TODO: implement this
+    def get_workshop_count_by_suit(self) -> {Suit: int}:  # TODO: this
         return {}
 
     #####
@@ -479,9 +479,12 @@ class Game:
         self.prompt = "Resolve the Decree"
         self.set_actions()
 
+    # TODO: eyrie resolve decree
+    # TODO: eyrie turmoil
+
     #####
 
-    def add_warrior(self, faction: Faction, area: Area, amount: int = 1):  # TODO: implement marquise's logic
+    def add_warrior(self, faction: Faction, area: Area, amount: int = 1):
         faction_board = self.marquise
         warrior_type = Warrior.MARQUIS
         if faction == Faction.EYRIE:
