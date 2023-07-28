@@ -1,4 +1,5 @@
 import logging
+from copy import copy
 from enum import StrEnum
 from random import shuffle
 
@@ -129,7 +130,7 @@ class Game:
         areas_radius = Board.rect.width * Area.size_ratio
         areas: list[Area] = [
             Area(Vector2(Board.rect.x + Board.rect.width * 0.12, Board.rect.y + Board.rect.height * (0.20 - areas_offset_y)), areas_radius,
-                 Suit.FOX, [Building.ROOST]),
+                 Suit.FOX, [Building.EMPTY]),
             Area(Vector2(Board.rect.x + Board.rect.width * 0.55, Board.rect.y + Board.rect.height * (0.15 - areas_offset_y)), areas_radius,
                  Suit.RABBIT, [Building.EMPTY, Building.EMPTY]),
             Area(Vector2(Board.rect.x + Board.rect.width * 0.88, Board.rect.y + Board.rect.height * (0.25 - areas_offset_y)), areas_radius,
@@ -216,6 +217,7 @@ class Game:
         for i in range(1, len(self.board.areas)):
             self.board.areas[i].add_warrior(Warrior.MARQUIS, 1)
 
+        self.build_roost(self.board.areas[0])
         self.board.areas[0].add_warrior(Warrior.EYRIE, 6)
 
         # Take Cards
@@ -434,7 +436,7 @@ class Game:
 
     def generate_actions_place_roost_and_3_warriors(self) -> list[Action]:
         actions: [Action] = []
-        min_token_areas = self.board.get_min_token_areas()
+        min_token_areas = [area for area in self.board.get_min_token_areas() if Building.EMPTY in area.buildings]
         for area in min_token_areas:
             actions.append(Action("Area {}".format(area.area_index), lambda: self.place_roost_and_3_warriors(area)))
 
@@ -445,8 +447,11 @@ class Game:
         self.build_roost(area)
 
     def build_roost(self, area: Area):
+        LOGGER.info("{}:{}:{}:{} built {} at area#{}".format(
+            self.turn_player, self.phase, self.sub_phase, Faction.EYRIE, Building.ROOST, area.buildings.index(Building.EMPTY)))
+
         self.eyrie.roost_tracker += 1
-        area.buildings.append(Building.ROOST)
+        area.buildings[area.buildings.index(Building.EMPTY)] = Building.ROOST
 
     def eyrie_birdsong_3_next(self):
         LOGGER.info("{}:{}:{}:next".format(self.turn_player, self.phase, self.sub_phase))
@@ -493,7 +498,6 @@ class Game:
 
         faction_board.reserved_warriors -= amount
         area.add_warrior(warrior_type, amount)
-
 
     def generate_actions_craft_cards(self, faction: Faction):  # TODO: add marquise's craft cards action generation
         actions: [Action] = []
@@ -575,7 +579,7 @@ class Game:
         if self.can_take_card_from_draw_pile(amount):
             faction_board.cards_in_hand.extend(self.draw_pile[0:amount])
             self.draw_pile = self.draw_pile[amount:]
-            LOGGER.info("{}:{}:{}:{} drawn {} card(s)".format(self.turn_player, self.phase, self.sub_phase, faction_board.name, amount))
+            LOGGER.info("{}:{}:{}:{} drawn {} card(s)".format(self.turn_player, self.phase, self.sub_phase, faction, amount))
 
     def discard_card(self, discard_from: list[PlayingCard], card: PlayingCard):
         discard_from.remove(card)
@@ -657,12 +661,12 @@ class Game:
 
     def draw_arrow(self, screen, starting_point):
         arrow = Config.FONT_1.render(">", True, Colors.WHITE)
-        shift = Vector2(10, 0.13 * Config.SCREEN_HEIGHT)
+        shift = Vector2(10, 0.15 * Config.SCREEN_HEIGHT)
         screen.blit(arrow, starting_point + shift + Vector2(self.action_arrow_pos[0] * self.action_col_width,
                                                             self.action_arrow_pos[1] * self.action_row_width))
 
     def draw_action_list(self, screen, starting_point):
-        shift = Vector2(10 + 16, 0.13 * Config.SCREEN_HEIGHT)
+        shift = Vector2(10 + 16, 0.15 * Config.SCREEN_HEIGHT)
 
         ind = 0
         for action in self.actions:
