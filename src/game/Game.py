@@ -2,6 +2,7 @@ import logging
 from copy import copy
 from enum import StrEnum
 from random import shuffle
+from typing import List
 
 import pygame
 from pygame import Vector2, Surface, Rect
@@ -38,15 +39,8 @@ class Action:
         self.name: str = name
         self.function: any = function
 
-
-MARQUISE_ACTIONS = {
-    Phase.BIRDSONG: [['Next']],
-    Phase.DAYLIGHT: [
-        ['Craft', 'Next'],
-        ['Battle', 'March', 'Recruit', 'Build', 'Overwork', 'Next']
-    ],
-    Phase.EVENING: [['End']]
-}
+    def get(self):
+        return self.name, self.function
 
 
 class Game:
@@ -177,13 +171,16 @@ class Game:
         self.action_col = 1
 
         # Actions
-        self.marquise_actions: {Phase: [[Action]]} = {
+        self.marquise_base_actions: {Phase: [[Action]]} = {
             Phase.BIRDSONG: [[Action('Next', perform(self.marquise_birdsong_next))]],
             Phase.DAYLIGHT: [
-                [Action('Craft', perform(self.generate_actions_craft_cards(Faction.MARQUISE))), Action('Next', perform(self.marquise_daylight_next))],
-                [Action('Battle'), Action('March'), Action('Recruit'), Action('Build'), Action('Overwork'), Action('Next')]
+                [Action('Craft', perform(self.marquise_daylight_craft)),
+                 Action('Next', perform(self.marquise_daylight_1_next))],
+                [Action('Battle'), Action('March', perform(self.marquise_daylight_march)), Action('Recruit'), Action('Build'),
+                 Action('Overwork'),
+                 Action('Next', perform(self.marquise_daylight_2_next))]
             ],
-            Phase.EVENING: [[Action('Next')]]
+            Phase.EVENING: [[Action('Next', perform(self.marquise_evening_next))]]
         }
         self.eyrie_base_actions: {Phase: [[Action]]} = {
             Phase.BIRDSONG: [
@@ -281,7 +278,6 @@ class Game:
         self.current_action.function()
 
     def other(self):
-        action = MARQUISE_ACTIONS[self.phase][self.sub_phase][int(self.action_arrow_pos.x) * self.action_col + int(self.action_arrow_pos.y)]
         move_available_clearing = []
         battle_available_clearing = []
         build_available_clearing = []
@@ -305,53 +301,6 @@ class Game:
         # print(move_available_clearing)
         # print(battle_available_clearing)
         # print(build_available_clearing)
-        # which phase
-
-        if self.phase == Phase.BIRDSONG:
-            # Place one wood at each sawmill
-            for area in self.board.areas:
-                area.token_count[Token.WOOD] += area.buildings.count(Building.SAWMILL)
-            if action == 'Next':
-                self.phase = Phase.DAYLIGHT
-                self.sub_phase = 0
-                self.action_arrow_pos = Vector2(0, 0)
-        elif self.phase == Phase.DAYLIGHT:
-            if self.sub_phase == 0:
-                if action == 'Next':
-                    self.sub_phase = 1
-                    self.action_arrow_pos = Vector2(0, 0)
-            elif self.sub_phase == 1:
-                # if action == 'march':
-                # elif action == 'battle':
-                # elif action == 'recruit':
-                # elif action == 'build':
-                # elif action == 'overwork':
-                # else
-                if action == 'Next':
-                    self.phase = Phase.EVENING
-                    self.sub_phase = 0
-                    self.action_arrow_pos = Vector2(0, 0)
-        else:
-            # Draw card
-            if action == 'End':
-                self.turn_player = Faction.EYRIE
-                self.phase = Phase.DAYLIGHT
-                self.sub_phase = 0
-                self.action_arrow_pos = Vector2(0, 0)
-        # elif phase == 'Daylight':
-        # Which phase
-        # if self.phase == Phase.BIRDSONG:
-        #     if event.type == pygame.K_RETURN:
-        #         self.current_action.function()
-        #
-        # elif self.phase == Phase.DAYLIGHT:
-        #     pass
-        # daylight
-        # move
-        # from where
-        # to where
-        # how many
-
         pass
 
     def marquise_birdsong_next(self):
@@ -363,12 +312,12 @@ class Game:
         craftable_cards = self.generate_actions_craft_cards(Faction.MARQUISE)
 
         if not craftable_cards:
-            self.set_actions([Action('Next', perform(self.marquise_daylight_next))])
+            self.set_actions([Action('Next', perform(self.marquise_daylight_1_next))])
         else:
             self.set_actions()
 
         self.phase = Phase.DAYLIGHT
-        self.prompt = "Select Actions"
+        self.prompt = "Want to craft something, squire?"
 
     def get_workshop_count_by_suit(self) -> {Suit: int}:
         workshop_count: {Suit: int} = {
@@ -385,13 +334,30 @@ class Game:
         return workshop_count
 
     def marquise_daylight_craft(self):
-        self.prompt = "Select Card To Craft"
-        self.set_actions(self.generate_actions_craft_cards(Faction.MARQUISE) + [Action('Next', perform(self.marquise_daylight_next))])
+        self.prompt = "What cards do you want to craft?"
+        self.set_actions(self.generate_actions_craft_cards(Faction.MARQUISE) + [Action('Next', perform(self.marquise_daylight_1_next))])
 
-    def marquise_daylight_next(self):
-        self.prompt = "Select Actions (Remaining Action: 3)"
+    def marquise_daylight_1_next(self):
+        remaining_action = 3
+        self.prompt = "Select Actions (Remaining Action: {})".format(remaining_action)
         self.sub_phase = 1
         self.set_actions()
+
+    def marquise_daylight_march(self):
+        self.prompt = "How many warriors you want to march?"
+        self.set_actions(self.generate_actions_move(Faction.MARQUISE) + [Action('Next', perform(self.marquise_daylight_1_next))])
+
+    def marquise_daylight_2_next(self):
+        self.prompt = "Draw one card, plus one card per draw bonus"
+        self.phase = Phase.EVENING
+        self.sub_phase = 0
+        self.set_actions()
+
+    def marquise_evening_next(self):
+        self.phase = Phase.DAYLIGHT
+        self.turn_player = Faction.EYRIE
+        self.set_actions()
+        pass
 
     #####
     # Eyrie
@@ -520,6 +486,7 @@ class Game:
     # TODO: eyrie turmoil
 
     #####
+    # Neutral
 
     def add_warrior(self, faction: Faction, area: Area, amount: int = 1):
         faction_board = self.marquise
@@ -552,8 +519,8 @@ class Game:
                 self.marquise.items[card.reward_item] += 1
                 self.discard_card(self.marquise.cards_in_hand, card)
 
-            self.eyrie.cards_in_hand.remove(card)
-            self.eyrie.crafted_cards.append(card)
+            self.marquise.cards_in_hand.remove(card)
+            self.marquise.crafted_cards.append(card)
         elif faction == Faction.EYRIE:
             LOGGER.info("{}:{}:{}:Crafted {} card".format(self.turn_player, self.phase, self.sub_phase, card.name))
 
@@ -603,7 +570,7 @@ class Game:
             self.actions = actions
         else:
             if self.turn_player == Faction.MARQUISE:
-                self.actions = self.marquise_actions[self.phase][self.sub_phase]
+                self.actions = self.marquise_base_actions[self.phase][self.sub_phase]
             elif self.turn_player == Faction.EYRIE:
                 self.actions = self.eyrie_base_actions[self.phase][self.sub_phase]
         self.reset_arrow()
@@ -625,6 +592,52 @@ class Game:
     def discard_card(self, discard_from: list[PlayingCard], card: PlayingCard):
         discard_from.remove(card)
         self.discard_pile.append(card)
+
+    def generate_actions_move(self, faction) -> [Action]:
+        movable_clearings = self.get_movable_clearing(faction)
+        actions = []
+
+        if faction == Faction.MARQUISE:
+            for movable_clearing in movable_clearings:
+                actions.append(
+                    Action("Move from {} to {}".format(movable_clearing[0], movable_clearing[1]),
+                           perform(self.select_warriors, faction, movable_clearing)))
+
+            return actions
+        elif faction == Faction.EYRIE:  # Eyrie logic
+            pass
+
+    def select_warriors(self, faction, movable_clearing):
+        actions = []
+        src = movable_clearing[0]
+        dest = movable_clearing[1]
+
+        if faction == Faction.MARQUISE:
+            for num_of_warriors in range(1, movable_clearing[2] + 1):
+                actions.append(Action("{}".format(num_of_warriors), perform(self.move_warriors, faction, src, dest, num_of_warriors)))
+            self.set_actions(actions)
+        elif faction == Faction.EYRIE:
+            pass
+
+    def move_warriors(self, faction, src, dest, num):  # TODO
+        self.set_actions([Action('Next', perform(self.marquise_daylight_2_next))])
+        pass
+
+    def get_movable_clearing(self, faction: Faction):
+        movable_clearings = []
+
+        if faction == Faction.MARQUISE:
+            for area in self.board.areas:
+                if area.ruler() == faction:  # ruler() return Warrior, Maybe fix
+                    movable_clearings += [(area, connected_area, area.warrior_count[Warrior.MARQUIS]) for connected_area in area.connected_clearings]
+                else:
+                    for connected_area in area.connected_clearings:
+                        if connected_area.ruler() == Warrior.MARQUIS:
+                            movable_clearings.append((area, connected_area, area.warrior_count[Warrior.MARQUIS]))
+        elif faction == Faction.EYRIE:
+            pass
+
+        return movable_clearings
 
     def calculate_fps(self):
         if self.delta_time != 0:
