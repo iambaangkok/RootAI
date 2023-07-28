@@ -137,7 +137,7 @@ class EyrieBoard(FactionBoard):
                 color = Colors.RABBIT
 
             for j, decree_action in enumerate(self.decree.keys()):
-                title_text = Config.FONT_1.render(str(len(self.decree[decree_action])), True, color)
+                title_text = Config.FONT_1.render(str(len([x for x in self.decree[decree_action] if x.suit == suit])), True, color)
                 shift: Vector2 = Vector2(j * width + offset_x, (i+2) * offset_y)
 
                 screen.blit(title_text, starting_point + shift)
