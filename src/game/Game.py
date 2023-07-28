@@ -277,7 +277,9 @@ class Game:
     #####
     # MARQUISE
     def check_event_marquise(self, event: pygame.event.Event):
+        self.current_action.function()
 
+    def other(self):
         action = MARQUISE_ACTIONS[self.phase][self.sub_phase][int(self.action_arrow_pos.x) * self.action_col + int(self.action_arrow_pos.y)]
         move_available_clearing = []
         battle_available_clearing = []
@@ -337,12 +339,12 @@ class Game:
                 self.action_arrow_pos = Vector2(0, 0)
         # elif phase == 'Daylight':
         # Which phase
-        if self.phase == Phase.BIRDSONG:
-            if event.type == pygame.K_RETURN:
-                self.current_action.function()
-
-        elif self.phase == Phase.DAYLIGHT:
-            pass
+        # if self.phase == Phase.BIRDSONG:
+        #     if event.type == pygame.K_RETURN:
+        #         self.current_action.function()
+        #
+        # elif self.phase == Phase.DAYLIGHT:
+        #     pass
         # daylight
         # move
         # from where
@@ -358,8 +360,19 @@ class Game:
         # Next phase
         self.phase = Phase.DAYLIGHT
 
-    def get_workshop_count_by_suit(self) -> {Suit: int}:  # TODO: this
-        return {}
+    def get_workshop_count_by_suit(self) -> {Suit: int}:
+        workshop_count: {Suit: int} = {
+            Suit.BIRD: 0,
+            Suit.FOX: 0,
+            Suit.RABBIT: 0,
+            Suit.MOUSE: 0
+        }
+
+        for clearing in self.board.areas:
+            if Building.WORKSHOP in clearing.buildings:
+                workshop_count[clearing.suit] += clearing.buildings.count(Building.WORKSHOP)
+
+        return workshop_count
 
     #####
     # Eyrie
@@ -370,7 +383,7 @@ class Game:
         LOGGER.info("{}:{}:{}:next".format(self.turn_player, self.phase, self.sub_phase))
 
         if len(self.eyrie.cards_in_hand) == 0:
-            self.take_card_from_draw_pile(self.eyrie)
+            self.take_card_from_draw_pile(Faction.EYRIE)
 
         self.sub_phase = 1
 
@@ -499,21 +512,29 @@ class Game:
         faction_board.reserved_warriors -= amount
         area.add_warrior(warrior_type, amount)
 
-    def generate_actions_craft_cards(self, faction: Faction):  # TODO: add marquise's craft cards action generation
+    def generate_actions_craft_cards(self, faction: Faction):
         actions: [Action] = []
         craftable_cards = self.get_craftable_cards(faction)
 
         if faction == Faction.MARQUISE:
-            pass
+            for card in craftable_cards:
+                actions.append(Action("Craft {}".format(card.name), lambda: self.craft_card(faction, card)))
         elif faction == Faction.EYRIE:
             for card in craftable_cards:
                 actions.append(Action("Craft {}".format(card.name), lambda: self.craft_card(faction, card)))
 
         return actions
 
-    def craft_card(self, faction: Faction, card: PlayingCard):  # TODO: add marquise's logic
+    def craft_card(self, faction: Faction, card: PlayingCard):
         if faction == Faction.MARQUISE:
-            pass
+            LOGGER.info("{}:{}:{}:Crafted {} card".format(self.turn_player, self.phase, self.sub_phase, card.name))
+            if card.phase == PlayingCardPhase.IMMEDIATE:
+                self.board.faction_points[0] += card.reward_vp
+                self.marquise.items[card.reward_item] += 1
+                self.discard_card(self.marquise.cards_in_hand, card)
+
+            self.eyrie.cards_in_hand.remove(card)
+            self.eyrie.crafted_cards.append(card)
         elif faction == Faction.EYRIE:
             LOGGER.info("{}:{}:{}:Crafted {} card".format(self.turn_player, self.phase, self.sub_phase, card.name))
 
@@ -532,13 +553,14 @@ class Game:
                 self.eyrie.cards_in_hand.remove(card)
                 self.eyrie.crafted_cards.append(card)
 
-    def get_craftable_cards(self, faction: Faction) -> list[PlayingCard]:  # TODO: add marquise's logic
+    def get_craftable_cards(self, faction: Faction) -> list[PlayingCard]:
         craftable_cards: list[PlayingCard] = []
 
         cards_in_hand: list[PlayingCard] = []
         crafting_station: {Suit: int} = {}
         if faction == Faction.MARQUISE:
-            pass  # TODO
+            cards_in_hand = self.marquise.cards_in_hand
+            crafting_station = self.get_workshop_count_by_suit()
         elif faction == Faction.EYRIE:
             cards_in_hand = self.eyrie.cards_in_hand
             crafting_station = self.get_roost_count_by_suit()
@@ -557,12 +579,12 @@ class Game:
     def select_card(self, card: PlayingCard):
         self.selected_card = card
 
-    def set_actions(self, actions: list[Action] = None):  # TODO: add marquise
+    def set_actions(self, actions: list[Action] = None):
         if actions is not None:
             self.actions = actions
         else:
             if self.turn_player == Faction.MARQUISE:
-                pass  # TODO: here
+                self.actions = self.marquise_actions[self.phase][self.sub_phase]
             elif self.turn_player == Faction.EYRIE:
                 self.actions = self.eyrie_base_actions[self.phase][self.sub_phase]
         self.reset_arrow()
@@ -689,3 +711,5 @@ class Game:
             self.delta_time = self.clock.tick(Config.FRAME_RATE) / 1000
 
         pygame.quit()
+
+
