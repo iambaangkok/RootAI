@@ -21,6 +21,7 @@ from src.game.Suit import Suit
 from src.game.Token import Token
 from src.game.Warrior import Warrior
 from src.utils.draw_utils import draw_text_in_rect
+from src.utils.utils import perform
 
 LOGGER = logging.getLogger('logger')
 
@@ -186,11 +187,11 @@ class Game:
         }
         self.eyrie_base_actions: {Phase: [[Action]]} = {
             Phase.BIRDSONG: [
-                [Action('Next', lambda: self.eyrie_birdsong_1_next())],
+                [Action('Next', perform(self.eyrie_birdsong_1_next))],
                 [],
-                [Action('Next', lambda: self.eyrie_birdsong_3_next())]],
+                [Action('Next', perform(self.eyrie_birdsong_3_next))]],
             Phase.DAYLIGHT: [
-                [Action('Next', lambda: self.eyrie_daylight_1_next())],
+                [Action('Next', perform(self.eyrie_daylight_1_next))],
                 [Action('Resolve the Decree'), Action('Next')]
             ],
             Phase.EVENING: [[Action('Next')]]
@@ -396,7 +397,7 @@ class Game:
             for card in self.eyrie.cards_in_hand:
                 if self.added_bird_card and card.suit == Suit.BIRD:
                     continue
-                actions.append(Action('{} ({})'.format(card.name, card.suit), lambda: self.select_card_to_add_to_decree_one(card)))
+                actions.append(Action('{} ({})'.format(card.name, card.suit), perform(self.select_card_to_add_to_decree_one, card)))
 
         return actions
 
@@ -409,7 +410,7 @@ class Game:
     def generate_actions_add_to_decree(self) -> list[Action]:
         actions: [Action] = []
         for decree_action in DecreeAction:
-            actions.append(Action("{}".format(decree_action), lambda: self.select_decree_to_add_card_to(decree_action)))
+            actions.append(Action("{}".format(decree_action), perform(self.select_decree_to_add_card_to, decree_action)))
 
         return actions
 
@@ -427,7 +428,7 @@ class Game:
         if self.addable_count != 0:
             self.prompt = "Select ANOTHER card to add to the Decree"
             self.set_actions(self.generate_actions_add_card_to_decree() + [
-                Action("Skip", lambda: self.eyrie_birdsong_2_card_2_skip())
+                Action("Skip", perform(self.eyrie_birdsong_2_card_2_skip))
             ])
         else:
             self.eyrie_birdsong_2_to_sub_phase_3()
@@ -451,7 +452,7 @@ class Game:
         actions: [Action] = []
         min_token_areas = [area for area in self.board.get_min_token_areas() if Building.EMPTY in area.buildings]
         for area in min_token_areas:
-            actions.append(Action("Area {}".format(area.area_index), lambda: self.place_roost_and_3_warriors(area)))
+            actions.append(Action("Area {}".format(area.area_index), perform(self.place_roost_and_3_warriors, area)))
 
         return actions
 
@@ -518,10 +519,10 @@ class Game:
 
         if faction == Faction.MARQUISE:
             for card in craftable_cards:
-                actions.append(Action("Craft {}".format(card.name), lambda: self.craft_card(faction, card)))
+                actions.append(Action("Craft {}".format(card.name), perform(self.craft_card, faction, card)))
         elif faction == Faction.EYRIE:
             for card in craftable_cards:
-                actions.append(Action("Craft {}".format(card.name), lambda: self.craft_card(faction, card)))
+                actions.append(Action("Craft {}".format(card.name), perform(self.craft_card, faction, card)))
 
         return actions
 
