@@ -61,7 +61,7 @@ class Game:
 
         # Game Data
         self.turn_count: int = 0
-        self.turn_player: Faction = Faction.EYRIE
+        self.turn_player: Faction = Faction.MARQUISE
         self.phase: Phase = Phase.BIRDSONG
         self.sub_phase = 0
         self.is_in_action_sub_phase: bool = False
@@ -178,9 +178,9 @@ class Game:
 
         # Actions
         self.marquise_actions: {Phase: [[Action]]} = {
-            Phase.BIRDSONG: [[Action('Next', self.marquise_birdsong_next)]],
+            Phase.BIRDSONG: [[Action('Next', perform(self.marquise_birdsong_next))]],
             Phase.DAYLIGHT: [
-                [Action('Craft'), Action('Next')],
+                [Action('Craft', perform(self.generate_actions_craft_cards(Faction.MARQUISE))), Action('Next', perform(self.marquise_daylight_next))],
                 [Action('Battle'), Action('March'), Action('Recruit'), Action('Build'), Action('Overwork'), Action('Next')]
             ],
             Phase.EVENING: [[Action('Next')]]
@@ -359,7 +359,16 @@ class Game:
         for area in self.board.areas:
             area.token_count[Token.WOOD] += area.buildings.count(Building.SAWMILL)
         # Next phase
+
+        craftable_cards = self.generate_actions_craft_cards(Faction.MARQUISE)
+
+        if not craftable_cards:
+            self.set_actions([Action('Next', perform(self.marquise_daylight_next))])
+        else:
+            self.set_actions()
+
         self.phase = Phase.DAYLIGHT
+        self.prompt = "Select Actions"
 
     def get_workshop_count_by_suit(self) -> {Suit: int}:
         workshop_count: {Suit: int} = {
@@ -374,6 +383,15 @@ class Game:
                 workshop_count[clearing.suit] += clearing.buildings.count(Building.WORKSHOP)
 
         return workshop_count
+
+    def marquise_daylight_craft(self):
+        self.prompt = "Select Card To Craft"
+        self.set_actions(self.generate_actions_craft_cards(Faction.MARQUISE) + [Action('Next', perform(self.marquise_daylight_next))])
+
+    def marquise_daylight_next(self):
+        self.prompt = "Select Actions (Remaining Action: 3)"
+        self.sub_phase = 1
+        self.set_actions()
 
     #####
     # Eyrie
@@ -712,5 +730,3 @@ class Game:
             self.delta_time = self.clock.tick(Config.FRAME_RATE) / 1000
 
         pygame.quit()
-
-
