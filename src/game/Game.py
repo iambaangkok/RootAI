@@ -55,7 +55,7 @@ class Game:
 
         # Game Data
         self.turn_count: int = 0
-        self.turn_player: Faction = Faction.EYRIE
+        self.turn_player: Faction = Faction.MARQUISE
         self.phase: Phase = Phase.BIRDSONG
         self.sub_phase = 0
         self.is_in_action_sub_phase: bool = False
@@ -278,32 +278,6 @@ class Game:
     def check_event_marquise(self, event: pygame.event.Event):
         self.current_action.function()
 
-    def other(self):
-        move_available_clearing = []
-        battle_available_clearing = []
-        build_available_clearing = []
-        overwork_available = []
-
-        for area in self.board.areas:
-            if area.ruler() == Warrior.MARQUIS:
-                move_available_clearing.append([(area, connected_area) for connected_area in area.connected_clearings])
-                build_available_clearing.append(area)
-            else:
-                for connected_area in area.connected_clearings:
-                    if connected_area.ruler() == Warrior.MARQUIS:
-                        move_available_clearing.append((area, connected_area))
-
-            if area.warrior_count[Warrior.MARQUIS] > 0 and area.warrior_count[Warrior.EYRIE] > 0:
-                battle_available_clearing.append(area)
-
-            # if area.buildings.count(Building.SAWMILL) > 0 and len(list(filter(lambda x: (x.suit == area.suit), self.marquise.cards_in_hand))) > 0:
-            #     overwork_available.append([(area, card) for card in list(filter(lambda x: (x.suit == area.suit), self.marquise.cards_in_hand))])
-
-        # print(move_available_clearing)
-        # print(battle_available_clearing)
-        # print(build_available_clearing)
-        pass
-
     def marquise_birdsong_next(self):
         # Place one wood at each sawmill
         for area in self.board.areas:
@@ -314,12 +288,53 @@ class Game:
         self.phase = Phase.DAYLIGHT
         self.prompt = "Want to craft something, squire?"
 
-        self.board.gain_vp(Faction.MARQUISE, 20)
-
         if not craftable_cards:
             self.set_actions([Action('Nope', perform(self.marquise_daylight_1_next))])
         else:
             self.set_actions()
+
+    def marquise_daylight_craft(self):
+        self.prompt = "What cards do you want to craft?"
+        self.set_actions(self.generate_actions_craft_cards(Faction.MARQUISE) + [Action('Next', perform(self.marquise_daylight_1_next))])
+
+    def marquise_daylight_1_next(self):
+        remaining_action = 3
+        self.prompt = "Select Actions (Remaining Action: {})".format(remaining_action)
+        self.sub_phase = 1
+
+        actions = []
+
+        if self.marquise_march_check():
+            actions.append(Action('March', perform(self.marquise_daylight_march)))
+        if self.marquise_build_check():
+            actions.append(Action('Build', perform(self.marquise_daylight_build)))
+        self.set_actions(actions)
+
+    def marquise_march_check(self):
+        return len(self.get_available_src_clearing(Faction.MARQUISE)) > 0
+
+    def marquise_build_check(self):
+        return len(self.get_buildable_clearing(Faction.MARQUISE)) > 0
+
+    def marquise_daylight_march(self):
+        self.prompt = "March? It's July, bro. Choose where to move from."
+        self.set_actions(self.generate_actions_select_src_clearing(Faction.MARQUISE))
+
+    def marquise_daylight_build(self):
+        self.prompt = "Poon prom kor, sud lor prom yang"
+        self.set_actions(self.generate_actions_select_buildable_clearing(Faction.MARQUISE))
+
+    def marquise_daylight_2_next(self):
+        self.prompt = "Draw one card, plus one card per draw bonus"
+        self.phase = Phase.EVENING
+        self.sub_phase = 0
+        self.set_actions()
+
+    def marquise_evening_next(self):
+        self.phase = Phase.DAYLIGHT
+        self.turn_player = Faction.EYRIE
+        self.set_actions()
+        pass
 
     def get_workshop_count_by_suit(self) -> {Suit: int}:
         workshop_count: {Suit: int} = {
@@ -335,31 +350,31 @@ class Game:
 
         return workshop_count
 
-    def marquise_daylight_craft(self):
-        self.prompt = "What cards do you want to craft?"
-        self.set_actions(self.generate_actions_craft_cards(Faction.MARQUISE) + [Action('Next', perform(self.marquise_daylight_1_next))])
+    def count_woods_from_clearing(self, clearing):
+        return self.dfs_marquise(clearing, [])
 
-    def marquise_daylight_1_next(self):
-        remaining_action = 3
-        self.prompt = "Select Actions (Remaining Action: {})".format(remaining_action)
-        self.sub_phase = 1
-        self.set_actions()
+    def dfs_marquise(self, clearing: Area, visited):
+        if visited.count(clearing) > 0:
+            return 0
+        if clearing.ruler() != Warrior.MARQUIS:
+            return 0
 
-    def marquise_daylight_march(self):
-        self.prompt = "March? It's July, bro. Choose where to move from."
-        self.set_actions(self.generate_actions_move_src(Faction.MARQUISE))
+        visited.append(clearing)
+        wood = clearing.token_count[Token.WOOD]
+        for connected_clearing in clearing.connected_clearings:
+            wood += self.dfs_marquise(connected_clearing, visited)
+        return wood
 
-    def marquise_daylight_2_next(self):
-        self.prompt = "Draw one card, plus one card per draw bonus"
-        self.phase = Phase.EVENING
-        self.sub_phase = 0
-        self.set_actions()
+    def marquise_get_min_cost_building(self):
+        cost = self.marquise.building_cost
+        building_tracker = self.marquise.building_trackers
 
-    def marquise_evening_next(self):
-        self.phase = Phase.DAYLIGHT
-        self.turn_player = Faction.EYRIE
-        self.set_actions()
-        pass
+        min_cost = float('inf')
+
+        for building, tracker in building_tracker.items():
+            min_cost = min(cost[tracker], min_cost)
+
+        return min_cost
 
     #####
     # Eyrie
@@ -489,7 +504,6 @@ class Game:
         if self.eyrie.activate_leader(leader):
             LOGGER.info("{}:{}:{}:{} selected as new leader".format(self.turn_player, self.phase, self.sub_phase, leader))
 
-
     # TODO: eyrie resolve decree
     # TODO: eyrie turmoil
 
@@ -601,22 +615,22 @@ class Game:
         discard_from.remove(card)
         self.discard_pile.append(card)
 
-    def generate_actions_move_src(self, faction) -> [Action]:
-        movable_clearings = self.get_movable_clearing_src(faction)
+    def generate_actions_select_src_clearing(self, faction) -> [Action]:
+        movable_clearings = self.get_available_src_clearing(faction)
         actions = []
 
         if faction == Faction.MARQUISE:
             for movable_clearing in movable_clearings:
                 actions.append(
                     Action("{}".format(movable_clearing),
-                           perform(self.generate_actions_move_dest, faction, movable_clearing)))
+                           perform(self.generate_actions_select_dest_clearing, faction, movable_clearing)))
 
             return actions
         elif faction == Faction.EYRIE:  # Eyrie logic
             pass
 
-    def generate_actions_move_dest(self, faction, src) -> [Action]:
-        dests = self.get_movable_clearing_dest(faction, src)
+    def generate_actions_select_dest_clearing(self, faction, src) -> [Action]:
+        dests = self.get_available_dest_clearing(faction, src)
         actions = []
 
         self.prompt = "Choose where to move to"
@@ -625,13 +639,13 @@ class Game:
             for dest in dests:
                 actions.append(
                     Action("{}".format(dest),
-                           perform(self.select_warriors, faction, src, dest)))
+                           perform(self.generate_actions_select_warriors, faction, src, dest)))
 
             self.set_actions(actions)
         elif faction == Faction.EYRIE:  # Eyrie logic
             pass
 
-    def select_warriors(self, faction, src: Area, dest: Area):
+    def generate_actions_select_warriors(self, faction, src: Area, dest: Area):
         actions = []
 
         self.prompt = "Choose the number of warriors you want to move"
@@ -643,7 +657,7 @@ class Game:
         elif faction == Faction.EYRIE:
             pass
 
-    def move_warriors(self, faction, src: Area, dest: Area, num):  # TODO
+    def move_warriors(self, faction, src: Area, dest: Area, num):
         LOGGER.info(
             "{}:{}:{}:{} move {} warrior(s) from Area {} to Area {}".format(self.turn_player, self.phase, self.sub_phase, self.turn_player, num, src,
                                                                             dest))
@@ -654,10 +668,10 @@ class Game:
 
             self.prompt = "The warriors has been moved."
             self.set_actions([Action('Next', perform(self.marquise_daylight_1_next))])
-        else:
+        else:  # TODO Eyrie move logic
             pass
 
-    def get_movable_clearing_src(self, faction: Faction):
+    def get_available_src_clearing(self, faction: Faction):
         movable_clearings = []
 
         if faction == Faction.MARQUISE:
@@ -674,7 +688,7 @@ class Game:
 
         return movable_clearings
 
-    def get_movable_clearing_dest(self, faction: Faction, src: Area):
+    def get_available_dest_clearing(self, faction: Faction, src: Area):
         dests = []
 
         if faction == Faction.MARQUISE:
@@ -690,6 +704,81 @@ class Game:
             pass
 
         return dests
+
+    def generate_actions_select_buildable_clearing(self, faction):
+        clearings = self.get_buildable_clearing(faction)
+        actions = []
+
+        if faction == Faction.MARQUISE:
+            for clearing in clearings:
+                actions.append(
+                    Action("{}".format(clearing),
+                           perform(self.generate_actions_select_building, faction, clearing)))
+
+            return actions
+
+        elif faction == Faction.EYRIE:
+            pass
+
+    def generate_actions_select_building(self, faction, clearing):
+        buildings = self.get_buildable_building(faction, clearing)
+        actions = []
+
+        if faction == Faction.MARQUISE:
+            for building in buildings:
+                actions.append(
+                    Action("{}".format(building),
+                           perform(self.build, faction, clearing, building)))
+            self.set_actions(actions)
+        elif faction == Faction.EYRIE:
+            pass
+
+    def build(self, faction, clearing: Area, building):
+        if faction == Faction.MARQUISE:
+            ind = clearing.buildings.index(Building.EMPTY)
+            clearing.buildings[ind] = building
+
+            self.board.gain_vp(Faction.MARQUISE, self.marquise.get_reward(building))
+            self.marquise.build_action_update(building)
+
+            self.remove_wood_from_clearing(clearing, 10)
+
+            self.prompt = "The {} has been build.".format(building)
+            self.set_actions([Action('Next', perform(self.marquise_daylight_1_next))])
+        elif faction == Faction.EYRIE:
+            pass
+
+    def remove_wood_from_clearing(self, clearing, number): # TODO
+        pass
+
+    def get_buildable_clearing(self, faction):
+        buildable_clearing = []
+
+        if faction == Faction.MARQUISE:
+            for clearing in self.board.areas:
+                if clearing.ruler() == Warrior.MARQUIS and clearing.buildings.count(
+                        Building.EMPTY) > 0 and self.marquise_get_min_cost_building() <= self.count_woods_from_clearing(clearing):
+                    buildable_clearing.append(clearing)
+            return buildable_clearing
+        elif faction == Faction.EYRIE:
+            pass
+
+    def get_buildable_building(self, faction, clearing):
+
+        buildings = []
+
+        if faction == Faction.MARQUISE:
+            woods = self.count_woods_from_clearing(clearing)
+            cost = self.marquise.building_cost
+            building_tracker = self.marquise.building_trackers
+
+            for building, tracker in building_tracker.items():
+                if woods > cost[tracker]:
+                    buildings.append(building)
+
+            return buildings
+        elif faction == Faction.EYRIE:
+            pass
 
     def calculate_fps(self):
         if self.delta_time != 0:
