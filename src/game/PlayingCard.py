@@ -58,10 +58,10 @@ class PlayingCardPhase(StrEnum):
 
 
 class PlayingCard:
-    def __init__(self, card_id: int, name: PlayingCardName, suit: Suit, phase: PlayingCardPhase, craft_requirement: {Suit: int} = None,
+    def __init__(self, card_id: int, name: PlayingCardName | str, suit: Suit, phase: PlayingCardPhase, craft_requirement: {Suit: int} = None,
                  reward_vp: int = 0, reward_item: Item | None = None):
         self.card_id: int = card_id
-        self.name: PlayingCardName = name
+        self.name: PlayingCardName | str = name
         self.suit: Suit = suit
         self.craft_requirement: {Suit: int} = craft_requirement
         self.reward_vp: int = reward_vp
