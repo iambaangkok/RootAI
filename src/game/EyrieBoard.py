@@ -1,3 +1,4 @@
+import logging
 from enum import StrEnum
 
 import pygame
@@ -5,10 +6,12 @@ from pygame import Color, Vector2, Surface
 
 from src.config import Config, Colors
 from src.game.FactionBoard import FactionBoard
-from src.game.PlayingCard import PlayingCard
+from src.game.PlayingCard import PlayingCard, PlayingCardPhase
 from src.game.Suit import Suit
 from src.utils import text_utils
 from src.utils.draw_utils import draw_key_value, draw_key_multi_value
+
+LOGGER = logging.getLogger('logger')
 
 ROOST_REWARD_VP = [0, 1, 2, 3, 4, 4, 5]
 ROOST_REWARD_CARD = [0, 0, 1, 1, 1, 2, 2]
@@ -34,6 +37,9 @@ class LeaderStatus(StrEnum):
     USED = "USED"
 
 
+LOYAL_VIZIER = PlayingCard(0, "Loyal Vizier", Suit.BIRD, PlayingCardPhase.IMMEDIATE)
+
+
 class EyrieBoard(FactionBoard):
     def __init__(self, name: str, color: Color, reserved_warriors: int, starting_point: Vector2):
         super().__init__(name, color, reserved_warriors, starting_point)
@@ -42,9 +48,9 @@ class EyrieBoard(FactionBoard):
             EyrieLeader.COMMANDER: LeaderStatus.INACTIVE,
             EyrieLeader.DESPOT: LeaderStatus.INACTIVE,
             EyrieLeader.BUILDER: LeaderStatus.INACTIVE,
-            EyrieLeader.CHARISMATIC: LeaderStatus.ACTIVE
+            EyrieLeader.CHARISMATIC: LeaderStatus.INACTIVE
         }
-        self.decree: {DecreeAction: list[int]} = {
+        self.decree: {DecreeAction: list[PlayingCard]} = {
             DecreeAction.RECRUIT: [],
             DecreeAction.MOVE: [],
             DecreeAction.BATTLE: [],
@@ -55,6 +61,27 @@ class EyrieBoard(FactionBoard):
         for leader in self.leaders.keys():
             if self.leaders[leader] == LeaderStatus.ACTIVE:
                 return leader
+
+    def activate_leader(self, leader: EyrieLeader) -> bool:
+        if self.leaders[leader] == LeaderStatus.USED:
+            LOGGER.warning("{} is already {}".format(leader, LeaderStatus.USED))
+            return False
+
+        self.leaders[leader] = LeaderStatus.ACTIVE
+        if leader == EyrieLeader.COMMANDER:
+            self.decree[DecreeAction.MOVE].append(LOYAL_VIZIER)
+            self.decree[DecreeAction.BATTLE].append(LOYAL_VIZIER)
+        elif leader == EyrieLeader.DESPOT:
+            self.decree[DecreeAction.MOVE].append(LOYAL_VIZIER)
+            self.decree[DecreeAction.BUILD].append(LOYAL_VIZIER)
+        elif leader == EyrieLeader.BUILDER:
+            self.decree[DecreeAction.RECRUIT].append(LOYAL_VIZIER)
+            self.decree[DecreeAction.MOVE].append(LOYAL_VIZIER)
+        elif leader == EyrieLeader.CHARISMATIC:
+            self.decree[DecreeAction.RECRUIT].append(LOYAL_VIZIER)
+            self.decree[DecreeAction.BATTLE].append(LOYAL_VIZIER)
+
+        return True
 
     def draw(self, screen: Surface):
         super().draw(screen)

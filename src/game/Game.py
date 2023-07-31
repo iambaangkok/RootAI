@@ -12,7 +12,7 @@ from src.config import Config, Colors
 from src.game.Area import Area
 from src.game.Board import Board
 from src.game.Building import Building
-from src.game.EyrieBoard import EyrieBoard, DecreeAction, EyrieLeader
+from src.game.EyrieBoard import EyrieBoard, DecreeAction, EyrieLeader, LeaderStatus, LOYAL_VIZIER
 from src.game.Faction import Faction
 from src.game.FactionBoard import FactionBoard
 from src.game.Item import Item
@@ -217,6 +217,7 @@ class Game:
 
         self.build_roost(self.board.areas[0])
         self.board.areas[0].add_warrior(Warrior.EYRIE, 6)
+        self.activate_leader(EyrieLeader.CHARISMATIC)
 
         # Take Cards
         self.shuffle_draw_pile()
@@ -482,6 +483,12 @@ class Game:
 
         self.prompt = "Resolve the Decree"
         self.set_actions()
+
+    def activate_leader(self, leader: EyrieLeader):
+
+        if self.eyrie.activate_leader(leader):
+            LOGGER.info("{}:{}:{}:{} selected as new leader".format(self.turn_player, self.phase, self.sub_phase, leader))
+
 
     # TODO: eyrie resolve decree
     # TODO: eyrie turmoil
