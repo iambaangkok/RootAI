@@ -5,6 +5,7 @@ from pygame import Color, Vector2, Surface, Rect
 
 from src.config import Config, Colors
 from src.game.Building import Building
+from src.game.Faction import Faction
 from src.game.Suit import Suit
 from src.game.Token import Token
 from src.game.Warrior import Warrior
@@ -284,3 +285,5 @@ class Area:
 
         return sum_of_tokens
 
+    def __str__(self):
+        return str(self.area_index)

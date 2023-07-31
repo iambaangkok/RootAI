@@ -254,7 +254,7 @@ class Game:
     def move_arrow(self, direction):
         update_arrow = {
             pygame.K_UP: Vector2(0, -1),
-            pygame.K_DOWN: Vector2(0, 1),
+            pygame.K_DOWN: Vector2(0, 1)
             # pygame.K_LEFT: Vector2(-1, 0),
             # pygame.K_RIGHT: Vector2(1, 0)
         }
@@ -310,14 +310,13 @@ class Game:
         # Next phase
 
         craftable_cards = self.generate_actions_craft_cards(Faction.MARQUISE)
-
-        if not craftable_cards:
-            self.set_actions([Action('Next', perform(self.marquise_daylight_1_next))])
-        else:
-            self.set_actions()
-
         self.phase = Phase.DAYLIGHT
         self.prompt = "Want to craft something, squire?"
+
+        if not craftable_cards:
+            self.set_actions([Action('Nope', perform(self.marquise_daylight_1_next))])
+        else:
+            self.set_actions()
 
     def get_workshop_count_by_suit(self) -> {Suit: int}:
         workshop_count: {Suit: int} = {
@@ -344,8 +343,8 @@ class Game:
         self.set_actions()
 
     def marquise_daylight_march(self):
-        self.prompt = "How many warriors you want to march?"
-        self.set_actions(self.generate_actions_move(Faction.MARQUISE) + [Action('Next', perform(self.marquise_daylight_1_next))])
+        self.prompt = "March? It's July, bro."
+        self.set_actions(self.generate_actions_move(Faction.MARQUISE))
 
     def marquise_daylight_2_next(self):
         self.prompt = "Draw one card, plus one card per draw bonus"
@@ -584,6 +583,7 @@ class Game:
         if faction == Faction.EYRIE:
             faction_board = self.eyrie
 
+
         if self.can_take_card_from_draw_pile(amount):
             faction_board.cards_in_hand.extend(self.draw_pile[0:amount])
             self.draw_pile = self.draw_pile[amount:]
@@ -612,6 +612,8 @@ class Game:
         src = movable_clearing[0]
         dest = movable_clearing[1]
 
+        self.prompt = "Choose the number of warriors you want to move"
+
         if faction == Faction.MARQUISE:
             for num_of_warriors in range(1, movable_clearing[2] + 1):
                 actions.append(Action("{}".format(num_of_warriors), perform(self.move_warriors, faction, src, dest, num_of_warriors)))
@@ -619,20 +621,26 @@ class Game:
         elif faction == Faction.EYRIE:
             pass
 
-    def move_warriors(self, faction, src, dest, num):  # TODO
-        self.set_actions([Action('Next', perform(self.marquise_daylight_2_next))])
-        pass
+    def move_warriors(self, faction, src: Area, dest: Area, num):  # TODO
+        if faction == Faction.MARQUISE:
+            src.remove_warrior(Warrior.MARQUIS, num)
+            dest.add_warrior(Warrior.MARQUIS, num)
+
+            self.prompt = "The warriors has been moved."
+            self.set_actions([Action('Next', perform(self.marquise_daylight_1_next))])
+        else:
+            pass
 
     def get_movable_clearing(self, faction: Faction):
         movable_clearings = []
 
         if faction == Faction.MARQUISE:
             for area in self.board.areas:
-                if area.ruler() == faction:  # ruler() return Warrior, Maybe fix
+                if area.ruler() == Warrior.MARQUIS:
                     movable_clearings += [(area, connected_area, area.warrior_count[Warrior.MARQUIS]) for connected_area in area.connected_clearings]
                 else:
                     for connected_area in area.connected_clearings:
-                        if connected_area.ruler() == Warrior.MARQUIS:
+                        if area.warrior_count[Warrior.MARQUIS] > 0 and connected_area.ruler() == Warrior.MARQUIS:
                             movable_clearings.append((area, connected_area, area.warrior_count[Warrior.MARQUIS]))
         elif faction == Faction.EYRIE:
             pass
