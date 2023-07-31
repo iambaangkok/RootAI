@@ -40,6 +40,10 @@ class LeaderStatus(StrEnum):
 LOYAL_VIZIER = PlayingCard(0, "Loyal Vizier", Suit.BIRD, PlayingCardPhase.IMMEDIATE)
 
 
+def count_decree_action_static(decree: {DecreeAction: list[PlayingCard]}, decree_action: DecreeAction | str, suit: Suit | str) -> int:
+    return len([x for x in decree[decree_action] if x.suit == suit])
+
+
 class EyrieBoard(FactionBoard):
     def __init__(self, name: str, color: Color, reserved_warriors: int, starting_point: Vector2):
         super().__init__(name, color, reserved_warriors, starting_point)
@@ -82,6 +86,9 @@ class EyrieBoard(FactionBoard):
             self.decree[DecreeAction.BATTLE].append(LOYAL_VIZIER)
 
         return True
+
+    def count_decree_action(self, decree_action: DecreeAction | str, suit: Suit | str) -> int:
+        return count_decree_action_static(self.decree, decree_action, suit)
 
     def draw(self, screen: Surface):
         super().draw(screen)
@@ -164,7 +171,7 @@ class EyrieBoard(FactionBoard):
                 color = Colors.RABBIT
 
             for j, decree_action in enumerate(self.decree.keys()):
-                title_text = Config.FONT_1.render(str(len([x for x in self.decree[decree_action] if x.suit == suit])), True, color)
+                title_text = Config.FONT_1.render(str(self.count_decree_action(decree_action, suit)), True, color)
                 shift: Vector2 = Vector2(j * width + offset_x, (i+2) * offset_y)
 
                 screen.blit(title_text, starting_point + shift)

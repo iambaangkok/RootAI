@@ -12,7 +12,7 @@ from src.config import Config, Colors
 from src.game.Area import Area
 from src.game.Board import Board
 from src.game.Building import Building
-from src.game.EyrieBoard import EyrieBoard, DecreeAction, EyrieLeader, LeaderStatus, LOYAL_VIZIER
+from src.game.EyrieBoard import EyrieBoard, DecreeAction, EyrieLeader, LeaderStatus, LOYAL_VIZIER, count_decree_action_static
 from src.game.Faction import Faction
 from src.game.FactionBoard import FactionBoard
 from src.game.Item import Item
@@ -201,6 +201,14 @@ class Game:
         self.added_bird_card: bool = False
         self.addable_count: int = 2
 
+        # # Resolve Decree variables
+        self.decree_counter: {DecreeAction: list[PlayingCard]} = {
+            DecreeAction.RECRUIT: [],
+            DecreeAction.MOVE: [],
+            DecreeAction.BATTLE: [],
+            DecreeAction.BUILD: []
+        }
+
         self.current_action: Action = self.actions[0]
         self.prompt = "If hand empty, draw 1 card"
 
@@ -356,7 +364,7 @@ class Game:
         self.set_actions()
 
     def marquise_evening_next(self):
-        self.phase = Phase.DAYLIGHT
+        self.phase = Phase.BIRDSONG
         self.turn_player = Faction.EYRIE
         self.set_actions()
         pass
@@ -394,7 +402,7 @@ class Game:
         self.set_actions(self.generate_actions_add_to_decree())
 
     def generate_actions_add_to_decree(self) -> list[Action]:
-        actions: [Action] = []
+        actions: list[Action] = []
         for decree_action in DecreeAction:
             actions.append(Action("{}".format(decree_action), perform(self.select_decree_to_add_card_to, decree_action)))
 
@@ -435,7 +443,7 @@ class Game:
             self.set_actions()
 
     def generate_actions_place_roost_and_3_warriors(self) -> list[Action]:
-        actions: [Action] = []
+        actions: list[Action] = []
         min_token_areas = [area for area in self.board.get_min_token_areas() if Building.EMPTY in area.buildings]
         for area in min_token_areas:
             actions.append(Action("Area {}".format(area.area_index), perform(self.place_roost_and_3_warriors, area)))
@@ -481,17 +489,51 @@ class Game:
 
         self.sub_phase = 1
 
-        self.prompt = "Resolve the Decree"
-        self.set_actions()
+        self.decree_counter = copy(self.eyrie.decree)
+
+        decree_action = DecreeAction.RECRUIT
+        self.prompt = "Resolve the Decree: Recruit BIRD/FOX/RABBIT/MOUSE {}/{}/{}/{}".format(
+            count_decree_action_static(self.decree_counter, decree_action, Suit.BIRD),
+            count_decree_action_static(self.decree_counter, decree_action, Suit.FOX),
+            count_decree_action_static(self.decree_counter, decree_action, Suit.RABBIT),
+            count_decree_action_static(self.decree_counter, decree_action, Suit.MOUSE)
+        )
+
+        self.set_actions(self.generate_actions_eyrie_recruit())
+
+    def generate_actions_eyrie_recruit(self) -> list[Action]:
+        actions: list[Action] = []
+
+        decree_action = DecreeAction.RECRUIT
+        can_recruit: {Suit: bool} = {}
+        for suit in Suit:
+            can_recruit[suit] = count_decree_action_static(self.decree_counter, decree_action, suit)
+
+        for area in self.board.areas:
+            if Building.ROOST in area.buildings and (can_recruit[Suit.BIRD] or can_recruit[area.suit]):
+                actions.append(Action("Recruit in area {}".format(area.area_index), perform(self.eyrie_recruit, area)))
+
+        # TODO: if actions is empty but there are still some in decree_count, turmoil
+        return actions
+
+    def eyrie_recruit(self, area: Area):
+        self.recruit(Faction.EYRIE, area)
+        self.decree_counter[DecreeAction.RECRUIT].remove(
+            self.get_decree_card_to_use(DecreeAction.RECRUIT, area.suit)
+        )
+        LOGGER.info("{}:{}:{}:{} recruited in area {}".format(self.turn_player, self.phase, self.sub_phase, Faction.EYRIE, area.area_index))
+
+        # TODO: go to next recruit OR move
+
+    def get_decree_card_to_use(self, decree_action: DecreeAction, suit: Suit) -> PlayingCard:
+        return [card for card in self.decree_counter[decree_action] if card.suit == suit][0]
+
+    # TODO: eyrie resolve decree: MOVE, BATTLE, BUILD
+    # TODO: eyrie turmoil
 
     def activate_leader(self, leader: EyrieLeader):
-
         if self.eyrie.activate_leader(leader):
             LOGGER.info("{}:{}:{}:{} selected as new leader".format(self.turn_player, self.phase, self.sub_phase, leader))
-
-
-    # TODO: eyrie resolve decree
-    # TODO: eyrie turmoil
 
     #####
     # Neutral
@@ -690,6 +732,20 @@ class Game:
             pass
 
         return dests
+
+    def recruit(self, faction: Faction, area: Area = None):
+        if faction == Faction.MARQUISE:
+            for area in self.board.areas:
+                if Building.RECRUITER in area:
+                    to_be_added_count = area.buildings.count(Building.RECRUITER)
+                    if self.marquise.reserved_warriors >= to_be_added_count:
+                        self.add_warrior(faction, area, to_be_added_count)
+        elif faction == Faction.EYRIE:
+            amount = 1
+            if self.eyrie.get_active_leader() == EyrieLeader.CHARISMATIC:
+                amount = 2
+            if self.eyrie.reserved_warriors >= amount:
+                self.add_warrior(faction, area, amount)
 
     def calculate_fps(self):
         if self.delta_time != 0:
