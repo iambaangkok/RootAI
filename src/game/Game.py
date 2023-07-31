@@ -490,7 +490,9 @@ class Game:
         self.sub_phase = 1
 
         self.decree_counter = copy(self.eyrie.decree)
+        self.update_prompt_actions_eyrie_recruit()
 
+    def update_prompt_actions_eyrie_recruit(self):
         decree_action = DecreeAction.RECRUIT
         self.prompt = "Resolve the Decree: Recruit BIRD/FOX/RABBIT/MOUSE {}/{}/{}/{}".format(
             count_decree_action_static(self.decree_counter, decree_action, Suit.BIRD),
@@ -505,6 +507,7 @@ class Game:
         actions: list[Action] = []
 
         decree_action = DecreeAction.RECRUIT
+
         can_recruit: {Suit: bool} = {}
         for suit in Suit:
             can_recruit[suit] = count_decree_action_static(self.decree_counter, decree_action, suit)
@@ -513,7 +516,14 @@ class Game:
             if Building.ROOST in area.buildings and (can_recruit[Suit.BIRD] or can_recruit[area.suit]):
                 actions.append(Action("Recruit in area {}".format(area.area_index), perform(self.eyrie_recruit, area)))
 
-        # TODO: if actions is empty but there are still some in decree_count, turmoil
+        if len(actions) == 0:
+            if len(self.decree_counter[decree_action]) > 0:
+                # TODO: turmoil
+                actions.append(Action("Turmoil"))
+            else:
+                # TODO: next, to MOVE
+                actions.append(Action("Next"))
+
         return actions
 
     def eyrie_recruit(self, area: Area):
@@ -523,10 +533,15 @@ class Game:
         )
         LOGGER.info("{}:{}:{}:{} recruited in area {}".format(self.turn_player, self.phase, self.sub_phase, Faction.EYRIE, area.area_index))
 
-        # TODO: go to next recruit OR move
+        self.update_prompt_actions_eyrie_recruit()
 
     def get_decree_card_to_use(self, decree_action: DecreeAction, suit: Suit) -> PlayingCard:
-        return [card for card in self.decree_counter[decree_action] if card.suit == suit][0]
+        eligible_card = [card for card in self.decree_counter[decree_action] if card.suit == suit]
+        bird_card = [card for card in self.decree_counter[decree_action] if card.suit == Suit.BIRD]
+        if len(eligible_card) > 0:
+            return eligible_card[0]
+        else:
+            return bird_card[0]
 
     # TODO: eyrie resolve decree: MOVE, BATTLE, BUILD
     # TODO: eyrie turmoil
