@@ -343,8 +343,8 @@ class Game:
         self.set_actions()
 
     def marquise_daylight_march(self):
-        self.prompt = "March? It's July, bro."
-        self.set_actions(self.generate_actions_move(Faction.MARQUISE))
+        self.prompt = "March? It's July, bro. Choose where to move from."
+        self.set_actions(self.generate_actions_move_src(Faction.MARQUISE))
 
     def marquise_daylight_2_next(self):
         self.prompt = "Draw one card, plus one card per draw bonus"
@@ -583,7 +583,6 @@ class Game:
         if faction == Faction.EYRIE:
             faction_board = self.eyrie
 
-
         if self.can_take_card_from_draw_pile(amount):
             faction_board.cards_in_hand.extend(self.draw_pile[0:amount])
             self.draw_pile = self.draw_pile[amount:]
@@ -593,29 +592,43 @@ class Game:
         discard_from.remove(card)
         self.discard_pile.append(card)
 
-    def generate_actions_move(self, faction) -> [Action]:
-        movable_clearings = self.get_movable_clearing(faction)
+    def generate_actions_move_src(self, faction) -> [Action]:
+        movable_clearings = self.get_movable_clearing_src(faction)
         actions = []
 
         if faction == Faction.MARQUISE:
             for movable_clearing in movable_clearings:
                 actions.append(
-                    Action("Move from {} to {}".format(movable_clearing[0], movable_clearing[1]),
-                           perform(self.select_warriors, faction, movable_clearing)))
+                    Action("{}".format(movable_clearing),
+                           perform(self.generate_actions_move_dest, faction, movable_clearing)))
 
             return actions
         elif faction == Faction.EYRIE:  # Eyrie logic
             pass
 
-    def select_warriors(self, faction, movable_clearing):
+    def generate_actions_move_dest(self, faction, src) -> [Action]:
+        dests = self.get_movable_clearing_dest(faction, src)
         actions = []
-        src = movable_clearing[0]
-        dest = movable_clearing[1]
+
+        self.prompt = "Choose where to move to"
+
+        if faction == Faction.MARQUISE:
+            for dest in dests:
+                actions.append(
+                    Action("{}".format(dest),
+                           perform(self.select_warriors, faction, src, dest)))
+
+            self.set_actions(actions)
+        elif faction == Faction.EYRIE:  # Eyrie logic
+            pass
+
+    def select_warriors(self, faction, src: Area, dest: Area):
+        actions = []
 
         self.prompt = "Choose the number of warriors you want to move"
 
         if faction == Faction.MARQUISE:
-            for num_of_warriors in range(1, movable_clearing[2] + 1):
+            for num_of_warriors in range(1, src.warrior_count[Warrior.MARQUIS] + 1):
                 actions.append(Action("{}".format(num_of_warriors), perform(self.move_warriors, faction, src, dest, num_of_warriors)))
             self.set_actions(actions)
         elif faction == Faction.EYRIE:
@@ -631,21 +644,40 @@ class Game:
         else:
             pass
 
-    def get_movable_clearing(self, faction: Faction):
+    def get_movable_clearing_src(self, faction: Faction):
         movable_clearings = []
 
         if faction == Faction.MARQUISE:
             for area in self.board.areas:
                 if area.ruler() == Warrior.MARQUIS:
-                    movable_clearings += [(area, connected_area, area.warrior_count[Warrior.MARQUIS]) for connected_area in area.connected_clearings]
+                    movable_clearings.append(area)
                 else:
                     for connected_area in area.connected_clearings:
                         if area.warrior_count[Warrior.MARQUIS] > 0 and connected_area.ruler() == Warrior.MARQUIS:
-                            movable_clearings.append((area, connected_area, area.warrior_count[Warrior.MARQUIS]))
+                            movable_clearings.append(area)
+                            break
         elif faction == Faction.EYRIE:
             pass
 
         return movable_clearings
+
+    def get_movable_clearing_dest(self, faction: Faction, src: Area):
+        dests = []
+
+        if faction == Faction.MARQUISE:
+            if src.ruler() == Warrior.MARQUIS:
+                for connect_area in src.connected_clearings:
+                    dests.append(connect_area)
+            else:
+                for connect_area in src.connected_clearings:
+                    if connect_area.ruler() == Warrior.MARQUIS:
+                        dests.append(connect_area)
+
+        elif faction == Faction.EYRIE:
+            pass
+
+        print(dests)
+        return dests
 
     def calculate_fps(self):
         if self.delta_time != 0:
