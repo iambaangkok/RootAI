@@ -5,16 +5,33 @@ from pygame import Rect, Color, Surface
 
 from src.config import Config, Colors
 from src.game.Area import Area
+from src.game.Faction import Faction
 from src.game.Item import Item
 from src.utils.geometry_utils import get_path_points
 
 FACTION_NAMES = ['Marquise de Cat', 'The Decree', 'Woodland Alliance', 'Vagabond']
-FACTION_ALIAS = ['MC', 'D', 'WA', 'V']
-FACTION_COLORS = [Colors.ORANGE, Colors.BLUE, Colors.GREEN, Colors.GREY]
+FACTION_ALIAS = {
+    Faction.MARQUISE: 'MC',
+    Faction.EYRIE: 'EY'
+}
+FACTION_COLORS = {
+    Faction.MARQUISE: Colors.ORANGE,
+    Faction.EYRIE: Colors.BLUE
+}
 FACTION_SIZE = 4
-ITEM_SUPPLY = [['bag', 'boots', 'crossbow', 'knife', 'keg', 'coin'], ['bag', 'boots', 'hammer', 'knife', 'keg', 'coin']]
-
-ITEM = [[Item.BAG, Item.BOOTS, Item.CROSSBOW, Item.KNIFE, Item.KEG, Item.COIN], ['bag', 'boots', 'hammer', 'knife', 'keg', 'coin']]
+ITEM_SUPPLY_RENDER = [
+    [Item.BAG, Item.BOOTS, Item.CROSSBOW, Item.KNIFE, Item.KEG, Item.COIN],
+    [Item.BAG, Item.BOOTS, Item.HAMMER, Item.KNIFE, Item.KEG, Item.COIN]
+]
+ITEM_SUPPLY_INDEX = {
+    Item.BAG: [0, 6],
+    Item.BOOTS: [1, 7],
+    Item.CROSSBOW: [2],
+    Item.KNIFE: [3, 9],
+    Item.KEG: [4, 10],
+    Item.COIN: [5, 11],
+    Item.HAMMER: [8]
+}
 
 
 def add_tuple(a, b):
@@ -31,7 +48,13 @@ class Board:
         self.color: Color = Colors.GREEN
         self.areas: list[Area] = areas
         self.paths: list[tuple[int, int]] = []
-        self.faction_points: list[int] = [0, 0, 0, 0]  # TODO: refactor this into {Faction: int}
+        self.faction_points = {
+            Faction.MARQUISE: 0,
+            Faction.EYRIE: 0
+        }
+        self.item_supply_available = [True, True, True, True, True, True, True, True, True, True, True, True]
+        self.turn_player = None
+        self.turn_count = 0
 
     def add_path(self, area_1: int, area_2: int):
         if ((area_1, area_2) in self.paths) or \
@@ -52,11 +75,23 @@ class Board:
 
         return [area for area in self.areas if area.sum_all_tokens() == min_token]
 
+    def item_available(self, item: Item) -> bool:
+        for item_index in ITEM_SUPPLY_INDEX[item]:
+            if self.item_supply_available[item_index]:
+                return True
+        return False
 
+    def remove_item_from_board(self, item: Item):
+        for item_index in ITEM_SUPPLY_INDEX[item]:
+            if self.item_supply_available[item_index]:
+                self.item_supply_available[item_index] = False
+                break
 
+    def gain_vp(self, faction: Faction, vp):
+        self.faction_points[faction] += vp
 
-    def item_available(self, item: Item) -> bool:  # TODO: refactor available items and implement this
-        return True
+    def lose_vp(self, faction: Faction, vp):
+        self.faction_points[faction] += vp
 
     #####
     # Render
@@ -98,9 +133,6 @@ class Board:
         pass
 
     def draw_victory_point_tracker(self, screen, starting_point, size):
-
-        self.faction_points = [25, 80, 15, 50]
-
         # Box
         box = Rect(starting_point, size)
         pygame.draw.rect(screen, self.color, box, width=1)
@@ -111,27 +143,14 @@ class Board:
 
         screen.blit(points_text, add_tuple(starting_point, shift))
 
-        # 2*2 Grid
-        for ind in range(4):
-            rendered_text = Config.FONT_LG_BOLD.render("{}".format(self.faction_points[ind]), True, FACTION_COLORS[ind])
-            pos = (starting_point[0] + ind * 45 + points_text.get_width() + 20, starting_point[1])
+        faction_pos_ind = 0
+        for (faction, vp) in self.faction_points.items():
+            rendered_text = Config.FONT_LG_BOLD.render("{}".format(vp), True, FACTION_COLORS[faction])
+            pos = (starting_point[0] + faction_pos_ind * 45 + points_text.get_width() + 20, starting_point[1])
             screen.blit(rendered_text, add_tuple(pos, shift))
+            faction_pos_ind += 1
 
         pass
-        # 1 * 4 Grid
-        # margin_left = 150
-        # for ind in range(4):
-        #     rendered_text = Config.FONT_LG.render("{}".format(self.faction_points[ind]), True, FACTION_COLORS[ind])
-        #     screen.blit(rendered_text,
-        #                 (((Config.SCREEN_WIDTH - self.dimension) // 2 + margin_left) + (self.dimension - margin_left) // 4 * ind,
-        #                  (Config.SCREEN_HEIGHT - 40) - rendered_text.get_height() // 2 + 10))
-
-        # 4 * 1 Grid
-        # for ind in range(4):
-        #     rendered_text = Config.FONT_MD.render("\t\tVP: {}".format(self.faction_points[ind]), True, FACTION_COLORS[ind])
-        #     screen.blit(rendered_text,
-        #                 (((Config.SCREEN_WIDTH - self.dimension) // 2),
-        #                  (Config.SCREEN_HEIGHT - 90) - rendered_text.get_height() // 2 + (90//4 + 3) * ind))
 
     def draw_turn_tracker(self, screen, starting_point, size):
 
@@ -139,24 +158,18 @@ class Board:
         box = Rect(starting_point, size)
         pygame.draw.rect(screen, self.color, box, width=1)
 
-        # Get from Game.py
-        turn_faction = 0
-        turn_num = 2
-
-        turn_text = Config.FONT_MD_BOLD.render("Turn {}:".format(turn_num), True, Colors.WHITE)
+        turn_text = Config.FONT_MD_BOLD.render("Turn {}:".format(self.turn_count), True, Colors.WHITE)
         shift = (10, size[1] / 2 - turn_text.get_height() / 2)
 
         screen.blit(turn_text, add_tuple(starting_point, shift))
 
-        player_turn_text = Config.FONT_MD_BOLD.render("{}'s turn".format(FACTION_ALIAS[turn_faction]), True, FACTION_COLORS[turn_faction])
+        player_turn_text = Config.FONT_MD_BOLD.render("{}'s turn".format(FACTION_ALIAS[self.turn_player]), True, FACTION_COLORS[self.turn_player])
         pos = (starting_point[0] + turn_text.get_width() + 10, starting_point[1])
         screen.blit(player_turn_text, add_tuple(pos, shift))
 
         pass
 
     def draw_item_supply(self, screen, starting_point, size):
-
-        available = [[True, False, True, True, False, True], [False, False, True, True, True, False]]
 
         # Box
         box = Rect(starting_point, size)
@@ -170,17 +183,18 @@ class Board:
         img_size = (40, 40)
         img_pos = add_tuple(starting_point, (10, item_supply_text.get_height() + 10))
 
-        for i in range(2):
-            for j in range(6):
-                item_image = pygame.image.load("../assets/images/{}.png".format(ITEM_SUPPLY[i][j]))
-                item_image = pygame.transform.scale(item_image, img_size)
-                if available[i][j]:
-                    screen.blit(item_image,
-                                (img_pos[0] + img_size[0] * j, img_pos[1] + img_size[0] * i))
-                else:
-                    alpha = 128
-                    item_image.set_alpha(alpha)
-                    screen.blit(item_image,
-                                (img_pos[0] + img_size[0] * j, img_pos[1] + img_size[0] * i))
+        for i in range(len(self.item_supply_available)):
+            row = i // 6
+            col = i % 6
 
-        pass
+            item_image = pygame.image.load("../assets/images/{}.png".format(ITEM_SUPPLY_RENDER[row][col]))
+            item_image = pygame.transform.scale(item_image, img_size)
+
+            if self.item_supply_available[i]:
+                screen.blit(item_image,
+                            (img_pos[0] + img_size[0] * col, img_pos[1] + img_size[0] * row))
+            else:
+                alpha = 128
+                item_image.set_alpha(alpha)
+                screen.blit(item_image,
+                            (img_pos[0] + img_size[0] * col, img_pos[1] + img_size[0] * row))

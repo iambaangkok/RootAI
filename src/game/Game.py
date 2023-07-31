@@ -55,7 +55,7 @@ class Game:
 
         # Game Data
         self.turn_count: int = 0
-        self.turn_player: Faction = Faction.MARQUISE
+        self.turn_player: Faction = Faction.EYRIE
         self.phase: Phase = Phase.BIRDSONG
         self.sub_phase = 0
         self.is_in_action_sub_phase: bool = False
@@ -312,6 +312,8 @@ class Game:
         craftable_cards = self.generate_actions_craft_cards(Faction.MARQUISE)
         self.phase = Phase.DAYLIGHT
         self.prompt = "Want to craft something, squire?"
+
+        self.board.gain_vp(Faction.MARQUISE, 20)
 
         if not craftable_cards:
             self.set_actions([Action('Nope', perform(self.marquise_daylight_1_next))])
@@ -635,6 +637,10 @@ class Game:
             pass
 
     def move_warriors(self, faction, src: Area, dest: Area, num):  # TODO
+        LOGGER.info(
+            "{}:{}:{}:{} move {} warrior(s) from Area {} to Area {}".format(self.turn_player, self.phase, self.sub_phase, self.turn_player, num, src,
+                                                                            dest))
+
         if faction == Faction.MARQUISE:
             src.remove_warrior(Warrior.MARQUIS, num)
             dest.add_warrior(Warrior.MARQUIS, num)
@@ -676,7 +682,6 @@ class Game:
         elif faction == Faction.EYRIE:
             pass
 
-        print(dests)
         return dests
 
     def calculate_fps(self):
@@ -690,6 +695,9 @@ class Game:
     def render(self):
         # Fill Black
         self.screen.fill("black")
+
+        self.board.turn_player = self.turn_player
+        self.board.turn_count = self.turn_count
 
         self.board.draw(self.screen)
         self.marquise.draw(self.screen)

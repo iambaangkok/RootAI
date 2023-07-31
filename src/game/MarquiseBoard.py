@@ -20,23 +20,6 @@ BUILDING_REWARD_CARD = {
 }
 BUILDING_TRACKER_NAME = [Building.SAWMILL, Building.WORKSHOP, Building.RECRUITER]
 
-MARQUISE_ACTIONS = {
-    'Birdsong': ['Next'],
-    'Daylight': {
-        '1': ['Craft', 'Next'],
-        '2': ['Battle', 'March', 'Recruit', 'Build', 'Overwork', 'Next']
-    },
-    'Evening': ['Next/Skip'],
-    'None': []
-}
-
-UPDATE_ARROW = {
-    pygame.K_UP: Vector2(0, -1),
-    pygame.K_DOWN: Vector2(0, 1),
-    pygame.K_LEFT: Vector2(-1, 0),
-    pygame.K_RIGHT: Vector2(1, 0)
-}
-
 
 class MarquiseBoard(FactionBoard):
     def __init__(self, name: str, color: Color, reserved_warriors: int, starting_point: Vector2):
@@ -47,9 +30,6 @@ class MarquiseBoard(FactionBoard):
             Building.WORKSHOP: 5,
             Building.RECRUITER: 3
         }
-
-    def move_arrow(self, direction):
-        self.marquise_action.move_arrow(direction)
 
     def draw(self, screen: Surface):
         super().draw(screen)
@@ -101,4 +81,3 @@ class MarquiseBoard(FactionBoard):
 
                 screen.blit(reward, (starting_point.x + (img_size.x + gap) * j + gap + offset_x,
                                      starting_point.y + img_size.y - Config.FONT_SM_BOLD.get_height()))
-
