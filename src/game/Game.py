@@ -402,27 +402,26 @@ class Game:
         return workshop_count
 
     def count_woods_from_clearing(self, clearing):
-        woods = self.marquise_bfs_count_wood([], [clearing])
-        print("{}:{}".format(clearing, woods))
-        return self.marquise_bfs_count_wood([], [clearing])
+        return self.marquise_bfs_count_wood(clearing)
 
-    def marquise_bfs_count_wood(self, visited, queue):
-        if len(queue) == 0:
-            return 0
+    def marquise_bfs_count_wood(self, clearing: Area):
+        visited = []
+        queue: list[Area] = [clearing]
 
-        clearing = queue.pop(0)
+        total_wood = 0
 
-        if visited.count(clearing) > 0 or clearing.ruler() != Warrior.MARQUIS:
-            return self.marquise_bfs_count_wood(visited, queue)
+        while queue:
+            u = queue.pop(0)
+            if u in visited:
+                continue
+            visited.append(u)
+            total_wood += u.token_count[Token.WOOD]
 
-        visited.append(clearing)
+            for v in u.connected_clearings:
+                if v.ruler() == Warrior.MARQUIS:
+                    queue.append(v)
 
-        wood = clearing.token_count[Token.WOOD]
-        for connected_clearing in clearing.connected_clearings:
-            queue.append(connected_clearing)
-        woods = wood + self.marquise_bfs_count_wood(visited, queue)
-
-        return woods
+        return visited, total_wood
 
     def marquise_get_min_cost_building(self):
         cost = self.marquise.building_cost
@@ -434,6 +433,19 @@ class Game:
             min_cost = min(cost[tracker], min_cost)
 
         return min_cost
+
+    def remove_wood(self, number, order):
+        remaining_wood = number
+        for clearing in order:
+            remaining_wood = self.remove_wood_from_clearing(clearing, remaining_wood)
+            if remaining_wood == 0:
+                break
+
+    def remove_wood_from_clearing(self, clearing, number):  # TODO
+        remaining_wood = max(number - clearing.token_count[Token.WOOD], 0)
+        clearing.token_count[Token.WOOD] -= (
+            min(number, clearing.token_count[Token.WOOD]))
+        return remaining_wood
 
     #####
     # Eyrie
@@ -883,17 +895,14 @@ class Game:
             clearing.buildings[ind] = building
 
             self.board.gain_vp(Faction.MARQUISE, self.marquise.get_reward(building))
-            self.marquise.build_action_update(building)
+            wood_cost = self.marquise.build_action_update(building)
 
-            self.remove_wood_from_clearing(clearing, 10)
+            self.remove_wood(wood_cost, self.count_woods_from_clearing(clearing)[0])
 
             self.prompt = "The {} has been build.".format(building)
             self.set_actions([Action('Next', perform(self.marquise_daylight_1_next))])
         elif faction == Faction.EYRIE:
             pass
-
-    def remove_wood_from_clearing(self, clearing, number):  # TODO
-        pass
 
     def get_buildable_clearing(self, faction):
         buildable_clearing = []
@@ -902,7 +911,7 @@ class Game:
             for clearing in self.board.areas:
                 if clearing.ruler() == Warrior.MARQUIS and clearing.buildings.count(
                         Building.EMPTY) > 0 and self.marquise_get_min_cost_building() <= self.count_woods_from_clearing(
-                    clearing):
+                    clearing)[1]:
                     buildable_clearing.append(clearing)
             return buildable_clearing
         elif faction == Faction.EYRIE:
@@ -912,7 +921,7 @@ class Game:
         buildings = []
 
         if faction == Faction.MARQUISE:
-            woods = self.count_woods_from_clearing(clearing)
+            woods = self.count_woods_from_clearing(clearing)[1]
             cost = self.marquise.building_cost
             building_tracker = self.marquise.building_trackers
 
