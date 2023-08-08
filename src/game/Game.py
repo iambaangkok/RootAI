@@ -12,9 +12,9 @@ from src.config import Config, Colors
 from src.game.Area import Area
 from src.game.Board import Board
 from src.game.Building import Building
-from src.game.EyrieBoard import EyrieBoard, DecreeAction, EyrieLeader, LeaderStatus, LOYAL_VIZIER, count_decree_action_static
+from src.game.EyrieBoard import EyrieBoard, DecreeAction, EyrieLeader, LeaderStatus, LOYAL_VIZIER, \
+    count_decree_action_static
 from src.game.Faction import Faction
-from src.game.FactionBoard import FactionBoard
 from src.game.Item import Item
 from src.game.MarquiseBoard import MarquiseBoard
 from src.game.PlayingCard import PlayingCard, PlayingCardName, PlayingCardPhase
@@ -64,12 +64,17 @@ class Game:
         self.draw_pile: list[PlayingCard] = [
             PlayingCard(0, PlayingCardName.AMBUSH, Suit.BIRD, PlayingCardPhase.BATTLE),
             PlayingCard(1, PlayingCardName.AMBUSH, Suit.BIRD, PlayingCardPhase.BATTLE),
-            PlayingCard(2, PlayingCardName.BIRDY_HANDLE, Suit.BIRD, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 1}, 1, Item.BAG),
+            PlayingCard(2, PlayingCardName.BIRDY_HANDLE, Suit.BIRD, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 1}, 1,
+                        Item.BAG),
             PlayingCard(3, PlayingCardName.ARMORERS, Suit.BIRD, PlayingCardPhase.IMMEDIATE, {Suit.FOX: 1}),
-            PlayingCard(4, PlayingCardName.CROSSBOW, Suit.BIRD, PlayingCardPhase.IMMEDIATE, {Suit.FOX: 1}, 1, Item.CROSSBOW),
-            PlayingCard(5, PlayingCardName.WOODLAND_RUNNERS, Suit.BIRD, PlayingCardPhase.IMMEDIATE, {Suit.RABBIT: 1}, 1, Item.BOOTS),
-            PlayingCard(6, PlayingCardName.ARMS_TRADER, Suit.BIRD, PlayingCardPhase.IMMEDIATE, {Suit.FOX: 2}, 2, Item.KNIFE),
-            PlayingCard(7, PlayingCardName.ARMS_TRADER, Suit.BIRD, PlayingCardPhase.IMMEDIATE, {Suit.FOX: 2}, 2, Item.KNIFE),
+            PlayingCard(4, PlayingCardName.CROSSBOW, Suit.BIRD, PlayingCardPhase.IMMEDIATE, {Suit.FOX: 1}, 1,
+                        Item.CROSSBOW),
+            PlayingCard(5, PlayingCardName.WOODLAND_RUNNERS, Suit.BIRD, PlayingCardPhase.IMMEDIATE, {Suit.RABBIT: 1}, 1,
+                        Item.BOOTS),
+            PlayingCard(6, PlayingCardName.ARMS_TRADER, Suit.BIRD, PlayingCardPhase.IMMEDIATE, {Suit.FOX: 2}, 2,
+                        Item.KNIFE),
+            PlayingCard(7, PlayingCardName.ARMS_TRADER, Suit.BIRD, PlayingCardPhase.IMMEDIATE, {Suit.FOX: 2}, 2,
+                        Item.KNIFE),
             PlayingCard(8, PlayingCardName.SAPPERS, Suit.BIRD, PlayingCardPhase.BATTLE, {Suit.MOUSE: 1}),
             PlayingCard(9, PlayingCardName.SAPPERS, Suit.BIRD, PlayingCardPhase.BATTLE, {Suit.MOUSE: 1}),
             PlayingCard(10, PlayingCardName.BRUTAL_TACTICS, Suit.BIRD, PlayingCardPhase.BATTLE, {Suit.FOX: 2}),
@@ -77,40 +82,61 @@ class Game:
             PlayingCard(12, PlayingCardName.ROYAL_CLAIM, Suit.BIRD, PlayingCardPhase.BIRDSONG, {Suit.BIRD: 4}),
 
             PlayingCard(13, PlayingCardName.AMBUSH, Suit.FOX, PlayingCardPhase.BATTLE),
-            PlayingCard(14, PlayingCardName.GENTLY_USED_KNAPSACK, Suit.FOX, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 1}, 1, Item.BAG),
-            PlayingCard(15, PlayingCardName.ROOT_TEA, Suit.FOX, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 1}, 2, Item.KEG),
-            PlayingCard(16, PlayingCardName.TRAVEL_GEAR, Suit.FOX, PlayingCardPhase.IMMEDIATE, {Suit.RABBIT: 1}, 1, Item.BOOTS),
-            PlayingCard(17, PlayingCardName.PROTECTION_RACKET, Suit.FOX, PlayingCardPhase.IMMEDIATE, {Suit.RABBIT: 2}, 3, Item.COIN),
-            PlayingCard(18, PlayingCardName.FOXFOLK_STEEL, Suit.FOX, PlayingCardPhase.IMMEDIATE, {Suit.FOX: 2}, 2, Item.KNIFE),
+            PlayingCard(14, PlayingCardName.GENTLY_USED_KNAPSACK, Suit.FOX, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 1},
+                        1, Item.BAG),
+            PlayingCard(15, PlayingCardName.ROOT_TEA, Suit.FOX, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 1}, 2,
+                        Item.KEG),
+            PlayingCard(16, PlayingCardName.TRAVEL_GEAR, Suit.FOX, PlayingCardPhase.IMMEDIATE, {Suit.RABBIT: 1}, 1,
+                        Item.BOOTS),
+            PlayingCard(17, PlayingCardName.PROTECTION_RACKET, Suit.FOX, PlayingCardPhase.IMMEDIATE, {Suit.RABBIT: 2},
+                        3, Item.COIN),
+            PlayingCard(18, PlayingCardName.FOXFOLK_STEEL, Suit.FOX, PlayingCardPhase.IMMEDIATE, {Suit.FOX: 2}, 2,
+                        Item.KNIFE),
             PlayingCard(19, PlayingCardName.ANVIL, Suit.FOX, PlayingCardPhase.IMMEDIATE, {Suit.FOX: 1}, 2, Item.HAMMER),
             PlayingCard(20, PlayingCardName.STAND_AND_DELIVER, Suit.FOX, PlayingCardPhase.BIRDSONG, {Suit.MOUSE: 3}),
             PlayingCard(21, PlayingCardName.STAND_AND_DELIVER, Suit.FOX, PlayingCardPhase.BIRDSONG, {Suit.MOUSE: 3}),
-            PlayingCard(22, PlayingCardName.TAX_COLLECTOR, Suit.FOX, PlayingCardPhase.DAYLIGHT, {Suit.FOX: 1, Suit.RABBIT: 1, Suit.MOUSE: 1}),
-            PlayingCard(23, PlayingCardName.TAX_COLLECTOR, Suit.FOX, PlayingCardPhase.DAYLIGHT, {Suit.FOX: 1, Suit.RABBIT: 1, Suit.MOUSE: 1}),
-            PlayingCard(24, PlayingCardName.TAX_COLLECTOR, Suit.FOX, PlayingCardPhase.DAYLIGHT, {Suit.FOX: 1, Suit.RABBIT: 1, Suit.MOUSE: 1}),
+            PlayingCard(22, PlayingCardName.TAX_COLLECTOR, Suit.FOX, PlayingCardPhase.DAYLIGHT,
+                        {Suit.FOX: 1, Suit.RABBIT: 1, Suit.MOUSE: 1}),
+            PlayingCard(23, PlayingCardName.TAX_COLLECTOR, Suit.FOX, PlayingCardPhase.DAYLIGHT,
+                        {Suit.FOX: 1, Suit.RABBIT: 1, Suit.MOUSE: 1}),
+            PlayingCard(24, PlayingCardName.TAX_COLLECTOR, Suit.FOX, PlayingCardPhase.DAYLIGHT,
+                        {Suit.FOX: 1, Suit.RABBIT: 1, Suit.MOUSE: 1}),
             PlayingCard(25, PlayingCardName.FAVOR_OF_THE_FOXES, Suit.FOX, PlayingCardPhase.IMMEDIATE, {Suit.FOX: 3}),
 
             PlayingCard(26, PlayingCardName.AMBUSH, Suit.RABBIT, PlayingCardPhase.BATTLE),
-            PlayingCard(27, PlayingCardName.SMUGGLERS_TRAIL, Suit.RABBIT, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 1}, 1, Item.BAG),
-            PlayingCard(28, PlayingCardName.ROOT_TEA, Suit.RABBIT, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 1}, 2, Item.KEG),
-            PlayingCard(29, PlayingCardName.A_VISIT_TO_FRIENDS, Suit.RABBIT, PlayingCardPhase.IMMEDIATE, {Suit.RABBIT: 1}, 1, Item.BOOTS),
-            PlayingCard(30, PlayingCardName.BAKE_SALE, Suit.RABBIT, PlayingCardPhase.IMMEDIATE, {Suit.RABBIT: 2}, 3, Item.COIN),
+            PlayingCard(27, PlayingCardName.SMUGGLERS_TRAIL, Suit.RABBIT, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 1},
+                        1, Item.BAG),
+            PlayingCard(28, PlayingCardName.ROOT_TEA, Suit.RABBIT, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 1}, 2,
+                        Item.KEG),
+            PlayingCard(29, PlayingCardName.A_VISIT_TO_FRIENDS, Suit.RABBIT, PlayingCardPhase.IMMEDIATE,
+                        {Suit.RABBIT: 1}, 1, Item.BOOTS),
+            PlayingCard(30, PlayingCardName.BAKE_SALE, Suit.RABBIT, PlayingCardPhase.IMMEDIATE, {Suit.RABBIT: 2}, 3,
+                        Item.COIN),
             PlayingCard(31, PlayingCardName.COMMAND_WARREN, Suit.RABBIT, PlayingCardPhase.DAYLIGHT, {Suit.RABBIT: 2}),
             PlayingCard(32, PlayingCardName.COMMAND_WARREN, Suit.RABBIT, PlayingCardPhase.DAYLIGHT, {Suit.RABBIT: 2}),
-            PlayingCard(33, PlayingCardName.BETTER_BURROW_BANK, Suit.RABBIT, PlayingCardPhase.BIRDSONG, {Suit.RABBIT: 2}),
-            PlayingCard(34, PlayingCardName.BETTER_BURROW_BANK, Suit.RABBIT, PlayingCardPhase.BIRDSONG, {Suit.RABBIT: 2}),
+            PlayingCard(33, PlayingCardName.BETTER_BURROW_BANK, Suit.RABBIT, PlayingCardPhase.BIRDSONG,
+                        {Suit.RABBIT: 2}),
+            PlayingCard(34, PlayingCardName.BETTER_BURROW_BANK, Suit.RABBIT, PlayingCardPhase.BIRDSONG,
+                        {Suit.RABBIT: 2}),
             PlayingCard(35, PlayingCardName.COBBLER, Suit.RABBIT, PlayingCardPhase.EVENING, {Suit.RABBIT: 2}),
             PlayingCard(36, PlayingCardName.COBBLER, Suit.RABBIT, PlayingCardPhase.EVENING, {Suit.RABBIT: 2}),
             PlayingCard(37, PlayingCardName.COBBLER, Suit.RABBIT, PlayingCardPhase.EVENING, {Suit.RABBIT: 2}),
-            PlayingCard(38, PlayingCardName.FAVOR_OF_THE_RABBITS, Suit.RABBIT, PlayingCardPhase.IMMEDIATE, {Suit.RABBIT: 3}),
+            PlayingCard(38, PlayingCardName.FAVOR_OF_THE_RABBITS, Suit.RABBIT, PlayingCardPhase.IMMEDIATE,
+                        {Suit.RABBIT: 3}),
 
             PlayingCard(39, PlayingCardName.AMBUSH, Suit.MOUSE, PlayingCardPhase.BATTLE),
-            PlayingCard(40, PlayingCardName.MOUSE_IN_A_SACK, Suit.MOUSE, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 1}, 1, Item.BAG),
-            PlayingCard(41, PlayingCardName.ROOT_TEA, Suit.MOUSE, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 1}, 2, Item.KEG),
-            PlayingCard(42, PlayingCardName.TRAVEL_GEAR, Suit.MOUSE, PlayingCardPhase.IMMEDIATE, {Suit.RABBIT: 1}, 1, Item.BOOTS),
-            PlayingCard(43, PlayingCardName.INVESTMENTS, Suit.MOUSE, PlayingCardPhase.IMMEDIATE, {Suit.RABBIT: 2}, 3, Item.COIN),
-            PlayingCard(44, PlayingCardName.SWORD, Suit.MOUSE, PlayingCardPhase.IMMEDIATE, {Suit.FOX: 2}, 2, Item.KNIFE),
-            PlayingCard(45, PlayingCardName.CROSSBOW, Suit.MOUSE, PlayingCardPhase.IMMEDIATE, {Suit.FOX: 1}, 1, Item.CROSSBOW),
+            PlayingCard(40, PlayingCardName.MOUSE_IN_A_SACK, Suit.MOUSE, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 1}, 1,
+                        Item.BAG),
+            PlayingCard(41, PlayingCardName.ROOT_TEA, Suit.MOUSE, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 1}, 2,
+                        Item.KEG),
+            PlayingCard(42, PlayingCardName.TRAVEL_GEAR, Suit.MOUSE, PlayingCardPhase.IMMEDIATE, {Suit.RABBIT: 1}, 1,
+                        Item.BOOTS),
+            PlayingCard(43, PlayingCardName.INVESTMENTS, Suit.MOUSE, PlayingCardPhase.IMMEDIATE, {Suit.RABBIT: 2}, 3,
+                        Item.COIN),
+            PlayingCard(44, PlayingCardName.SWORD, Suit.MOUSE, PlayingCardPhase.IMMEDIATE, {Suit.FOX: 2}, 2,
+                        Item.KNIFE),
+            PlayingCard(45, PlayingCardName.CROSSBOW, Suit.MOUSE, PlayingCardPhase.IMMEDIATE, {Suit.FOX: 1}, 1,
+                        Item.CROSSBOW),
             PlayingCard(46, PlayingCardName.SCOUTING_PARTY, Suit.MOUSE, PlayingCardPhase.BATTLE, {Suit.MOUSE: 2}),
             PlayingCard(47, PlayingCardName.SCOUTING_PARTY, Suit.MOUSE, PlayingCardPhase.BATTLE, {Suit.MOUSE: 2}),
             # PlayingCard(48, PlayingCardName.CODEBREAKERS, Suit.MOUSE, PlayingCardPhase.DAYLIGHT, {Suit.MOUSE: 1}),
@@ -124,38 +150,51 @@ class Game:
         areas_offset_y = 0.05
         areas_radius = Board.rect.width * Area.size_ratio
         areas: list[Area] = [
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.12, Board.rect.y + Board.rect.height * (0.20 - areas_offset_y)), areas_radius,
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.12,
+                         Board.rect.y + Board.rect.height * (0.20 - areas_offset_y)), areas_radius,
                  Suit.FOX, [Building.EMPTY]),
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.55, Board.rect.y + Board.rect.height * (0.15 - areas_offset_y)), areas_radius,
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.55,
+                         Board.rect.y + Board.rect.height * (0.15 - areas_offset_y)), areas_radius,
                  Suit.RABBIT, [Building.EMPTY, Building.EMPTY]),
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.88, Board.rect.y + Board.rect.height * (0.25 - areas_offset_y)), areas_radius,
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.88,
+                         Board.rect.y + Board.rect.height * (0.25 - areas_offset_y)), areas_radius,
                  Suit.MOUSE, [Building.EMPTY, Building.EMPTY]),
 
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.43, Board.rect.y + Board.rect.height * (0.35 - areas_offset_y)), areas_radius,
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.43,
+                         Board.rect.y + Board.rect.height * (0.35 - areas_offset_y)), areas_radius,
                  Suit.RABBIT, [Building.EMPTY]),
 
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.10, Board.rect.y + Board.rect.height * (0.45 - areas_offset_y)), areas_radius,
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.10,
+                         Board.rect.y + Board.rect.height * (0.45 - areas_offset_y)), areas_radius,
                  Suit.MOUSE, [Building.EMPTY, Building.EMPTY]),
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.34, Board.rect.y + Board.rect.height * (0.58 - areas_offset_y)), areas_radius,
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.34,
+                         Board.rect.y + Board.rect.height * (0.58 - areas_offset_y)), areas_radius,
                  Suit.FOX, [Building.EMPTY]),
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.66, Board.rect.y + Board.rect.height * (0.53 - areas_offset_y)), areas_radius,
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.66,
+                         Board.rect.y + Board.rect.height * (0.53 - areas_offset_y)), areas_radius,
                  Suit.MOUSE, [Building.EMPTY, Building.EMPTY]),
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.90, Board.rect.y + Board.rect.height * (0.56 - areas_offset_y)), areas_radius,
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.90,
+                         Board.rect.y + Board.rect.height * (0.56 - areas_offset_y)), areas_radius,
                  Suit.FOX, [Building.WORKSHOP]),
 
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.12, Board.rect.y + Board.rect.height * (0.83 - areas_offset_y)), areas_radius,
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.12,
+                         Board.rect.y + Board.rect.height * (0.83 - areas_offset_y)), areas_radius,
                  Suit.RABBIT, [Building.EMPTY]),
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.39, Board.rect.y + Board.rect.height * (0.88 - areas_offset_y)), areas_radius,
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.39,
+                         Board.rect.y + Board.rect.height * (0.88 - areas_offset_y)), areas_radius,
                  Suit.FOX, [Building.EMPTY, Building.EMPTY]),
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.62, Board.rect.y + Board.rect.height * (0.80 - areas_offset_y)), areas_radius,
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.62,
+                         Board.rect.y + Board.rect.height * (0.80 - areas_offset_y)), areas_radius,
                  Suit.MOUSE, [Building.RECRUITER, Building.EMPTY]),
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.84, Board.rect.y + Board.rect.height * (0.88 - areas_offset_y)), areas_radius,
+            Area(Vector2(Board.rect.x + Board.rect.width * 0.84,
+                         Board.rect.y + Board.rect.height * (0.88 - areas_offset_y)), areas_radius,
                  Suit.RABBIT, [Building.SAWMILL]),
         ]
 
         self.board: Board = Board(areas)
 
-        paths = [(0, 1), (0, 3), (0, 4), (1, 2), (2, 3), (2, 7), (3, 5), (4, 5), (4, 8), (5, 6), (5, 8), (5, 10), (6, 7), (6, 11), (7, 11), (8, 9),
+        paths = [(0, 1), (0, 3), (0, 4), (1, 2), (2, 3), (2, 7), (3, 5), (4, 5), (4, 8), (5, 6), (5, 8), (5, 10),
+                 (6, 7), (6, 11), (7, 11), (8, 9),
                  (9, 10), (10, 11)]
         for path in paths:
             self.board.add_path(path[0], path[1])
@@ -176,7 +215,8 @@ class Game:
             Phase.DAYLIGHT: [
                 [Action('Craft', perform(self.marquise_daylight_craft)),
                  Action('Next', perform(self.marquise_daylight_1_next))],
-                [Action('Battle'), Action('March', perform(self.marquise_daylight_march)), Action('Recruit'), Action('Build'),
+                [Action('Battle'), Action('March', perform(self.marquise_daylight_march)), Action('Recruit'),
+                 Action('Build'),
                  Action('Overwork'),
                  Action('Next', perform(self.marquise_daylight_2_next))]
             ],
@@ -291,10 +331,12 @@ class Game:
         for area in self.board.areas:
             area.token_count[Token.WOOD] += area.buildings.count(Building.SAWMILL)
         # Next phase
+        self.marquise.workshop_count = self.get_workshop_count_by_suit()
 
-        craftable_cards = self.generate_actions_craft_cards(Faction.MARQUISE)
         self.phase = Phase.DAYLIGHT
         self.prompt = "Want to craft something, squire?"
+
+        craftable_cards = self.generate_actions_craft_cards(Faction.MARQUISE)
 
         if not craftable_cards:
             self.set_actions([Action('Nope', perform(self.marquise_daylight_1_next))])
@@ -303,7 +345,8 @@ class Game:
 
     def marquise_daylight_craft(self):
         self.prompt = "What cards do you want to craft?"
-        self.set_actions(self.generate_actions_craft_cards(Faction.MARQUISE) + [Action('Next', perform(self.marquise_daylight_1_next))])
+        self.set_actions(self.generate_actions_craft_cards(Faction.MARQUISE) + [
+            Action('Next', perform(self.marquise_daylight_1_next))])
 
     def marquise_daylight_1_next(self):
         remaining_action = 3
@@ -359,19 +402,27 @@ class Game:
         return workshop_count
 
     def count_woods_from_clearing(self, clearing):
-        return self.dfs_marquise(clearing, [])
+        woods = self.marquise_bfs_count_wood([], [clearing])
+        print("{}:{}".format(clearing, woods))
+        return self.marquise_bfs_count_wood([], [clearing])
 
-    def dfs_marquise(self, clearing: Area, visited):
-        if visited.count(clearing) > 0:
+    def marquise_bfs_count_wood(self, visited, queue):
+        if len(queue) == 0:
             return 0
-        if clearing.ruler() != Warrior.MARQUIS:
-            return 0
+
+        clearing = queue.pop(0)
+
+        if visited.count(clearing) > 0 or clearing.ruler() != Warrior.MARQUIS:
+            return self.marquise_bfs_count_wood(visited, queue)
 
         visited.append(clearing)
+
         wood = clearing.token_count[Token.WOOD]
         for connected_clearing in clearing.connected_clearings:
-            wood += self.dfs_marquise(connected_clearing, visited)
-        return wood
+            queue.append(connected_clearing)
+        woods = wood + self.marquise_bfs_count_wood(visited, queue)
+
+        return woods
 
     def marquise_get_min_cost_building(self):
         cost = self.marquise.building_cost
@@ -406,7 +457,8 @@ class Game:
             for card in self.eyrie.cards_in_hand:
                 if self.added_bird_card and card.suit == Suit.BIRD:
                     continue
-                actions.append(Action('{} ({})'.format(card.name, card.suit), perform(self.select_card_to_add_to_decree_one, card)))
+                actions.append(Action('{} ({})'.format(card.name, card.suit),
+                                      perform(self.select_card_to_add_to_decree_one, card)))
 
         return actions
 
@@ -419,7 +471,8 @@ class Game:
     def generate_actions_add_to_decree(self) -> list[Action]:
         actions: list[Action] = []
         for decree_action in DecreeAction:
-            actions.append(Action("{}".format(decree_action), perform(self.select_decree_to_add_card_to, decree_action)))
+            actions.append(
+                Action("{}".format(decree_action), perform(self.select_decree_to_add_card_to, decree_action)))
 
         return actions
 
@@ -432,7 +485,8 @@ class Game:
             self.added_bird_card = True
 
         LOGGER.info(
-            "{}:{}:{}:Added card '{}' to {} decree".format(self.turn_player, self.phase, self.sub_phase, self.selected_card.name, decree_action))
+            "{}:{}:{}:Added card '{}' to {} decree".format(self.turn_player, self.phase, self.sub_phase,
+                                                           self.selected_card.name, decree_action))
 
         if self.addable_count != 0:
             self.prompt = "Select ANOTHER card to add to the Decree"
@@ -471,7 +525,8 @@ class Game:
 
     def build_roost(self, area: Area):
         LOGGER.info("{}:{}:{}:{} built {} at area#{}".format(
-            self.turn_player, self.phase, self.sub_phase, Faction.EYRIE, Building.ROOST, area.buildings.index(Building.EMPTY)))
+            self.turn_player, self.phase, self.sub_phase, Faction.EYRIE, Building.ROOST,
+            area.buildings.index(Building.EMPTY)))
 
         self.eyrie.roost_tracker += 1
         area.buildings[area.buildings.index(Building.EMPTY)] = Building.ROOST
@@ -546,7 +601,9 @@ class Game:
         self.decree_counter[DecreeAction.RECRUIT].remove(
             self.get_decree_card_to_use(DecreeAction.RECRUIT, area.suit)
         )
-        LOGGER.info("{}:{}:{}:{} recruited in area {}".format(self.turn_player, self.phase, self.sub_phase, Faction.EYRIE, area.area_index))
+        LOGGER.info(
+            "{}:{}:{}:{} recruited in area {}".format(self.turn_player, self.phase, self.sub_phase, Faction.EYRIE,
+                                                      area.area_index))
 
         self.update_prompt_actions_eyrie_recruit()
 
@@ -563,7 +620,8 @@ class Game:
 
     def activate_leader(self, leader: EyrieLeader):
         if self.eyrie.activate_leader(leader):
-            LOGGER.info("{}:{}:{}:{} selected as new leader".format(self.turn_player, self.phase, self.sub_phase, leader))
+            LOGGER.info(
+                "{}:{}:{}:{} selected as new leader".format(self.turn_player, self.phase, self.sub_phase, leader))
 
     #####
     # Neutral
@@ -595,21 +653,29 @@ class Game:
         if faction == Faction.MARQUISE:
             LOGGER.info("{}:{}:{}:Crafted {} card".format(self.turn_player, self.phase, self.sub_phase, card.name))
             if card.phase == PlayingCardPhase.IMMEDIATE:
-                self.board.faction_points[0] += card.reward_vp
-                self.marquise.items[card.reward_item] += 1
+                self.board.faction_points[Faction.MARQUISE] += card.reward_vp
+                if card.reward_item is not None:
+                    self.marquise.items[card.reward_item] += 1
                 self.discard_card(self.marquise.cards_in_hand, card)
+            else:
+                self.discard_card(self.marquise.cards_in_hand, card)
+                self.marquise.crafted_cards.append(card)
 
-            self.marquise.cards_in_hand.remove(card)
-            self.marquise.crafted_cards.append(card)
+            for requirement in card.craft_requirement:
+                self.marquise.workshop_count[requirement] -= 1
+
+            self.prompt = "{} has been crafted.".format(card.name)
+            self.set_actions([Action("Next", self.marquise_daylight_craft)])
+
         elif faction == Faction.EYRIE:
             LOGGER.info("{}:{}:{}:Crafted {} card".format(self.turn_player, self.phase, self.sub_phase, card.name))
 
             if card.phase == PlayingCardPhase.IMMEDIATE:
                 # Gain VP
                 if self.eyrie.get_active_leader() == EyrieLeader.BUILDER:
-                    self.board.faction_points[1] += card.reward_vp
+                    self.board.faction_points[Warrior.EYRIE] += card.reward_vp
                 else:
-                    self.board.faction_points[1] += 1
+                    self.board.faction_points[Warrior.EYRIE] += 1
 
                 # Gain Item
                 self.eyrie.items[card.reward_item] += 1
@@ -626,17 +692,20 @@ class Game:
         crafting_station: {Suit: int} = {}
         if faction == Faction.MARQUISE:
             cards_in_hand = self.marquise.cards_in_hand
-            crafting_station = self.get_workshop_count_by_suit()
+            crafting_station = self.marquise.workshop_count
         elif faction == Faction.EYRIE:
             cards_in_hand = self.eyrie.cards_in_hand
             crafting_station = self.get_roost_count_by_suit()
 
         for card in cards_in_hand:
             can_craft = True
+            if card.craft_requirement is None:
+                continue
             for suit in card.craft_requirement.keys():
-                if card.craft_requirement[suit] > crafting_station[suit] or not self.board.item_available(card.reward_item):
+                if card.craft_requirement[suit] > crafting_station[suit]:
                     can_craft = False
-                    break
+                elif (card.reward_item is not None) and (not self.board.item_available(card.reward_item)):
+                    can_craft = False
             if can_craft:
                 craftable_cards.append(card)
 
@@ -667,7 +736,8 @@ class Game:
         if self.can_take_card_from_draw_pile(amount):
             faction_board.cards_in_hand.extend(self.draw_pile[0:amount])
             self.draw_pile = self.draw_pile[amount:]
-            LOGGER.info("{}:{}:{}:{} drawn {} card(s)".format(self.turn_player, self.phase, self.sub_phase, faction, amount))
+            LOGGER.info(
+                "{}:{}:{}:{} drawn {} card(s)".format(self.turn_player, self.phase, self.sub_phase, faction, amount))
 
     def discard_card(self, discard_from: list[PlayingCard], card: PlayingCard):
         discard_from.remove(card)
@@ -710,14 +780,16 @@ class Game:
 
         if faction == Faction.MARQUISE:
             for num_of_warriors in range(1, src.warrior_count[Warrior.MARQUIS] + 1):
-                actions.append(Action("{}".format(num_of_warriors), perform(self.move_warriors, faction, src, dest, num_of_warriors)))
+                actions.append(Action("{}".format(num_of_warriors),
+                                      perform(self.move_warriors, faction, src, dest, num_of_warriors)))
             self.set_actions(actions)
         elif faction == Faction.EYRIE:
             pass
 
     def move_warriors(self, faction, src: Area, dest: Area, num):
         LOGGER.info(
-            "{}:{}:{}:{} move {} warrior(s) from Area {} to Area {}".format(self.turn_player, self.phase, self.sub_phase, self.turn_player, num, src,
+            "{}:{}:{}:{} move {} warrior(s) from Area {} to Area {}".format(self.turn_player, self.phase,
+                                                                            self.sub_phase, self.turn_player, num, src,
                                                                             dest))
 
         if faction == Faction.MARQUISE:
@@ -776,6 +848,7 @@ class Game:
                 amount = 2
             if self.eyrie.reserved_warriors >= amount:
                 self.add_warrior(faction, area, amount)
+
     def generate_actions_select_buildable_clearing(self, faction):
         clearings = self.get_buildable_clearing(faction)
         actions = []
@@ -800,7 +873,7 @@ class Game:
                 actions.append(
                     Action("{}".format(building),
                            perform(self.build, faction, clearing, building)))
-            self.set_actions(actions)
+            self.set_actions(actions + [Action('Next', self.marquise_daylight_1_next)])
         elif faction == Faction.EYRIE:
             pass
 
@@ -819,7 +892,7 @@ class Game:
         elif faction == Faction.EYRIE:
             pass
 
-    def remove_wood_from_clearing(self, clearing, number): # TODO
+    def remove_wood_from_clearing(self, clearing, number):  # TODO
         pass
 
     def get_buildable_clearing(self, faction):
@@ -828,14 +901,14 @@ class Game:
         if faction == Faction.MARQUISE:
             for clearing in self.board.areas:
                 if clearing.ruler() == Warrior.MARQUIS and clearing.buildings.count(
-                        Building.EMPTY) > 0 and self.marquise_get_min_cost_building() <= self.count_woods_from_clearing(clearing):
+                        Building.EMPTY) > 0 and self.marquise_get_min_cost_building() <= self.count_woods_from_clearing(
+                    clearing):
                     buildable_clearing.append(clearing)
             return buildable_clearing
         elif faction == Faction.EYRIE:
             pass
 
     def get_buildable_building(self, faction, clearing):
-
         buildings = []
 
         if faction == Faction.MARQUISE:
@@ -844,7 +917,7 @@ class Game:
             building_tracker = self.marquise.building_trackers
 
             for building, tracker in building_tracker.items():
-                if woods > cost[tracker]:
+                if woods >= cost[tracker]:
                     buildings.append(building)
 
             return buildings

@@ -4,6 +4,7 @@ from pygame import Color, Vector2, Surface, Rect
 from src.config import Config, Colors
 from src.game.Building import Building
 from src.game.FactionBoard import FactionBoard
+from src.game.Suit import Suit
 from src.utils import text_utils
 
 
@@ -15,9 +16,9 @@ class MarquiseBoard(FactionBoard):
         super().__init__(name, color, reserved_warriors, starting_point)
 
         self.building_trackers: {Building, int} = {
-            Building.SAWMILL: 0,
-            Building.WORKSHOP: 0,
-            Building.RECRUITER: 0
+            Building.SAWMILL: 1,
+            Building.WORKSHOP: 1,
+            Building.RECRUITER: 1
         }
 
         self.building_cost = [0, 1, 2, 3, 3, 4]
@@ -31,6 +32,13 @@ class MarquiseBoard(FactionBoard):
             Building.SAWMILL: [0, 0, 0, 0, 0, 0],
             Building.WORKSHOP: [0, 0, 0, 0, 0, 0],
             Building.RECRUITER: [0, 0, 1, 1, 2, 2]
+        }
+
+        self.workshop_count = {
+            Suit.BIRD: 0,
+            Suit.FOX: 0,
+            Suit.RABBIT: 0,
+            Suit.MOUSE: 0
         }
 
     def get_reward(self, building):
