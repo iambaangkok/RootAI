@@ -359,6 +359,8 @@ class Game:
             actions.append(Action('March', perform(self.marquise_daylight_march)))
         if self.marquise_build_check():
             actions.append(Action('Build', perform(self.marquise_daylight_build)))
+        if self.marquise_recruit_check():
+            actions.append(Action('Recruit', perform(self.marquise_daylight_recruit)))
         self.set_actions(actions)
 
     def marquise_march_check(self):
@@ -367,13 +369,29 @@ class Game:
     def marquise_build_check(self):
         return len(self.get_buildable_clearing(Faction.MARQUISE)) > 0
 
+    def marquise_recruit_check(self):
+        return self.get_total_building(Building.RECRUITER) > 0
+
     def marquise_daylight_march(self):
         self.prompt = "March? It's July, bro. Choose where to move from."
         self.set_actions(self.generate_actions_select_src_clearing(Faction.MARQUISE))
 
     def marquise_daylight_build(self):
-        self.prompt = "Poon prom kor, sud lor prom yang"
+        self.prompt = "Let's build"
         self.set_actions(self.generate_actions_select_buildable_clearing(Faction.MARQUISE))
+
+    def marquise_daylight_recruit(self):
+        for area in self.board.areas:
+            total_recruiters = area.buildings.count(Building.RECRUITER)
+            if total_recruiters > 0:
+                LOGGER.info(
+                    "{}:{}:{}:MARQUISE adds warrior in clearing #{}".format(self.turn_player, self.phase,
+                                                                            self.sub_phase,
+                                                                            area.area_index))
+            area.warrior_count[Warrior.MARQUIS] += area.buildings.count(Building.RECRUITER)
+
+        self.prompt = "Recruit Warrior"
+        self.set_actions([Action('Next', self.marquise_daylight_1_next)])
 
     def marquise_daylight_2_next(self):
         self.prompt = "Draw one card, plus one card per draw bonus"
@@ -800,7 +818,7 @@ class Game:
 
     def move_warriors(self, faction, src: Area, dest: Area, num):
         LOGGER.info(
-            "{}:{}:{}:{} move {} warrior(s) from Area {} to Area {}".format(self.turn_player, self.phase,
+            "{}:{}:{}:{} move {} warrior(s) from Clearing #{} to Clearing #{}".format(self.turn_player, self.phase,
                                                                             self.sub_phase, self.turn_player, num, src,
                                                                             dest))
 
@@ -900,6 +918,9 @@ class Game:
             self.remove_wood(wood_cost, self.count_woods_from_clearing(clearing)[0])
 
             self.prompt = "The {} has been build.".format(building)
+            LOGGER.info(
+                "{}:{}:{}:MARQUISE builds {} in clearing #{}".format(self.turn_player, self.phase, self.sub_phase,
+                                                                     building, clearing.area_index))
             self.set_actions([Action('Next', perform(self.marquise_daylight_1_next))])
         elif faction == Faction.EYRIE:
             pass
@@ -910,8 +931,8 @@ class Game:
         if faction == Faction.MARQUISE:
             for clearing in self.board.areas:
                 if clearing.ruler() == Warrior.MARQUIS and clearing.buildings.count(
-                        Building.EMPTY) > 0 and self.marquise_get_min_cost_building() <= self.count_woods_from_clearing(
-                    clearing)[1]:
+                        Building.EMPTY) > 0 and self.marquise_get_min_cost_building() <= \
+                        self.count_woods_from_clearing(clearing)[1]:
                     buildable_clearing.append(clearing)
             return buildable_clearing
         elif faction == Faction.EYRIE:
@@ -932,6 +953,12 @@ class Game:
             return buildings
         elif faction == Faction.EYRIE:
             pass
+
+    def get_total_building(self, building):
+        total = 0
+        for area in self.board.areas:
+            total += area.buildings.count(building)
+        return total
 
     def calculate_fps(self):
         if self.delta_time != 0:
