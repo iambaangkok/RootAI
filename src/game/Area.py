@@ -252,9 +252,17 @@ class Area:
 
     def ruler(self) -> str | Warrior:
         # only for MARQUIS vs DECREE
-        if self.warrior_count[Warrior.MARQUIS] == 0 and self.warrior_count[Warrior.EYRIE] == 0:
+        marquise_presence = self.warrior_count[Warrior.MARQUIS] \
+            + self.buildings.count(Building.SAWMILL) \
+            + self.buildings.count(Building.RECRUITER) \
+            + self.buildings.count(Building.WORKSHOP)
+
+        eyrie_presence = self.warrior_count[Warrior.EYRIE] \
+            + self.buildings.count(Building.ROOST)
+
+        if marquise_presence == 0 and eyrie_presence == 0:
             return "None"
-        if self.warrior_count[Warrior.MARQUIS] > self.warrior_count[Warrior.EYRIE]:
+        if marquise_presence > eyrie_presence:
             return Warrior.MARQUIS
         else:
             return Warrior.EYRIE
