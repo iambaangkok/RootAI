@@ -381,17 +381,13 @@ class Game:
         self.set_actions(self.generate_actions_select_buildable_clearing(Faction.MARQUISE))
 
     def marquise_daylight_recruit(self):
-        for area in self.board.areas:
-            total_recruiters = area.buildings.count(Building.RECRUITER)
-            if total_recruiters > 0:
-                LOGGER.info(
-                    "{}:{}:{}:MARQUISE adds warrior in clearing #{}".format(self.turn_player, self.phase,
-                                                                            self.sub_phase,
-                                                                            area.area_index))
-            area.warrior_count[Warrior.MARQUIS] += area.buildings.count(Building.RECRUITER)
-
+        self.recruit(Faction.MARQUISE)
         self.prompt = "Recruit Warrior"
         self.set_actions([Action('Next', self.marquise_daylight_1_next)])
+
+    def marquise_daylight_battle(self):
+        self.prompt = "Battle"
+        self.set_actions(self.generate_actions_select_clearing_battle(Faction.MARQUISE))
 
     def marquise_daylight_2_next(self):
         self.prompt = "Draw one card, plus one card per draw bonus"
@@ -819,8 +815,9 @@ class Game:
     def move_warriors(self, faction, src: Area, dest: Area, num):
         LOGGER.info(
             "{}:{}:{}:{} move {} warrior(s) from Clearing #{} to Clearing #{}".format(self.turn_player, self.phase,
-                                                                            self.sub_phase, self.turn_player, num, src,
-                                                                            dest))
+                                                                                      self.sub_phase, self.turn_player,
+                                                                                      num, src,
+                                                                                      dest))
 
         if faction == Faction.MARQUISE:
             src.remove_warrior(Warrior.MARQUIS, num)
@@ -868,10 +865,13 @@ class Game:
     def recruit(self, faction: Faction, area: Area = None):
         if faction == Faction.MARQUISE:
             for area in self.board.areas:
-                if Building.RECRUITER in area:
-                    to_be_added_count = area.buildings.count(Building.RECRUITER)
-                    if self.marquise.reserved_warriors >= to_be_added_count:
-                        self.add_warrior(faction, area, to_be_added_count)
+                total_recruiters = area.buildings.count(Building.RECRUITER)
+                if total_recruiters > 0:
+                    self.add_warrior(faction, area, min(total_recruiters, self.marquise.reserved_warriors))
+                    LOGGER.info(
+                        "{}:{}:{}:MARQUISE adds warrior in clearing #{}".format(self.turn_player, self.phase,
+                                                                                self.sub_phase,
+                                                                                area.area_index))
         elif faction == Faction.EYRIE:
             amount = 1
             if self.eyrie.get_active_leader() == EyrieLeader.CHARISMATIC:
@@ -959,6 +959,59 @@ class Game:
         for area in self.board.areas:
             total += area.buildings.count(building)
         return total
+
+    def generate_actions_select_clearing_battle(self, faction):
+        clearings = self.get_battle_clearing(faction)
+        actions = []
+
+        if faction == Faction.MARQUISE:
+            for clearing in clearings:
+                actions.append(
+                    Action("{}".format(clearing),
+                           perform(self.generate_actions_select_faction_battle(faction, clearing), faction, clearing)))
+            return actions
+
+        elif faction == Faction.EYRIE:
+            pass
+
+    def generate_actions_select_faction_battle(self, faction, clearing):
+        enemy_factions = self.get_factions_from_clearing(faction, clearing)
+        actions = []
+
+        if faction == Faction.MARQUISE:
+            for enemy_faction in enemy_factions:
+                actions.append(
+                    Action("{}".format(enemy_faction),
+                           perform(self.battle(faction, clearing, enemy_faction), faction, clearing, enemy_faction)))
+            return actions
+
+        elif faction == Faction.EYRIE:
+            pass
+
+    def get_battle_clearing(self, faction):
+        clearings = []
+        if faction == Faction.MARQUISE:
+            for area in self.board.areas:
+                if area.warrior_count[Warrior.MARQUIS] > 0:
+                    clearings.append(area)
+        elif faction == Faction.EYRIE:
+            pass
+
+        return clearings
+
+    def get_factions_from_clearing(self, faction, clearing):
+        factions = []
+        if faction == Faction.MARQUISE:
+            for warrior_faction, warrior in enumerate(clearing.warrior_count):
+                if faction == warrior_faction:
+                    continue
+                elif warrior > 0:
+                    factions.append(warrior_faction)
+
+        return factions
+
+    def battle(self, faction, clearing, enemy_faction):
+        pass
 
     def calculate_fps(self):
         if self.delta_time != 0:
@@ -1067,3 +1120,7 @@ class Game:
             self.delta_time = self.clock.tick(Config.FRAME_RATE) / 1000
 
         pygame.quit()
+
+
+
+
