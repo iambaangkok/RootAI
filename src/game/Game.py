@@ -55,7 +55,7 @@ class Game:
 
         # Game Data
         self.turn_count: int = 0
-        self.turn_player: Faction = Faction.MARQUISE
+        self.turn_player: Faction = Faction.EYRIE
         self.phase: Phase = Phase.BIRDSONG
         self.sub_phase = 0
         self.is_in_action_sub_phase: bool = False
@@ -373,8 +373,16 @@ class Game:
         return self.get_total_building(Building.RECRUITER) > 0
 
     def marquise_daylight_march(self):
-        self.prompt = "March? It's July, bro. Choose where to move from."
+        self.prompt = "March? It's July, bro. Choose area to move from."
         self.set_actions(self.generate_actions_select_src_clearing(Faction.MARQUISE))
+
+    def marquise_daylight_march_choose_move_from(self, faction, src):
+        self.prompt = "Choose area to move to."
+        self.set_actions(self.generate_actions_select_dest_clearing(faction, src))
+
+    def marquise_daylight_march_choose_move_to(self, faction, src, dest):
+        self.prompt = "Choose number of warriors to move."
+        self.set_actions(self.generate_actions_select_warriors(faction, src, dest))
 
     def marquise_daylight_build(self):
         self.prompt = "Let's build"
@@ -586,18 +594,17 @@ class Game:
         self.sub_phase = 1
 
         self.decree_counter = copy(self.eyrie.decree)
-        self.update_prompt_actions_eyrie_recruit()
+        self.update_prompt_eyrie_decree(DecreeAction.RECRUIT)
+        self.set_actions(self.generate_actions_eyrie_recruit())
 
-    def update_prompt_actions_eyrie_recruit(self):
-        decree_action = DecreeAction.RECRUIT
-        self.prompt = "Resolve the Decree: Recruit BIRD/FOX/RABBIT/MOUSE {}/{}/{}/{}".format(
+    def update_prompt_eyrie_decree(self, decree_action: DecreeAction):
+        self.prompt = "Resolve the Decree: {} BIRD/FOX/RABBIT/MOUSE {}/{}/{}/{}".format(
+            decree_action,
             count_decree_action_static(self.decree_counter, decree_action, Suit.BIRD),
             count_decree_action_static(self.decree_counter, decree_action, Suit.FOX),
             count_decree_action_static(self.decree_counter, decree_action, Suit.RABBIT),
             count_decree_action_static(self.decree_counter, decree_action, Suit.MOUSE)
         )
-
-        self.set_actions(self.generate_actions_eyrie_recruit())
 
     def generate_actions_eyrie_recruit(self) -> list[Action]:
         actions: list[Action] = []
@@ -617,32 +624,67 @@ class Game:
                 # TODO: turmoil
                 actions.append(Action("Turmoil"))
             else:
-                # TODO: next, to MOVE
-                actions.append(Action("Next"))
+                actions.append(Action("Next", self.eyrie_recruit_next))
 
         return actions
 
     def eyrie_recruit(self, area: Area):
+        decree_action = DecreeAction.RECRUIT
         self.recruit(Faction.EYRIE, area)
-        self.decree_counter[DecreeAction.RECRUIT].remove(
-            self.get_decree_card_to_use(DecreeAction.RECRUIT, area.suit)
+        self.decree_counter[decree_action].remove(
+            self.get_decree_card_to_use(decree_action, area.suit)
         )
         LOGGER.info(
             "{}:{}:{}:{} recruited in area {}".format(self.turn_player, self.phase, self.sub_phase, Faction.EYRIE,
                                                       area.area_index))
 
-        self.update_prompt_actions_eyrie_recruit()
+        self.update_prompt_eyrie_decree(decree_action)
+        self.set_actions(self.generate_actions_eyrie_recruit())
+
+    def eyrie_recruit_next(self):
+        LOGGER.info("{}:{}:{}:recruit_next".format(self.turn_player, self.phase, self.sub_phase))
+        self.update_prompt_eyrie_decree(DecreeAction.MOVE)
+        self.set_actions(self.generate_actions_eyrie_move())
+
+    def generate_actions_eyrie_move(self) -> list[Action]:
+        actions: list[Action] = self.generate_actions_select_src_clearing(Faction.EYRIE)
+
+        decree_action = DecreeAction.MOVE
+
+        if len(actions) == 0:
+            if len(self.decree_counter[decree_action]) > 0:
+                # TODO: turmoil
+                actions.append(Action("Turmoil"))
+            else:
+                # TODO: next, to BATTLE
+                actions.append(Action("Next"))
+
+        return actions
+
+    def eyrie_choose_move_from(self, faction, src):
+        LOGGER.info("{}:{}:{}:eyrie_choose_move_from area {}".format(self.turn_player, self.phase, self.sub_phase, src))
+
+        self.update_prompt_eyrie_decree(DecreeAction.MOVE)
+        self.prompt += " Choose area to move to."
+        self.set_actions(self.generate_actions_select_dest_clearing(faction, src))
+
+    def eyrie_choose_move_to(self, faction, src, dest):
+        LOGGER.info("{}:{}:{}:eyrie_choose_move_to area {}".format(self.turn_player, self.phase, self.sub_phase, src, dest))
+
+        self.update_prompt_eyrie_decree(DecreeAction.MOVE)
+        self.prompt += " Choose number of warriors to move."
+        self.set_actions(self.generate_actions_select_warriors(faction, src, dest))
+
+    # TODO: eyrie resolve decree: BATTLE, BUILD
+    # TODO: eyrie turmoil
 
     def get_decree_card_to_use(self, decree_action: DecreeAction, suit: Suit) -> PlayingCard:
-        eligible_card = [card for card in self.decree_counter[decree_action] if card.suit == suit]
-        bird_card = [card for card in self.decree_counter[decree_action] if card.suit == Suit.BIRD]
-        if len(eligible_card) > 0:
-            return eligible_card[0]
+        eligible_cards = [card for card in self.decree_counter[decree_action] if card.suit == suit]
+        bird_cards = [card for card in self.decree_counter[decree_action] if card.suit == Suit.BIRD]
+        if len(eligible_cards) > 0:
+            return eligible_cards[0]
         else:
-            return bird_card[0]
-
-    # TODO: eyrie resolve decree: MOVE, BATTLE, BUILD
-    # TODO: eyrie turmoil
+            return bird_cards[0]
 
     def activate_leader(self, leader: EyrieLeader):
         if self.eyrie.activate_leader(leader):
@@ -769,7 +811,7 @@ class Game:
         discard_from.remove(card)
         self.discard_pile.append(card)
 
-    def generate_actions_select_src_clearing(self, faction) -> [Action]:
+    def generate_actions_select_src_clearing(self, faction) -> list[Action]:
         movable_clearings = self.get_available_src_clearing(faction)
         actions = []
 
@@ -777,40 +819,48 @@ class Game:
             for movable_clearing in movable_clearings:
                 actions.append(
                     Action("{}".format(movable_clearing),
-                           perform(self.generate_actions_select_dest_clearing, faction, movable_clearing)))
+                           perform(self.marquise_daylight_march_choose_move_from, faction, movable_clearing)))
 
             return actions
-        elif faction == Faction.EYRIE:  # Eyrie logic
-            pass
+        elif faction == Faction.EYRIE:
+            for movable_clearing in movable_clearings:
+                actions.append(
+                    Action("{}".format(movable_clearing),
+                           perform(self.eyrie_choose_move_from, faction, movable_clearing)))
+            return actions
 
-    def generate_actions_select_dest_clearing(self, faction, src) -> [Action]:
+    def generate_actions_select_dest_clearing(self, faction, src) -> list[Action]:
         dests = self.get_available_dest_clearing(faction, src)
         actions = []
-
-        self.prompt = "Choose where to move to"
 
         if faction == Faction.MARQUISE:
             for dest in dests:
                 actions.append(
                     Action("{}".format(dest),
-                           perform(self.generate_actions_select_warriors, faction, src, dest)))
+                           perform(self.marquise_daylight_march_choose_move_to, faction, src, dest)))
 
-            self.set_actions(actions)
-        elif faction == Faction.EYRIE:  # Eyrie logic
-            pass
+        elif faction == Faction.EYRIE:
+            for dest in dests:
+                actions.append(
+                    Action("{}".format(dest),
+                           perform(self.eyrie_choose_move_to, faction, src, dest)))
 
-    def generate_actions_select_warriors(self, faction, src: Area, dest: Area):
+        return actions
+
+    def generate_actions_select_warriors(self, faction, src: Area, dest: Area) -> list[Action]:
         actions = []
-
-        self.prompt = "Choose the number of warriors you want to move"
 
         if faction == Faction.MARQUISE:
             for num_of_warriors in range(1, src.warrior_count[Warrior.MARQUIS] + 1):
                 actions.append(Action("{}".format(num_of_warriors),
                                       perform(self.move_warriors, faction, src, dest, num_of_warriors)))
-            self.set_actions(actions)
+
         elif faction == Faction.EYRIE:
-            pass
+            for num_of_warriors in range(1, src.warrior_count[Warrior.EYRIE] + 1):
+                actions.append(Action("{}".format(num_of_warriors),
+                                      perform(self.move_warriors, faction, src, dest, num_of_warriors)))
+
+        return actions
 
     def move_warriors(self, faction, src: Area, dest: Area, num):
         LOGGER.info(
@@ -825,8 +875,19 @@ class Game:
 
             self.prompt = "The warriors has been moved."
             self.set_actions([Action('Next', perform(self.marquise_daylight_1_next))])
-        else:  # TODO Eyrie move logic
-            pass
+        elif faction == Faction.EYRIE:
+            src.remove_warrior(Warrior.EYRIE, num)
+            dest.add_warrior(Warrior.EYRIE, num)
+            decree_action = DecreeAction.MOVE
+
+            self.decree_counter[decree_action].remove(
+                self.get_decree_card_to_use(decree_action, src.suit)
+            )
+
+            self.update_prompt_eyrie_decree(decree_action)
+            self.set_actions(self.generate_actions_eyrie_recruit())
+
+            self.eyrie_recruit_next()
 
     def get_available_src_clearing(self, faction: Faction):
         movable_clearings = []
@@ -841,7 +902,20 @@ class Game:
                             movable_clearings.append(area)
                             break
         elif faction == Faction.EYRIE:
-            pass
+            decree_can_move_from: {Suit: bool} = {}
+            for suit in Suit:
+                decree_can_move_from[suit] = count_decree_action_static(self.decree_counter, DecreeAction.MOVE, suit)
+
+            for area in self.board.areas:
+                if not decree_can_move_from[area.suit]:
+                    continue
+                if area.ruler() == Warrior.EYRIE:
+                    movable_clearings.append(area)
+                else:
+                    for connected_area in area.connected_clearings:
+                        if area.warrior_count[Warrior.EYRIE] > 0 and connected_area.ruler() == Warrior.EYRIE:
+                            movable_clearings.append(area)
+                            break
 
         return movable_clearings
 
@@ -858,7 +932,13 @@ class Game:
                         dests.append(connect_area)
 
         elif faction == Faction.EYRIE:
-            pass
+            if src.ruler() == Warrior.EYRIE:
+                for connect_area in src.connected_clearings:
+                    dests.append(connect_area)
+            else:
+                for connect_area in src.connected_clearings:
+                    if connect_area.ruler() == Warrior.EYRIE:
+                        dests.append(connect_area)
 
         return dests
 
