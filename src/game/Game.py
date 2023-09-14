@@ -1,7 +1,7 @@
 import logging
 from copy import copy
 from enum import StrEnum
-from random import shuffle
+from random import shuffle, randint
 from typing import List
 
 import pygame
@@ -15,6 +15,7 @@ from src.game.Building import Building
 from src.game.EyrieBoard import EyrieBoard, DecreeAction, EyrieLeader, LeaderStatus, LOYAL_VIZIER, \
     count_decree_action_static
 from src.game.Faction import Faction
+from src.game.FactionBoard import FactionBoard
 from src.game.Item import Item
 from src.game.MarquiseBoard import MarquiseBoard
 from src.game.PlayingCard import PlayingCard, PlayingCardName, PlayingCardPhase
@@ -22,7 +23,7 @@ from src.game.Suit import Suit
 from src.game.Token import Token
 from src.game.Warrior import Warrior
 from src.utils.draw_utils import draw_text_in_rect
-from src.utils.utils import perform
+from src.utils.utils import perform, faction_to_warrior, faction_to_tokens, faction_to_buildings
 
 LOGGER = logging.getLogger('logger')
 
@@ -261,7 +262,7 @@ class Game:
         self.board.areas[-1].add_token(Token.CASTLE)
 
         for i in range(1, len(self.board.areas)):
-            self.board.areas[i].add_warrior(Warrior.MARQUIS, 1)
+            self.board.areas[i].add_warrior(Warrior.MARQUISE, 1)
 
         self.build_roost(self.board.areas[0])
         self.board.areas[0].add_warrior(Warrior.EYRIE, 6)
@@ -440,7 +441,7 @@ class Game:
             total_wood += u.token_count[Token.WOOD]
 
             for v in u.connected_clearings:
-                if v.ruler() == Warrior.MARQUIS:
+                if v.ruler() == Warrior.MARQUISE:
                     queue.append(v)
 
         return visited, total_wood
@@ -657,7 +658,7 @@ class Game:
                 actions.append(Action("Turmoil"))
             else:
                 # TODO: next, to BATTLE
-                actions.append(Action("Next"))
+                actions.append(Action("Next", self.eyrie_move_next))
 
         return actions
 
@@ -674,6 +675,35 @@ class Game:
         self.update_prompt_eyrie_decree(DecreeAction.MOVE)
         self.prompt += " Choose number of warriors to move."
         self.set_actions(self.generate_actions_select_warriors(faction, src, dest))
+
+    def eyrie_move_next(self):
+        LOGGER.info("{}:{}:{}:move_next".format(self.turn_player, self.phase, self.sub_phase))
+        self.update_prompt_eyrie_decree(DecreeAction.BATTLE)
+        self.prompt += " Choose area to battle in."
+
+        self.set_actions(self.generate_actions_eyrie_battle())
+
+    def generate_actions_eyrie_battle(self) -> list[Action]:
+        actions: list[Action] = self.generate_actions_select_clearing_battle(Faction.EYRIE)
+
+        decree_action = DecreeAction.BATTLE
+
+        if len(actions) == 0:
+            if len(self.decree_counter[decree_action]) > 0:
+                # TODO: turmoil
+                actions.append(Action("Turmoil"))
+            else:
+                # TODO: next, to BUILD
+                actions.append(Action("Next"))
+
+        return actions
+
+    def eyrie_choose_battle_in(self, clearing: Area):
+        LOGGER.info("{}:{}:{}:eyrie_choose_battle_in area {}".format(self.turn_player, self.phase, self.sub_phase, clearing))
+
+        self.update_prompt_eyrie_decree(DecreeAction.BATTLE)
+        self.prompt += " Choose enemy faction to battle."
+        self.set_actions(self.generate_actions_select_faction_battle(Faction.EYRIE, clearing))
 
     # TODO: eyrie resolve decree: BATTLE, BUILD
     # TODO: eyrie turmoil
@@ -696,7 +726,7 @@ class Game:
 
     def add_warrior(self, faction: Faction, area: Area, amount: int = 1):
         faction_board = self.marquise
-        warrior_type = Warrior.MARQUIS
+        warrior_type = Warrior.MARQUISE
         if faction == Faction.EYRIE:
             faction_board = self.eyrie
             warrior_type = Warrior.EYRIE
@@ -851,7 +881,7 @@ class Game:
         actions = []
 
         if faction == Faction.MARQUISE:
-            for num_of_warriors in range(1, src.warrior_count[Warrior.MARQUIS] + 1):
+            for num_of_warriors in range(1, src.warrior_count[Warrior.MARQUISE] + 1):
                 actions.append(Action("{}".format(num_of_warriors),
                                       perform(self.move_warriors, faction, src, dest, num_of_warriors)))
 
@@ -870,8 +900,8 @@ class Game:
                                                                                       dest))
 
         if faction == Faction.MARQUISE:
-            src.remove_warrior(Warrior.MARQUIS, num)
-            dest.add_warrior(Warrior.MARQUIS, num)
+            src.remove_warrior(Warrior.MARQUISE, num)
+            dest.add_warrior(Warrior.MARQUISE, num)
 
             self.prompt = "The warriors has been moved."
             self.set_actions([Action('Next', perform(self.marquise_daylight_1_next))])
@@ -894,11 +924,11 @@ class Game:
 
         if faction == Faction.MARQUISE:
             for area in self.board.areas:
-                if area.ruler() == Warrior.MARQUIS:
+                if area.ruler() == Warrior.MARQUISE:
                     movable_clearings.append(area)
                 else:
                     for connected_area in area.connected_clearings:
-                        if area.warrior_count[Warrior.MARQUIS] > 0 and connected_area.ruler() == Warrior.MARQUIS:
+                        if area.warrior_count[Warrior.MARQUISE] > 0 and connected_area.ruler() == Warrior.MARQUISE:
                             movable_clearings.append(area)
                             break
         elif faction == Faction.EYRIE:
@@ -907,7 +937,7 @@ class Game:
                 decree_can_move_from[suit] = count_decree_action_static(self.decree_counter, DecreeAction.MOVE, suit)
 
             for area in self.board.areas:
-                if not decree_can_move_from[area.suit]:
+                if decree_can_move_from[area.suit] == 0 and decree_can_move_from[Suit.BIRD] == 0:
                     continue
                 if area.ruler() == Warrior.EYRIE:
                     movable_clearings.append(area)
@@ -923,12 +953,12 @@ class Game:
         dests = []
 
         if faction == Faction.MARQUISE:
-            if src.ruler() == Warrior.MARQUIS:
+            if src.ruler() == Warrior.MARQUISE:
                 for connect_area in src.connected_clearings:
                     dests.append(connect_area)
             else:
                 for connect_area in src.connected_clearings:
-                    if connect_area.ruler() == Warrior.MARQUIS:
+                    if connect_area.ruler() == Warrior.MARQUISE:
                         dests.append(connect_area)
 
         elif faction == Faction.EYRIE:
@@ -1010,7 +1040,7 @@ class Game:
 
         if faction == Faction.MARQUISE:
             for clearing in self.board.areas:
-                if clearing.ruler() == Warrior.MARQUIS and clearing.buildings.count(
+                if clearing.ruler() == Warrior.MARQUISE and clearing.buildings.count(
                         Building.EMPTY) > 0 and self.marquise_get_min_cost_building() <= \
                         self.count_woods_from_clearing(clearing)[1]:
                     buildable_clearing.append(clearing)
@@ -1040,58 +1070,145 @@ class Game:
             total += area.buildings.count(building)
         return total
 
-    def generate_actions_select_clearing_battle(self, faction):
-        clearings = self.get_battle_clearing(faction)
+    def generate_actions_select_clearing_battle(self, faction) -> list[Action]:
+        clearings = self.get_battlable_clearing(faction)
         actions = []
 
         if faction == Faction.MARQUISE:
             for clearing in clearings:
+                # TODO: if
                 actions.append(
                     Action("{}".format(clearing),
-                           perform(self.generate_actions_select_faction_battle(faction, clearing), faction, clearing)))
-            return actions
-
+                           perform(self.generate_actions_select_faction_battle, faction, clearing)))
         elif faction == Faction.EYRIE:
-            pass
+            for clearing in clearings:
+                actions.append(
+                    Action("{}".format(clearing),
+                           perform(self.eyrie_choose_battle_in, clearing)))
+        return actions
 
-    def generate_actions_select_faction_battle(self, faction, clearing):
-        enemy_factions = self.get_factions_from_clearing(faction, clearing)
-        actions = []
+    def generate_actions_select_faction_battle(self, faction: Faction, clearing: Area) -> list[Action]:
+        enemy_factions: list[Faction] = self.get_available_enemy_tokens_from_clearing(faction, clearing)
+        actions: list[Action] = []
 
         if faction == Faction.MARQUISE:
             for enemy_faction in enemy_factions:
                 actions.append(
                     Action("{}".format(enemy_faction),
-                           perform(self.battle(faction, clearing, enemy_faction), faction, clearing, enemy_faction)))
-            return actions
+                           perform(self.battle, faction, clearing, enemy_faction)))
 
         elif faction == Faction.EYRIE:
-            pass
+            for enemy_faction in enemy_factions:
+                actions.append(
+                    Action("{}".format(enemy_faction),
+                           perform(self.battle, faction, clearing, enemy_faction)))
 
-    def get_battle_clearing(self, faction):
+        return actions
+
+    def get_battlable_clearing(self, faction):
         clearings = []
         if faction == Faction.MARQUISE:
             for area in self.board.areas:
-                if area.warrior_count[Warrior.MARQUIS] > 0:
+                if area.warrior_count[Warrior.MARQUISE] > 0:  # TODO: add condition
                     clearings.append(area)
         elif faction == Faction.EYRIE:
-            pass
+            decree_can_battle_in: {Suit: bool} = {}
+            for suit in Suit:
+                decree_can_battle_in[suit] = count_decree_action_static(self.decree_counter, DecreeAction.BATTLE, suit)
+
+            for area in self.board.areas:
+                if decree_can_battle_in[area.suit] == 0 and decree_can_battle_in[Suit.BIRD] == 0:
+                    continue
+                if area.warrior_count[Warrior.EYRIE] == 0:
+                    continue
+                if area.warrior_count[Warrior.MARQUISE] + area.warrior_count[Warrior.ALLIANCE] + area.warrior_count[Warrior.VAGABOND] == 0:
+                    continue
+
+                clearings.append(area)
 
         return clearings
 
-    def get_factions_from_clearing(self, faction, clearing):
-        factions = []
-        if faction == Faction.MARQUISE:
-            for warrior_faction, warrior in enumerate(clearing.warrior_count):
-                if faction == warrior_faction:
-                    continue
-                elif warrior > 0:
-                    factions.append(warrior_faction)
+    def get_available_enemy_tokens_from_clearing(self, faction: Faction, clearing: Area) -> list[Faction]:
+        factions: list[Faction] = []
+        our_warrior = faction_to_warrior(faction)
+
+        for enemy_faction in Faction:
+
+            enemy_warrior = faction_to_warrior(Faction[enemy_faction])
+            if enemy_warrior == our_warrior:
+                continue
+
+            enemy_tokens = faction_to_tokens(Faction[enemy_faction])
+            enemy_buildings = faction_to_buildings(Faction[enemy_faction])
+
+            enemy_warrior_count = clearing.get_warrior_count(enemy_warrior)
+            enemy_tokens_count = clearing.get_tokens_count(enemy_tokens)
+            enemy_buildings_count = clearing.get_buildings_count(enemy_buildings)
+
+            if enemy_warrior_count + enemy_tokens_count + enemy_buildings_count == 0:
+                continue
+            factions.append(Faction[enemy_faction])
 
         return factions
 
-    def battle(self, faction, clearing, enemy_faction):
-        pass
+    def battle(self, attacker: Faction, clearing: Area, defender: Faction):
+        # TODO: ambush and foil ambush logic
+
+        attacker_faction_board = self.faction_to_faction_board(attacker)
+        defender_faction_board = self.faction_to_faction_board(defender)
+
+        # roll dice and add extra hits
+        dices: list[int] = [randint(0, 4), randint(0, 4)]
+        attacker_roll: int = max(dices)
+        defender_roll: int = min(dices)
+        # TODO: add marquise extra_hit logic, if there is any
+
+        defender_defenseless_extra_hits: int = 1 if (clearing.get_warrior_count(faction_to_warrior(defender)) == 0) else 0
+
+        attacker_extra_hits: int = 1 if (attacker == Faction.EYRIE and self.eyrie.get_active_leader() == EyrieLeader.COMMANDER) else 0
+        defender_extra_hits: int = 0
+
+        attacker_total_hits: int = min(attacker_roll, clearing.get_warrior_count(
+            faction_to_warrior(attacker))) + attacker_extra_hits + defender_defenseless_extra_hits
+        defender_total_hits: int = min(defender_roll, clearing.get_warrior_count(faction_to_warrior(defender))) + defender_extra_hits
+
+        # deal hits
+        attacker_remaining_hits = attacker_total_hits
+        defender_remaining_hits = defender_total_hits
+        # to attacker
+        removed_attacker_warriors = clearing.remove_warrior(faction_to_warrior(attacker), defender_remaining_hits)
+        defender_remaining_hits -= removed_attacker_warriors
+        attacker_faction_board.reserved_warriors += removed_attacker_warriors
+        # to defender
+        removed_defender_warriors = clearing.remove_warrior(faction_to_warrior(defender), attacker_remaining_hits)
+        attacker_remaining_hits -= removed_defender_warriors
+        defender_faction_board.reserved_warriors += removed_defender_warriors
+
+        # TODO: for excess damage from warriors, choose tokens or buildings to remove
+        # score
+        attacker_total_vp = removed_defender_warriors
+        defender_total_vp = removed_attacker_warriors
+
+        attacker_faction_board.victory_point += attacker_total_vp  # @DarkTXYZ do we use this vp
+        self.board.gain_vp(attacker, attacker_total_vp)  # or this vp?
+        defender_faction_board.victory_point += defender_total_vp
+        self.board.gain_vp(defender, defender_total_vp)
+        # TODO: score for tokens and buildings removed
+
+        LOGGER.info(
+            "{}:{}:{}:battle: {} vs {}, total hits {}:{}, vps gained {}:{}".format(self.turn_player, self.phase, self.sub_phase,
+                                                                                   attacker, defender,
+                                                                                   attacker_total_hits, defender_total_hits,
+                                                                                   attacker_total_vp, defender_total_vp)
+        )
+
+        # TODO: continue to next action
+
+    def faction_to_faction_board(self, faction: Faction) -> FactionBoard:
+        if faction == Faction.MARQUISE:
+            return self.marquise
+        if faction == Faction.EYRIE:
+            return self.eyrie
 
     def calculate_fps(self):
         if self.delta_time != 0:
@@ -1200,7 +1317,3 @@ class Game:
             self.delta_time = self.clock.tick(Config.FRAME_RATE) / 1000
 
         pygame.quit()
-
-
-
-

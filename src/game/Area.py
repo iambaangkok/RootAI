@@ -161,7 +161,7 @@ class Area:
         position = self.position + offset
 
         ruler = self.ruler()
-        if ruler is Warrior.MARQUIS:
+        if ruler is Warrior.MARQUISE:
             color = Colors.ORANGE
             text = "M"
         elif ruler is Warrior.EYRIE:
@@ -185,14 +185,14 @@ class Area:
 
         count = 2
         starting_offset: Vector2 = Vector2(
-            -1 * ((count-1) * gap) / 2,
+            -1 * ((count - 1) * gap) / 2,
             y_offset_ratio * self.radius
         )
 
         # text Marquis
-        if self.warrior_count[Warrior.MARQUIS] > 0:
+        if self.warrior_count[Warrior.MARQUISE] > 0:
             color = Colors.ORANGE
-            text = str(self.warrior_count[Warrior.MARQUIS])
+            text = str(self.warrior_count[Warrior.MARQUISE])
 
             surface = Config.FONT_SM.render(text, True, color)
             surface_rect = surface.get_rect()
@@ -252,18 +252,18 @@ class Area:
 
     def ruler(self) -> str | Warrior:
         # only for MARQUIS vs DECREE
-        marquise_presence = self.warrior_count[Warrior.MARQUIS] \
-            + self.buildings.count(Building.SAWMILL) \
-            + self.buildings.count(Building.RECRUITER) \
-            + self.buildings.count(Building.WORKSHOP)
+        marquise_presence = self.warrior_count[Warrior.MARQUISE] \
+                            + self.buildings.count(Building.SAWMILL) \
+                            + self.buildings.count(Building.RECRUITER) \
+                            + self.buildings.count(Building.WORKSHOP)
 
         eyrie_presence = self.warrior_count[Warrior.EYRIE] \
-            + self.buildings.count(Building.ROOST)
+                         + self.buildings.count(Building.ROOST)
 
         if marquise_presence == 0 and eyrie_presence == 0:
             return "None"
         if marquise_presence > eyrie_presence:
-            return Warrior.MARQUIS
+            return Warrior.MARQUISE
         else:
             return Warrior.EYRIE
 
@@ -271,7 +271,17 @@ class Area:
         self.warrior_count[warrior_type] += amount
 
     def remove_warrior(self, warrior_type: Warrior, amount: int = 1):
+        """
+        Removes `amount` warrior of `warrior_type` from this clearing.
+        If `amount` is more than warriors present, remove all.
+
+        :param amount: amount of warriors to be removed
+        :param warrior_type: type of warriors to be removed
+        :return: numbers of removed warrior
+        """
+        pre_removed_warrior_count: int = self.warrior_count[warrior_type]
         self.warrior_count[warrior_type] = max(0, self.warrior_count[warrior_type] - amount)
+        return pre_removed_warrior_count - self.warrior_count[warrior_type]
 
     def add_token(self, token_type: Token, amount: int = 1):
         self.token_count[token_type] += amount
@@ -292,6 +302,15 @@ class Area:
         sum_of_tokens += len(self.buildings) - self.buildings.count(Building.EMPTY)
 
         return sum_of_tokens
+
+    def get_warrior_count(self, warrior: Warrior) -> int:
+        return self.warrior_count[warrior]
+
+    def get_tokens_count(self, tokens: list[Token]) -> int:
+        return sum([self.token_count[token] for token in tokens])
+
+    def get_buildings_count(self, buildings: list[Building]) -> int:
+        return sum([self.buildings.count(building) for building in buildings])
 
     def __str__(self):
         return str(self.area_index)
