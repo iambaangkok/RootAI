@@ -56,7 +56,7 @@ class Game:
 
         # Game Data
         self.turn_count: int = 0
-        self.turn_player: Faction = Faction.EYRIE
+        self.turn_player: Faction = Faction.MARQUISE
         self.phase: Phase = Phase.BIRDSONG
         self.sub_phase = 0
         self.is_in_action_sub_phase: bool = False
@@ -362,16 +362,21 @@ class Game:
             actions.append(Action('Build', perform(self.marquise_daylight_build)))
         if self.marquise_recruit_check():
             actions.append(Action('Recruit', perform(self.marquise_daylight_recruit)))
+        if self.marquise_overwork_check():
+            actions.append(Action('Overwork', perform(self.marquise_daylight_overwork_1)))
         self.set_actions(actions)
 
     def marquise_march_check(self):
-        return len(self.get_available_src_clearing(Faction.MARQUISE)) > 0
+        return len(self.find_available_source_clearings(Faction.MARQUISE)) > 0
 
     def marquise_build_check(self):
         return len(self.get_buildable_clearing(Faction.MARQUISE)) > 0
 
     def marquise_recruit_check(self):
-        return self.get_total_building(Building.RECRUITER) > 0
+        return self.count_buildings(Building.RECRUITER) > 0
+
+    def marquise_overwork_check(self):
+        return len(self.find_available_overwork_clearings()) > 0
 
     def marquise_daylight_march(self):
         self.prompt = "March? It's July, bro. Choose area to move from."
@@ -391,12 +396,29 @@ class Game:
 
     def marquise_daylight_recruit(self):
         self.recruit(Faction.MARQUISE)
-        self.prompt = "Recruit Warrior"
+        self.prompt = "Recruit: Done"
         self.set_actions([Action('Next', self.marquise_daylight_1_next)])
 
     def marquise_daylight_battle(self):
         self.prompt = "Battle"
         self.set_actions(self.generate_actions_select_clearing_battle(Faction.MARQUISE))
+
+    def marquise_daylight_overwork_1(self):
+        self.prompt = "Select Clearing"
+        self.set_actions(self.generate_actions_select_clearing_overwork())
+
+    def marquise_daylight_overwork_2(self, clearing):
+        self.prompt = "Select Card"
+        self.set_actions(self.generate_actions_select_card_overwork(clearing))
+
+    def marquise_overwork(self, clearing,card):
+
+        self.discard_card(self.marquise.cards_in_hand, card)
+        clearing.token_count[Token.WOOD] += 1
+
+        self.prompt = "Overwork: Done"
+        self.set_actions([Action('Next', self.marquise_daylight_1_next)])
+
 
     def marquise_daylight_2_next(self):
         self.prompt = "Draw one card, plus one card per draw bonus"
@@ -469,6 +491,36 @@ class Game:
         clearing.token_count[Token.WOOD] -= (
             min(number, clearing.token_count[Token.WOOD]))
         return remaining_wood
+
+    def find_available_overwork_clearings(self) -> list[Area]:
+        clearings_with_sawmill: list[Area] = [clearing for clearing in filter(self.sawmill_clearing, self.board.areas)]
+        card_suit_list = set([card.suit for card in self.marquise.cards_in_hand])
+        print([clearing.area_index for clearing in clearings_with_sawmill if clearing.suit in card_suit_list])
+        return [clearing for clearing in clearings_with_sawmill if clearing.suit in card_suit_list]
+
+    def sawmill_clearing(self, area):
+        return area.buildings.count(Building.SAWMILL) > 0
+
+    def generate_actions_select_clearing_overwork(self):
+        available_clearing = self.find_available_overwork_clearings()
+        actions: list[Action] = []
+
+        for clearing in available_clearing:
+            actions.append(
+                Action("{}".format(clearing.area_index),
+                       perform(self.marquise_daylight_overwork_2, clearing)))
+
+        return actions
+
+    def generate_actions_select_card_overwork(self, clearing):
+        discardable_card = [card for card in self.marquise.cards_in_hand if card.suit == clearing.suit]
+        actions: list[Action] = []
+
+        for card in discardable_card:
+            actions.append(Action('{} ({})'.format(card.name, card.suit),
+                                  perform(self.marquise_overwork, clearing, card)))
+
+        return actions
 
     #####
     # Eyrie
@@ -670,7 +722,8 @@ class Game:
         self.set_actions(self.generate_actions_select_dest_clearing(faction, src))
 
     def eyrie_choose_move_to(self, faction, src, dest):
-        LOGGER.info("{}:{}:{}:eyrie_choose_move_to area {}".format(self.turn_player, self.phase, self.sub_phase, src, dest))
+        LOGGER.info(
+            "{}:{}:{}:eyrie_choose_move_to area {}".format(self.turn_player, self.phase, self.sub_phase, src, dest))
 
         self.update_prompt_eyrie_decree(DecreeAction.MOVE)
         self.prompt += " Choose number of warriors to move."
@@ -699,7 +752,8 @@ class Game:
         return actions
 
     def eyrie_choose_battle_in(self, clearing: Area):
-        LOGGER.info("{}:{}:{}:eyrie_choose_battle_in area {}".format(self.turn_player, self.phase, self.sub_phase, clearing))
+        LOGGER.info(
+            "{}:{}:{}:eyrie_choose_battle_in area {}".format(self.turn_player, self.phase, self.sub_phase, clearing))
 
         self.update_prompt_eyrie_decree(DecreeAction.BATTLE)
         self.prompt += " Choose enemy faction to battle."
@@ -740,10 +794,10 @@ class Game:
 
         if faction == Faction.MARQUISE:
             for card in craftable_cards:
-                actions.append(Action("Craft {}".format(card.name), perform(self.craft_card, faction, card)))
+                actions.append(Action('{} ({})'.format(card.name, card.suit), perform(self.craft_card, faction, card)))
         elif faction == Faction.EYRIE:
             for card in craftable_cards:
-                actions.append(Action("Craft {}".format(card.name), perform(self.craft_card, faction, card)))
+                actions.append(Action('{} ({})'.format(card.name, card.suit), perform(self.craft_card, faction, card)))
 
         return actions
 
@@ -842,7 +896,7 @@ class Game:
         self.discard_pile.append(card)
 
     def generate_actions_select_src_clearing(self, faction) -> list[Action]:
-        movable_clearings = self.get_available_src_clearing(faction)
+        movable_clearings = self.find_available_source_clearings(faction)
         actions = []
 
         if faction == Faction.MARQUISE:
@@ -860,7 +914,7 @@ class Game:
             return actions
 
     def generate_actions_select_dest_clearing(self, faction, src) -> list[Action]:
-        dests = self.get_available_dest_clearing(faction, src)
+        dests = self.find_available_destination_clearings(faction, src)
         actions = []
 
         if faction == Faction.MARQUISE:
@@ -919,7 +973,7 @@ class Game:
 
             self.eyrie_recruit_next()
 
-    def get_available_src_clearing(self, faction: Faction):
+    def find_available_source_clearings(self, faction: Faction):
         movable_clearings = []
 
         if faction == Faction.MARQUISE:
@@ -949,7 +1003,7 @@ class Game:
 
         return movable_clearings
 
-    def get_available_dest_clearing(self, faction: Faction, src: Area):
+    def find_available_destination_clearings(self, faction: Faction, src: Area):
         dests = []
 
         if faction == Faction.MARQUISE:
@@ -1064,7 +1118,7 @@ class Game:
         elif faction == Faction.EYRIE:
             pass
 
-    def get_total_building(self, building):
+    def count_buildings(self, building):
         total = 0
         for area in self.board.areas:
             total += area.buildings.count(building)
@@ -1109,7 +1163,11 @@ class Game:
         clearings = []
         if faction == Faction.MARQUISE:
             for area in self.board.areas:
-                if area.warrior_count[Warrior.MARQUISE] > 0:  # TODO: add condition
+                total_enemy_warriors = area.warrior_count[Warrior.EYRIE] + area.warrior_count[Warrior.ALLIANCE] + \
+                                       area.warrior_count[Warrior.VAGABOND]
+                total_enemy_buildings = area.buildings.count(Building.ROOST)
+                if area.warrior_count[
+                    Warrior.MARQUISE] > 0 and total_enemy_warriors + total_enemy_buildings > 0:
                     clearings.append(area)
         elif faction == Faction.EYRIE:
             decree_can_battle_in: {Suit: bool} = {}
@@ -1121,7 +1179,8 @@ class Game:
                     continue
                 if area.warrior_count[Warrior.EYRIE] == 0:
                     continue
-                if area.warrior_count[Warrior.MARQUISE] + area.warrior_count[Warrior.ALLIANCE] + area.warrior_count[Warrior.VAGABOND] == 0:
+                if area.warrior_count[Warrior.MARQUISE] + area.warrior_count[Warrior.ALLIANCE] + area.warrior_count[
+                    Warrior.VAGABOND] == 0:
                     continue
 
                 clearings.append(area)
@@ -1163,14 +1222,17 @@ class Game:
         defender_roll: int = min(dices)
         # TODO: add marquise extra_hit logic, if there is any
 
-        defender_defenseless_extra_hits: int = 1 if (clearing.get_warrior_count(faction_to_warrior(defender)) == 0) else 0
+        defender_defenseless_extra_hits: int = 1 if (
+                clearing.get_warrior_count(faction_to_warrior(defender)) == 0) else 0
 
-        attacker_extra_hits: int = 1 if (attacker == Faction.EYRIE and self.eyrie.get_active_leader() == EyrieLeader.COMMANDER) else 0
+        attacker_extra_hits: int = 1 if (
+                attacker == Faction.EYRIE and self.eyrie.get_active_leader() == EyrieLeader.COMMANDER) else 0
         defender_extra_hits: int = 0
 
         attacker_total_hits: int = min(attacker_roll, clearing.get_warrior_count(
             faction_to_warrior(attacker))) + attacker_extra_hits + defender_defenseless_extra_hits
-        defender_total_hits: int = min(defender_roll, clearing.get_warrior_count(faction_to_warrior(defender))) + defender_extra_hits
+        defender_total_hits: int = min(defender_roll,
+                                       clearing.get_warrior_count(faction_to_warrior(defender))) + defender_extra_hits
 
         # deal hits
         attacker_remaining_hits = attacker_total_hits
@@ -1196,9 +1258,11 @@ class Game:
         # TODO: score for tokens and buildings removed
 
         LOGGER.info(
-            "{}:{}:{}:battle: {} vs {}, total hits {}:{}, vps gained {}:{}".format(self.turn_player, self.phase, self.sub_phase,
+            "{}:{}:{}:battle: {} vs {}, total hits {}:{}, vps gained {}:{}".format(self.turn_player, self.phase,
+                                                                                   self.sub_phase,
                                                                                    attacker, defender,
-                                                                                   attacker_total_hits, defender_total_hits,
+                                                                                   attacker_total_hits,
+                                                                                   defender_total_hits,
                                                                                    attacker_total_vp, defender_total_vp)
         )
 
