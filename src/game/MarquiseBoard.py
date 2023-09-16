@@ -45,7 +45,7 @@ class MarquiseBoard(FactionBoard):
         return self.building_reward[building][self.building_trackers[building]]
 
     def get_reward_card(self):
-        return self.building_reward[Building.RECRUITER][self.building_trackers[Building.RECRUITER]]
+        return self.building_reward_card[Building.RECRUITER][self.building_trackers[Building.RECRUITER]]
 
     def build_action_update(self, building):
         cost = self.building_cost[self.building_trackers[building]]

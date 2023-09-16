@@ -221,11 +221,11 @@ class Game:
                  Action('Overwork'),
                  Action('Next', perform(self.marquise_daylight_2_next))]
             ],
-            Phase.EVENING: [[Action('Next', perform(self.marquise_evening_next))]]
+            Phase.EVENING: [[Action('End turn', perform(self.marquise_evening_next))]]
         }
         self.eyrie_base_actions: {Phase: [[Action]]} = {
             Phase.BIRDSONG: [
-                [Action('Next', perform(self.eyrie_birdsong_1_next))],
+                [Action('Next', perform(self.marquise_evening_next))],
                 [],
                 [Action('Next', perform(self.eyrie_birdsong_3_next))]],
             Phase.DAYLIGHT: [
@@ -236,6 +236,10 @@ class Game:
         }
         self.actions: list[Action] = []
         self.set_actions()
+
+        # Marquise variables
+        self.marquise_action_count = 3
+        self.marquise_recruit_action_used = False
 
         # # Add Card To Decree variables
         self.selected_card: PlayingCard | None = None
@@ -328,6 +332,8 @@ class Game:
         self.current_action.function()
 
     def marquise_birdsong_next(self):
+        # set marquise action count to 3
+        self.marquise_action_count = 3
         # Place one wood at each sawmill
         for area in self.board.areas:
             area.token_count[Token.WOOD] += area.buildings.count(Building.SAWMILL)
@@ -350,21 +356,24 @@ class Game:
             Action('Next', perform(self.marquise_daylight_1_next))])
 
     def marquise_daylight_1_next(self):
-        remaining_action = 3
-        self.prompt = "Select Actions (Remaining Action: {})".format(remaining_action)
+        actions = []
+        self.prompt = "Select Actions (Remaining Action: {})".format(self.marquise_action_count)
         self.sub_phase = 1
 
-        actions = []
-
-        if self.marquise_march_check():
-            actions.append(Action('March', perform(self.marquise_daylight_march_move_from)))
-        if self.marquise_build_check():
-            actions.append(Action('Build', perform(self.marquise_daylight_build_select_clearing)))
-        if self.marquise_recruit_check():
-            actions.append(Action('Recruit', perform(self.marquise_daylight_recruit)))
-        if self.marquise_overwork_check():
-            actions.append(Action('Overwork', perform(self.marquise_daylight_overwork_1)))
-        self.set_actions(actions)
+        if self.marquise_action_count == 0:  # TODO: Hawks for Hire action
+            self.prompt = "No action remaining, Proceed to next phase.".format(self.marquise_action_count)
+            self.set_actions([Action('Next', perform(self.marquise_daylight_2_next))])
+        else:
+            if self.marquise_march_check():
+                actions.append(Action('March', perform(self.marquise_daylight_march_move_from)))
+            if self.marquise_build_check():
+                actions.append(Action('Build', perform(self.marquise_daylight_build_select_clearing)))
+            if self.marquise_recruit_check():
+                actions.append(Action('Recruit', perform(self.marquise_daylight_recruit)))
+            if self.marquise_overwork_check():
+                actions.append(Action('Overwork', perform(self.marquise_daylight_overwork_1)))
+            actions.append(Action('Next', perform(self.marquise_daylight_2_next)))
+            self.set_actions(actions)
 
     def marquise_march_check(self):
         return len(self.find_available_source_clearings(Faction.MARQUISE)) > 0
@@ -401,9 +410,10 @@ class Game:
     def marquise_daylight_recruit(self):
         self.recruit(Faction.MARQUISE)
         self.prompt = "The Marquise warriors are coming to town."
+        self.marquise_action_count -= 1
         self.set_actions([Action('Next', self.marquise_daylight_1_next)])
 
-    def marquise_daylight_battle(self): #TODO: Refactor Battle Method
+    def marquise_daylight_battle(self):  # TODO: Refactor Battle Method
         self.prompt = "Battle"
         self.set_actions(self.generate_actions_select_clearing_battle(Faction.MARQUISE))
 
@@ -415,26 +425,22 @@ class Game:
         self.prompt = "Select Card"
         self.set_actions(self.generate_actions_select_card_overwork(clearing))
 
-    def marquise_overwork(self, clearing,card):
-
+    def marquise_overwork(self, clearing, card):
         self.discard_card(self.marquise.cards_in_hand, card)
         clearing.token_count[Token.WOOD] += 1
 
         self.prompt = "Overwork: Done"
+        self.marquise_action_count -= 1
         self.set_actions([Action('Next', self.marquise_daylight_1_next)])
 
-
-    def marquise_daylight_2_next(self):
+    def marquise_daylight_2_next(self): # TODO: Draw cards
         self.prompt = "Draw one card, plus one card per draw bonus"
+        number_of_card_to_be_drawn = self.marquise.get_reward_card() + 1
+        self.take_card_from_draw_pile(Faction.MARQUISE, number_of_card_to_be_drawn)
+
         self.phase = Phase.EVENING
         self.sub_phase = 0
         self.set_actions()
-
-    def marquise_evening_next(self):
-        self.phase = Phase.DAYLIGHT
-        self.turn_player = Faction.EYRIE
-        self.set_actions()
-        pass
 
     def get_workshop_count_by_suit(self) -> {Suit: int}:
         workshop_count: {Suit: int} = {
@@ -530,7 +536,9 @@ class Game:
     def check_event_eyrie(self, event: pygame.event.Event):
         self.current_action.function()
 
-    def eyrie_birdsong_1_next(self):
+    def marquise_evening_next(self):
+        self.turn_player = Faction.EYRIE
+        self.phase = Phase.BIRDSONG
         LOGGER.info("{}:{}:{}:next".format(self.turn_player, self.phase, self.sub_phase))
 
         if len(self.eyrie.cards_in_hand) == 0:
@@ -961,6 +969,7 @@ class Game:
             dest.add_warrior(Warrior.MARQUISE, num)
 
             self.prompt = "The warriors has been moved."
+            self.marquise_action_count -= 1
             self.set_actions([Action('Next', perform(self.marquise_daylight_1_next))])
         elif faction == Faction.EYRIE:
             src.remove_warrior(Warrior.EYRIE, num)
@@ -1089,6 +1098,7 @@ class Game:
                 "{}:{}:{}:MARQUISE builds {} in clearing #{}".format(self.turn_player, self.phase, self.sub_phase,
                                                                      building, clearing.area_index))
             self.prompt = "The {} has been build at clearing #{}.".format(building, clearing.area_index)
+            self.marquise_action_count -= 1
             self.set_actions([Action('Next', perform(self.marquise_daylight_1_next))])
         elif faction == Faction.EYRIE:
             pass
