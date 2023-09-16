@@ -216,7 +216,7 @@ class Game:
             Phase.DAYLIGHT: [
                 [Action('Craft', perform(self.marquise_daylight_craft)),
                  Action('Next', perform(self.marquise_daylight_1_next))],
-                [Action('Battle'), Action('March', perform(self.marquise_daylight_march)), Action('Recruit'),
+                [Action('Battle'), Action('March', perform(self.marquise_daylight_march_move_from)), Action('Recruit'),
                  Action('Build'),
                  Action('Overwork'),
                  Action('Next', perform(self.marquise_daylight_2_next))]
@@ -357,9 +357,9 @@ class Game:
         actions = []
 
         if self.marquise_march_check():
-            actions.append(Action('March', perform(self.marquise_daylight_march)))
+            actions.append(Action('March', perform(self.marquise_daylight_march_move_from)))
         if self.marquise_build_check():
-            actions.append(Action('Build', perform(self.marquise_daylight_build)))
+            actions.append(Action('Build', perform(self.marquise_daylight_build_select_clearing)))
         if self.marquise_recruit_check():
             actions.append(Action('Recruit', perform(self.marquise_daylight_recruit)))
         if self.marquise_overwork_check():
@@ -378,28 +378,32 @@ class Game:
     def marquise_overwork_check(self):
         return len(self.find_available_overwork_clearings()) > 0
 
-    def marquise_daylight_march(self):
-        self.prompt = "March? It's July, bro. Choose area to move from."
+    def marquise_daylight_march_move_from(self):
+        self.prompt = "Let's march. Choose area to move from."
         self.set_actions(self.generate_actions_select_src_clearing(Faction.MARQUISE))
 
-    def marquise_daylight_march_choose_move_from(self, faction, src):
+    def marquise_daylight_march_move_to(self, faction, src):
         self.prompt = "Choose area to move to."
         self.set_actions(self.generate_actions_select_dest_clearing(faction, src))
 
-    def marquise_daylight_march_choose_move_to(self, faction, src, dest):
+    def marquise_daylight_march_select_warriors(self, faction, src, dest):
         self.prompt = "Choose number of warriors to move."
         self.set_actions(self.generate_actions_select_warriors(faction, src, dest))
 
-    def marquise_daylight_build(self):
-        self.prompt = "Let's build"
+    def marquise_daylight_build_select_clearing(self):
+        self.prompt = "Let's build. Select clearing"
         self.set_actions(self.generate_actions_select_buildable_clearing(Faction.MARQUISE))
+
+    def marquise_daylight_build_select_building(self, clearing):
+        self.prompt = "Select Building"
+        self.set_actions(self.generate_actions_select_building(Faction.MARQUISE, clearing))
 
     def marquise_daylight_recruit(self):
         self.recruit(Faction.MARQUISE)
-        self.prompt = "Recruit: Done"
+        self.prompt = "The Marquise warriors are coming to town."
         self.set_actions([Action('Next', self.marquise_daylight_1_next)])
 
-    def marquise_daylight_battle(self):
+    def marquise_daylight_battle(self): #TODO: Refactor Battle Method
         self.prompt = "Battle"
         self.set_actions(self.generate_actions_select_clearing_battle(Faction.MARQUISE))
 
@@ -495,7 +499,6 @@ class Game:
     def find_available_overwork_clearings(self) -> list[Area]:
         clearings_with_sawmill: list[Area] = [clearing for clearing in filter(self.sawmill_clearing, self.board.areas)]
         card_suit_list = set([card.suit for card in self.marquise.cards_in_hand])
-        print([clearing.area_index for clearing in clearings_with_sawmill if clearing.suit in card_suit_list])
         return [clearing for clearing in clearings_with_sawmill if clearing.suit in card_suit_list]
 
     def sawmill_clearing(self, area):
@@ -903,7 +906,7 @@ class Game:
             for movable_clearing in movable_clearings:
                 actions.append(
                     Action("{}".format(movable_clearing),
-                           perform(self.marquise_daylight_march_choose_move_from, faction, movable_clearing)))
+                           perform(self.marquise_daylight_march_move_to, faction, movable_clearing)))
 
             return actions
         elif faction == Faction.EYRIE:
@@ -921,7 +924,7 @@ class Game:
             for dest in dests:
                 actions.append(
                     Action("{}".format(dest),
-                           perform(self.marquise_daylight_march_choose_move_to, faction, src, dest)))
+                           perform(self.marquise_daylight_march_select_warriors, faction, src, dest)))
 
         elif faction == Faction.EYRIE:
             for dest in dests:
@@ -1051,12 +1054,12 @@ class Game:
             for clearing in clearings:
                 actions.append(
                     Action("{}".format(clearing),
-                           perform(self.generate_actions_select_building, faction, clearing)))
-
-            return actions
+                           perform(self.marquise_daylight_build_select_building, clearing)))
 
         elif faction == Faction.EYRIE:
             pass
+
+        return actions
 
     def generate_actions_select_building(self, faction, clearing):
         buildings = self.get_buildable_building(faction, clearing)
@@ -1067,9 +1070,10 @@ class Game:
                 actions.append(
                     Action("{}".format(building),
                            perform(self.build, faction, clearing, building)))
-            self.set_actions(actions + [Action('Next', self.marquise_daylight_1_next)])
         elif faction == Faction.EYRIE:
             pass
+
+        return actions
 
     def build(self, faction, clearing: Area, building):
         if faction == Faction.MARQUISE:
@@ -1081,10 +1085,10 @@ class Game:
 
             self.remove_wood(wood_cost, self.count_woods_from_clearing(clearing)[0])
 
-            self.prompt = "The {} has been build.".format(building)
             LOGGER.info(
                 "{}:{}:{}:MARQUISE builds {} in clearing #{}".format(self.turn_player, self.phase, self.sub_phase,
                                                                      building, clearing.area_index))
+            self.prompt = "The {} has been build at clearing #{}.".format(building, clearing.area_index)
             self.set_actions([Action('Next', perform(self.marquise_daylight_1_next))])
         elif faction == Faction.EYRIE:
             pass
