@@ -361,8 +361,12 @@ class Game:
         self.sub_phase = 1
 
         if self.marquise_action_count == 0:  # TODO: Hawks for Hire action
-            self.prompt = "No action remaining, Proceed to next phase.".format(self.marquise_action_count)
-            self.set_actions([Action('Next', perform(self.marquise_daylight_2_next))])
+            self.prompt = "No action remaining. Proceed to next phase.".format(self.marquise_action_count)
+            if self.marquise_hawks_for_hire_check():
+                self.prompt = "No action remaining. Discard BIRD suit card to gain extra action.".format(
+                    self.marquise_action_count)
+                actions.append(Action('Hawks for hire (discard BIRD suit card to gain extra action)',
+                                      perform(self.marquise_daylight_hawks_for_hire_select_card)))
         else:
             if self.marquise_march_check():
                 actions.append(Action('March', perform(self.marquise_daylight_march_move_from)))
@@ -372,8 +376,12 @@ class Game:
                 actions.append(Action('Recruit', perform(self.marquise_daylight_recruit)))
             if self.marquise_overwork_check():
                 actions.append(Action('Overwork', perform(self.marquise_daylight_overwork_1)))
-            actions.append(Action('Next', perform(self.marquise_daylight_2_next)))
-            self.set_actions(actions)
+
+        actions.append(Action('Next', perform(self.marquise_daylight_2_next)))
+        self.set_actions(actions)
+
+    def marquise_hawks_for_hire_check(self):
+        return len([card for card in self.marquise.cards_in_hand if card.suit == Suit.BIRD]) > 0
 
     def marquise_march_check(self):
         return len(self.find_available_source_clearings(Faction.MARQUISE)) > 0
@@ -386,6 +394,10 @@ class Game:
 
     def marquise_overwork_check(self):
         return len(self.find_available_overwork_clearings()) > 0
+
+    def marquise_daylight_hawks_for_hire_select_card(self):
+        self.prompt = "Select card to discard"
+        self.set_actions(self.generate_actions_select_card_hawks_for_hire())
 
     def marquise_daylight_march_move_from(self):
         self.prompt = "Let's march. Choose area to move from."
@@ -433,7 +445,7 @@ class Game:
         self.marquise_action_count -= 1
         self.set_actions([Action('Next', self.marquise_daylight_1_next)])
 
-    def marquise_daylight_2_next(self): # TODO: Draw cards
+    def marquise_daylight_2_next(self):  # TODO: Draw cards
         self.prompt = "Draw one card, plus one card per draw bonus"
         number_of_card_to_be_drawn = self.marquise.get_reward_card() + 1
         self.take_card_from_draw_pile(Faction.MARQUISE, number_of_card_to_be_drawn)
@@ -530,6 +542,23 @@ class Game:
                                   perform(self.marquise_overwork, clearing, card)))
 
         return actions
+
+    def generate_actions_select_card_hawks_for_hire(self):
+        cards = [card for card in self.marquise.cards_in_hand if card.suit == Suit.BIRD]
+        actions: list[Action] = []
+
+        for card in cards:
+            actions.append(Action('{} ({})'.format(card.name, card.suit),
+                                  perform(self.marquise_hawks_for_hire, card)))
+
+        return actions
+
+    def marquise_hawks_for_hire(self, card):
+        self.discard_card(self.marquise.cards_in_hand, card)
+        self.marquise_action_count += 1
+
+        self.prompt = "Gain 1 extra action."
+        self.set_actions([Action('Next', self.marquise_daylight_1_next)])
 
     #####
     # Eyrie
