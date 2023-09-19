@@ -221,11 +221,11 @@ class Game:
                  Action('Overwork'),
                  Action('Next', perform(self.marquise_daylight_2_next))]
             ],
-            Phase.EVENING: [[Action('End turn', perform(self.marquise_evening_next))]]
+            Phase.EVENING: [[Action('End turn', perform(self.eyrie_birdsong_1_next))]]
         }
         self.eyrie_base_actions: {Phase: [[Action]]} = {
             Phase.BIRDSONG: [
-                [Action('Next', perform(self.marquise_evening_next))],
+                [Action('Next', perform(self.eyrie_birdsong_1_next))],
                 [],
                 [Action('Next', perform(self.eyrie_birdsong_3_next))]],
             Phase.DAYLIGHT: [
@@ -574,9 +574,7 @@ class Game:
     def check_event_eyrie(self, event: pygame.event.Event):
         self.current_action.function()
 
-    def marquise_evening_next(self):
-        self.turn_player = Faction.EYRIE
-        self.phase = Phase.BIRDSONG
+    def eyrie_birdsong_1_next(self):
         LOGGER.info("{}:{}:{}:next".format(self.turn_player, self.phase, self.sub_phase))
 
         if len(self.eyrie.cards_in_hand) == 0:
@@ -702,6 +700,62 @@ class Game:
         self.update_prompt_eyrie_decree(DecreeAction.RECRUIT)
         self.set_actions(self.generate_actions_eyrie_recruit())
 
+    def eyrie_turmoil(self):
+        # humuliate
+        self.eyrie_turmoil_humiliate()
+        # purge
+        self.eyrie_turmoil_purge()
+        # depose -> rest
+        self.eyrie_turmoil_depose()
+
+    def eyrie_turmoil_humiliate(self):
+        bird_card_in_decree_count = self.eyrie.count_card_in_decree_with_suit(Suit.BIRD)
+        vp_lost = min(self.board.faction_points[Faction.EYRIE], bird_card_in_decree_count)
+        self.board.lose_vp(Faction.EYRIE, vp_lost)
+        LOGGER.info("{}:{}:{}:turmoil:humiliate: lost {} vp(s)".format(self.turn_player, self.phase, self.sub_phase, vp_lost))
+
+    def eyrie_turmoil_purge(self):
+        for decree in DecreeAction:
+            for card in self.eyrie.decree[decree]:
+                if card.name is not LOYAL_VIZIER.name:
+                    self.discard_card(self.eyrie.decree[decree], card)
+                else:
+                    self.eyrie.decree[decree].remove(card)
+        LOGGER.info("{}:{}:{}:turmoil:purge: discarded all decree cards except loyal viziers".format(self.turn_player, self.phase, self.sub_phase))
+
+    def eyrie_turmoil_depose(self):
+        current_leader = self.eyrie.get_active_leader()
+
+        self.eyrie.deactivate_current_leader()
+        inactive_leaders = self.eyrie.get_inactive_leader()
+
+        if len(inactive_leaders) == 0:
+            self.eyrie.a_new_generation()
+
+        LOGGER.info("{}:{}:{}:turmoil:depose: {} deposed".format(self.turn_player, self.phase, self.sub_phase, current_leader))
+        self.prompt = "Select New Eyrie Leader:"
+        self.set_actions(self.generate_actions_eyrie_select_new_leader(inactive_leaders))
+
+    def generate_actions_eyrie_select_new_leader(self, inactive_leaders: list[EyrieLeader]) -> list[Action]:
+        actions: list[Action] = []
+
+        for leader in inactive_leaders:
+            actions.append(Action("{}".format(leader),
+                                  perform(self.eyrie_select_new_leader, leader)))
+
+        return actions
+
+    def eyrie_select_new_leader(self, leader: EyrieLeader):
+        self.eyrie.activate_leader(leader)
+        LOGGER.info("{}:{}:{}:turmoil:depose: {} selected as new leader".format(self.turn_player, self.phase, self.sub_phase, leader))
+        self.eyrie_turmoil_rest()
+
+    def eyrie_turmoil_rest(self):
+        LOGGER.info("{}:{}:{}:turmoil:rest".format(self.turn_player, self.phase, self.sub_phase))
+        self.phase = Phase.EVENING
+        self.sub_phase = 1
+        self.eyrie_evening()
+
     def update_prompt_eyrie_decree(self, decree_action: DecreeAction):
         self.prompt = "Resolve the Decree: {} BIRD/FOX/RABBIT/MOUSE {}/{}/{}/{}".format(
             decree_action,
@@ -726,8 +780,7 @@ class Game:
 
         if len(actions) == 0:
             if len(self.decree_counter[decree_action]) > 0:
-                # TODO: turmoil
-                actions.append(Action("Turmoil"))
+                actions.append(Action("Turmoil", self.eyrie_turmoil))
             else:
                 actions.append(Action("Next", self.eyrie_recruit_next))
 
@@ -758,8 +811,7 @@ class Game:
 
         if len(actions) == 0:
             if len(self.decree_counter[decree_action]) > 0:
-                # TODO: turmoil
-                actions.append(Action("Turmoil"))
+                actions.append(Action("Turmoil", self.eyrie_turmoil))
             else:
                 # TODO: next, to BATTLE
                 actions.append(Action("Next", self.eyrie_move_next))
@@ -795,8 +847,7 @@ class Game:
 
         if len(actions) == 0:
             if len(self.decree_counter[decree_action]) > 0:
-                # TODO: turmoil
-                actions.append(Action("Turmoil"))
+                actions.append(Action("Turmoil", self.eyrie_turmoil))
             else:
                 # TODO: next, to BUILD
                 actions.append(Action("Next"))
@@ -812,7 +863,33 @@ class Game:
         self.set_actions(self.generate_actions_select_faction_battle(Faction.EYRIE, clearing))
 
     # TODO: eyrie resolve decree: BATTLE, BUILD
-    # TODO: eyrie turmoil
+
+    # TODO: eyrie evening
+
+    def eyrie_evening(self):
+        roost_tracker = self.eyrie.roost_tracker
+        vp = EyrieBoard.ROOST_REWARD_VP[roost_tracker]
+        card_to_draw = 1 + EyrieBoard.ROOST_REWARD_CARD[roost_tracker]
+
+        self.board.gain_vp(Faction.EYRIE, vp)
+        LOGGER.info("{}:{}:{}:eyrie_evening: scored {} vps".format(self.turn_player, self.phase, self.sub_phase, vp))
+
+        self.take_card_from_draw_pile(Faction.EYRIE, card_to_draw)
+        card_in_hand_count = len(self.eyrie.cards_in_hand)
+        if card_in_hand_count > 5:
+            # TODO: discard card down to 5
+            self.prompt = "Select card to discard down to 5 cards (currently {} cards in hand)".format(card_in_hand_count)
+            self.set_actions(self.generate_actions_select_card_to_discard(Faction.EYRIE))
+        else:
+            self.eyrie_evening_next()
+
+    def eyrie_evening_next(self):
+        LOGGER.info("{}:{}:{}:eyrie_evening_next".format(self.turn_player, self.phase, self.sub_phase))
+        self.turn_player = Faction.MARQUISE
+        self.phase = Phase.BIRDSONG
+        self.sub_phase = 0
+        self.prompt = "Marquise's Turn"
+        self.set_actions()  # to marquise
 
     def get_decree_card_to_use(self, decree_action: DecreeAction, suit: Suit) -> PlayingCard:
         eligible_cards = [card for card in self.decree_counter[decree_action] if card.suit == suit]
@@ -1417,6 +1494,31 @@ class Game:
         self.prompt = "Remove {} successfully.".format(token_building.name)
         self.set_actions([Action('Next', perform(self.post_battle, attacker, defender, attacker_remaining_hits - 1,
                                                  defender_remaining_hits, clearing))])
+                                                 
+    def generate_actions_select_card_to_discard(self, faction: Faction) -> list[Action]:
+        actions: list[Action] = []
+
+        faction_board = self.faction_to_faction_board(faction)
+
+        for card in faction_board.cards_in_hand:
+            actions.append(Action("Card {} ({})".format(card.name, card.suit), perform(self.select_card_to_discard, faction, card)))
+
+        return actions
+
+    def select_card_to_discard(self, faction: Faction, card: PlayingCard):
+        faction_board = self.faction_to_faction_board(faction)
+        LOGGER.info("{}:{}:{}:{}:discard_card {} ({}) discarded".format(self.turn_player, self.phase, self.sub_phase, faction, card.name, card.suit))
+        self.discard_card(faction_board.cards_in_hand, card)
+        card_in_hand_count = len(faction_board.cards_in_hand)
+        if card_in_hand_count > 5:
+            self.prompt = "Select card to discard down to 5 cards (currently {} cards in hand)".format(card_in_hand_count)
+            self.set_actions(self.generate_actions_select_card_to_discard(faction))
+        else:
+            if faction == Faction.MARQUISE:
+                # TODO
+                pass
+            elif faction == Faction.EYRIE:
+                self.eyrie_evening_next()
 
     def faction_to_faction_board(self, faction: Faction) -> FactionBoard:
         if faction == Faction.MARQUISE:
