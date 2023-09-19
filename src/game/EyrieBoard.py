@@ -13,9 +13,6 @@ from src.utils.draw_utils import draw_key_value, draw_key_multi_value
 
 LOGGER = logging.getLogger('logger')
 
-ROOST_REWARD_VP = [0, 1, 2, 3, 4, 4, 5]
-ROOST_REWARD_CARD = [0, 0, 1, 1, 1, 2, 2]
-
 
 class DecreeAction(StrEnum):
     RECRUIT = "RECRUIT"
@@ -45,6 +42,9 @@ def count_decree_action_static(decree: {DecreeAction: list[PlayingCard]}, decree
 
 
 class EyrieBoard(FactionBoard):
+    ROOST_REWARD_VP: list[int] = [0, 1, 2, 3, 4, 4, 5]
+    ROOST_REWARD_CARD: list[int] = [0, 0, 1, 1, 1, 2, 2]
+
     def __init__(self, name: str, color: Color, reserved_warriors: int, starting_point: Vector2):
         super().__init__(name, color, reserved_warriors, starting_point)
         self.roost_tracker: int = 1
@@ -65,6 +65,20 @@ class EyrieBoard(FactionBoard):
         for leader in self.leaders.keys():
             if self.leaders[leader] == LeaderStatus.ACTIVE:
                 return leader
+
+    def get_inactive_leader(self) -> list[EyrieLeader]:
+        inactive_leaders: list[EyrieLeader] = []
+        for leader in self.leaders.keys():
+            if self.leaders[leader] == LeaderStatus.INACTIVE:
+                inactive_leaders.append(leader)
+        return inactive_leaders
+
+    def deactivate_current_leader(self):
+        self.leaders[self.get_active_leader()] = LeaderStatus.USED
+
+    def a_new_generation(self):
+        for leader in self.leaders.keys():
+            self.leaders[leader] = LeaderStatus.INACTIVE
 
     def activate_leader(self, leader: EyrieLeader) -> bool:
         if self.leaders[leader] == LeaderStatus.USED:
@@ -87,7 +101,10 @@ class EyrieBoard(FactionBoard):
 
         return True
 
-    def count_decree_action(self, decree_action: DecreeAction | str, suit: Suit | str) -> int:
+    def count_card_in_decree_with_suit(self, suit: Suit | str) -> int:
+        return sum([self.count_decree_action_with_suit(decree_action, suit) for decree_action in DecreeAction])
+
+    def count_decree_action_with_suit(self, decree_action: DecreeAction | str, suit: Suit | str) -> int:
         return count_decree_action_static(self.decree, decree_action, suit)
 
     def draw(self, screen: Surface):
@@ -125,14 +142,14 @@ class EyrieBoard(FactionBoard):
                 draw_img = img
             screen.blit(draw_img,
                         (starting_point.x + (img_size.x + gap) * j + gap + offset_x, starting_point.y))
-            if ROOST_REWARD_VP[j] > 0:
-                reward_vp = Config.FONT_SM_BOLD.render("+" + str(ROOST_REWARD_VP[j]), True, (206, 215, 132))
+            if EyrieBoard.ROOST_REWARD_VP[j] > 0:
+                reward_vp = Config.FONT_SM_BOLD.render("+" + str(EyrieBoard.ROOST_REWARD_VP[j]), True, (206, 215, 132))
                 reward_vp = text_utils.add_outline(reward_vp, 2, Colors.GREY_DARK_2)
 
                 screen.blit(reward_vp, (starting_point.x + (img_size.x + gap) * j + gap + offset_x, starting_point.y))
 
-            if ROOST_REWARD_CARD[j] > 0:
-                reward_card = Config.FONT_SM_BOLD.render("+" + str(ROOST_REWARD_CARD[j]), True, (206, 215, 132))
+            if EyrieBoard.ROOST_REWARD_CARD[j] > 0:
+                reward_card = Config.FONT_SM_BOLD.render("+" + str(EyrieBoard.ROOST_REWARD_CARD[j]), True, (206, 215, 132))
                 reward_card = text_utils.add_outline(reward_card, 2, Colors.BLUE)
 
                 screen.blit(reward_card, (starting_point.x + (img_size.x + gap) * j + gap + offset_x,
@@ -171,7 +188,7 @@ class EyrieBoard(FactionBoard):
                 color = Colors.RABBIT
 
             for j, decree_action in enumerate(self.decree.keys()):
-                title_text = Config.FONT_1.render(str(self.count_decree_action(decree_action, suit)), True, color)
-                shift: Vector2 = Vector2(j * width + offset_x, (i+2) * offset_y)
+                title_text = Config.FONT_1.render(str(self.count_decree_action_with_suit(decree_action, suit)), True, color)
+                shift: Vector2 = Vector2(j * width + offset_x, (i + 2) * offset_y)
 
                 screen.blit(title_text, starting_point + shift)
