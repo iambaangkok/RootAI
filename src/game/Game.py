@@ -271,7 +271,7 @@ class Game:
 
         self.build_roost(self.board.areas[0])
         self.board.areas[0].add_warrior(Warrior.EYRIE, 6)
-        self.activate_leader(EyrieLeader.DESPOT)
+        self.activate_leader(EyrieLeader.CHARISMATIC)
 
         # Take Cards
         self.shuffle_draw_pile()
@@ -901,6 +901,7 @@ class Game:
         self.eyrie_evening()
 
     def eyrie_evening(self):
+        # score points
         roost_tracker = self.eyrie.roost_tracker
         vp = EyrieBoard.ROOST_REWARD_VP[roost_tracker]
         card_to_draw = 1 + EyrieBoard.ROOST_REWARD_CARD[roost_tracker]
@@ -909,7 +910,7 @@ class Game:
         LOGGER.info(
             "{}:{}:{}:eyrie_evening: roost tracker {}, scored {} vps".format(self.turn_player, self.phase, self.sub_phase, self.eyrie.roost_tracker,
                                                                              vp))
-
+        # draw and discard
         self.take_card_from_draw_pile(Faction.EYRIE, card_to_draw)
         card_in_hand_count = len(self.eyrie.cards_in_hand)
         if card_in_hand_count > 5:
@@ -1496,6 +1497,12 @@ class Game:
                                          perform(self.post_battle, defender, attacker, defender_remaining_hits, 0,
                                                  clearing))])
             else:
+                if attacker == Faction.EYRIE:
+                    if self.eyrie.get_active_leader() == EyrieLeader.DESPOT:
+                        LOGGER.info(
+                            "{}:{}:{}:post_battle: despot, gain 1 additional vp".format(self.turn_player, self.phase, self.sub_phase))
+                        self.board.gain_vp(Faction.EYRIE, 1)
+
                 self.prompt = "{}: Select Token/Building to be removed (Remaining: {})".format(defender,
                                                                                                attacker_remaining_hits)
                 self.set_actions(actions)
