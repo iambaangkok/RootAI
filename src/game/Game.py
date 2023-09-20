@@ -657,10 +657,7 @@ class Game:
 
     def eyrie_birdsong_2_to_sub_phase_3(self):
         self.sub_phase = 2
-        self.prompt = """
-            If you have no roost, place a roost and 3 warriors in 
-            the clearing with the fewest total pieces. (Select Clearing)
-        """
+        self.prompt = """If you have no roost, place a roost and 3 warriors in the clearing with the fewest total pieces. (Select Clearing)"""
 
         if self.eyrie.roost_tracker == 0:
             self.set_actions(self.generate_actions_place_roost_and_3_warriors() + [
@@ -731,10 +728,10 @@ class Game:
 
     def eyrie_turmoil_humiliate(self):
         bird_card_in_decree_count = self.eyrie.count_card_in_decree_with_suit(Suit.BIRD)
-        vp_lost = min(self.board.faction_points[Faction.EYRIE], bird_card_in_decree_count)
+        vp_lost = min(self.board.faction_points[Faction.EYRIE], bird_card_in_decree_count)  # TODO: investigate vp lost not matching bird cards in self.eyrie.decree
         self.board.lose_vp(Faction.EYRIE, vp_lost)
-        LOGGER.info(
-            "{}:{}:{}:turmoil:humiliate: lost {} vp(s)".format(self.turn_player, self.phase, self.sub_phase, vp_lost))
+        LOGGER.info("{}:{}:{}:turmoil:humiliate: {} bird cards in the decree, lost {} vp(s)".format(self.turn_player, self.phase, self.sub_phase,
+                                                                                                    bird_card_in_decree_count, vp_lost))
 
     def eyrie_turmoil_purge(self):
         for decree in DecreeAction:
@@ -809,16 +806,16 @@ class Game:
             if len(self.decree_counter[decree_action]) > 0:
                 actions.append(Action("Turmoil", self.eyrie_turmoil))
             else:
-                actions.append(Action("Next", self.eyrie_recruit_next))
+                actions.append(Action("Next, to MOVE", self.eyrie_recruit_next))
 
         return actions
 
     def eyrie_recruit(self, area: Area):
         decree_action = DecreeAction.RECRUIT
         self.recruit(Faction.EYRIE, area)
-        self.decree_counter[decree_action].remove(
-            self.get_decree_card_to_use(decree_action, area.suit)
-        )
+        # remove decree counter
+        self.remove_decree_counter(decree_action, area.suit)
+
         LOGGER.info(
             "{}:{}:{}:{} recruited in area {}".format(self.turn_player, self.phase, self.sub_phase, Faction.EYRIE,
                                                       area.area_index))
@@ -829,6 +826,7 @@ class Game:
     def eyrie_recruit_next(self):
         LOGGER.info("{}:{}:{}:recruit_next".format(self.turn_player, self.phase, self.sub_phase))
         self.update_prompt_eyrie_decree(DecreeAction.MOVE)
+        self.prompt += " Choose area to move from."
         self.set_actions(self.generate_actions_eyrie_move())
 
     def generate_actions_eyrie_move(self) -> list[Action]:
@@ -840,7 +838,7 @@ class Game:
             if len(self.decree_counter[decree_action]) > 0:
                 actions.append(Action("Turmoil", self.eyrie_turmoil))
             else:
-                actions.append(Action("Next", self.eyrie_move_next))
+                actions.append(Action("Next, To BATTLE", self.eyrie_move_next))
 
         return actions
 
@@ -860,7 +858,7 @@ class Game:
         self.set_actions(self.generate_actions_select_warriors(faction, src, dest))
 
     def eyrie_move_next(self):
-        LOGGER.info("{}:{}:{}:move_next".format(self.turn_player, self.phase, self.sub_phase))
+        LOGGER.info("{}:{}:{}:eyrie_move_next".format(self.turn_player, self.phase, self.sub_phase))
         self.update_prompt_eyrie_decree(DecreeAction.BATTLE)
         self.prompt += " Choose area to battle in."
 
@@ -875,12 +873,12 @@ class Game:
             if len(self.decree_counter[decree_action]) > 0:
                 actions.append(Action("Turmoil", self.eyrie_turmoil))
             else:
-                actions.append(Action("Next", self.eyrie_battle_next))
+                actions.append(Action("Next, To BUILD", self.eyrie_battle_next))
 
         return actions
 
     def eyrie_battle_next(self):
-        LOGGER.info("{}:{}:{}:battle_next".format(self.turn_player, self.phase, self.sub_phase))
+        LOGGER.info("{}:{}:{}:eyrie_battle_next".format(self.turn_player, self.phase, self.sub_phase))
         self.update_prompt_eyrie_decree(DecreeAction.BUILD)
 
         self.prompt += " Choose area to build roost in."
@@ -903,7 +901,7 @@ class Game:
             if len(self.decree_counter[decree_action]) > 0:
                 actions.append(Action("Turmoil", self.eyrie_turmoil))
             else:
-                actions.append(Action("Next", self.eyrie_build_next))
+                actions.append(Action("Next, To Evening", self.eyrie_build_next))
 
         return actions
 
@@ -913,18 +911,17 @@ class Game:
         clearing.buildings[building_slot_index] = Building.ROOST
         self.eyrie.roost_tracker += 1
 
+        self.remove_decree_counter(DecreeAction.BUILD, clearing.suit)
+
         LOGGER.info(
             "{}:{}:{}:eyrie_build built {} in clearing #{}".format(self.turn_player, self.phase, self.sub_phase,
                                                                    Building.ROOST, clearing.area_index))
 
         self.update_prompt_eyrie_decree(DecreeAction.BUILD)
-        self.set_actions(self.generate_actions_select_buildable_clearing(Faction.EYRIE))
+        self.set_actions(self.generate_actions_eyrie_build())
 
     def eyrie_build_next(self):
-        # TODO: eyrie build next
-        pass
-
-    # TODO: eyrie resolve decree: BATTLE, BUILD
+        self.eyrie_evening()
 
     def eyrie_evening(self):
         roost_tracker = self.eyrie.roost_tracker
@@ -932,7 +929,9 @@ class Game:
         card_to_draw = 1 + EyrieBoard.ROOST_REWARD_CARD[roost_tracker]
 
         self.board.gain_vp(Faction.EYRIE, vp)
-        LOGGER.info("{}:{}:{}:eyrie_evening: scored {} vps".format(self.turn_player, self.phase, self.sub_phase, vp))
+        LOGGER.info(
+            "{}:{}:{}:eyrie_evening: roost tracker {}, scored {} vps".format(self.turn_player, self.phase, self.sub_phase, self.eyrie.roost_tracker,
+                                                                             vp))
 
         self.take_card_from_draw_pile(Faction.EYRIE, card_to_draw)
         card_in_hand_count = len(self.eyrie.cards_in_hand)
@@ -963,6 +962,11 @@ class Game:
         if self.eyrie.activate_leader(leader):
             LOGGER.info(
                 "{}:{}:{}:{} selected as new leader".format(self.turn_player, self.phase, self.sub_phase, leader))
+
+    def remove_decree_counter(self, decree_action: DecreeAction | str, suit: Suit | str):
+        self.decree_counter[decree_action].remove(
+            self.get_decree_card_to_use(decree_action, suit)
+        )
 
     #####
     # Neutral
@@ -1154,9 +1158,7 @@ class Game:
             dest.add_warrior(Warrior.EYRIE, num)
             decree_action = DecreeAction.MOVE
 
-            self.decree_counter[decree_action].remove(
-                self.get_decree_card_to_use(decree_action, src.suit)
-            )
+            self.remove_decree_counter(decree_action, src.suit)
 
             self.update_prompt_eyrie_decree(decree_action)
             self.set_actions(self.generate_actions_eyrie_move())
@@ -1298,11 +1300,15 @@ class Game:
                 decree_can_build_in[suit] = count_decree_action_static(self.decree_counter, DecreeAction.BUILD, suit)
 
             for clearing in self.board.areas:
-                if clearing.ruler() == Warrior.EYRIE and \
-                        clearing.buildings.count(Building.EMPTY) > 0 and \
-                        self.eyrie.roost_tracker < len(EyrieBoard.ROOST_REWARD_VP) - 1 and \
-                        decree_can_build_in[clearing.suit]:  # roost tracker in range [0, 6]
-                    buildable_clearings.append(clearing)
+                if self.eyrie.roost_tracker >= len(EyrieBoard.ROOST_REWARD_VP):  # roost tracker in range [0, 6]
+                    break
+                if clearing.ruler() != Warrior.EYRIE:
+                    continue
+                if clearing.buildings.count(Building.EMPTY) == 0:
+                    continue
+                if decree_can_build_in[clearing.suit] == 0 and decree_can_build_in[Suit.BIRD] == 0:
+                    continue
+                buildable_clearings.append(clearing)
 
         return buildable_clearings
 
@@ -1465,6 +1471,11 @@ class Game:
                                                                                    attacker_total_vp, defender_total_vp)
         )
 
+
+        # remove decree counter
+        if self.turn_player == Faction.EYRIE:
+            self.remove_decree_counter(DecreeAction.BATTLE, clearing.suit)
+
         if attacker_remaining_hits == defender_remaining_hits == 0:
             if self.turn_player == Faction.MARQUISE:
                 self.marquise_action_count -= 1
@@ -1472,9 +1483,10 @@ class Game:
                 self.set_actions([Action('Next',
                                          perform(self.marquise_daylight_1_next))])
             elif self.turn_player == Faction.EYRIE:
-                pass
+                self.eyrie_move_next()
 
         else:
+
             self.prompt = "Battle Completed. Proceed to removing pieces phase."
             self.set_actions(
                 [Action("Next", perform(self.post_battle, attacker, defender, attacker_remaining_hits,
@@ -1489,7 +1501,7 @@ class Game:
                 self.set_actions([Action('Next',
                                          perform(self.marquise_daylight_1_next))])
             elif self.turn_player == Faction.EYRIE:
-                pass
+                self.eyrie_move_next()
         elif attacker_remaining_hits > 0:
             actions = self.generate_actions_select_tokens_warriors_to_remove(attacker, defender,
                                                                              attacker_remaining_hits,

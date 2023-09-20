@@ -9,7 +9,6 @@ from src.game.FactionBoard import FactionBoard
 from src.game.PlayingCard import PlayingCard, PlayingCardPhase
 from src.game.Suit import Suit
 from src.utils import text_utils
-from src.utils.draw_utils import draw_key_value, draw_key_multi_value
 
 LOGGER = logging.getLogger('logger')
 
@@ -47,7 +46,7 @@ class EyrieBoard(FactionBoard):
 
     def __init__(self, name: str, color: Color, reserved_warriors: int, starting_point: Vector2):
         super().__init__(name, color, reserved_warriors, starting_point)
-        self.roost_tracker: int = 1
+        self.roost_tracker: int = 0
         self.leaders: {EyrieLeader: LeaderStatus} = {
             EyrieLeader.COMMANDER: LeaderStatus.INACTIVE,
             EyrieLeader.DESPOT: LeaderStatus.INACTIVE,
