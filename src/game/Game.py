@@ -1,5 +1,5 @@
 import logging
-from copy import copy
+from copy import copy, deepcopy
 from enum import StrEnum
 from random import shuffle, randint
 from typing import List
@@ -693,7 +693,7 @@ class Game:
 
         self.sub_phase = 1
 
-        self.decree_counter = copy(self.eyrie.decree)
+        self.decree_counter = deepcopy(self.eyrie.decree)
         self.update_prompt_eyrie_decree(DecreeAction.RECRUIT)
         self.set_actions(self.generate_actions_eyrie_recruit())
 
