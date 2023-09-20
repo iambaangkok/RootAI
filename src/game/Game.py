@@ -707,7 +707,7 @@ class Game:
 
     def eyrie_turmoil_humiliate(self):
         bird_card_in_decree_count = self.eyrie.count_card_in_decree_with_suit(Suit.BIRD)
-        vp_lost = min(self.board.faction_points[Faction.EYRIE], bird_card_in_decree_count)
+        vp_lost = min(self.board.faction_points[Faction.EYRIE], bird_card_in_decree_count)  # TODO: investigate vp lost not matching bird cards in self.eyrie.decree
         self.board.lose_vp(Faction.EYRIE, vp_lost)
         LOGGER.info("{}:{}:{}:turmoil:humiliate: {} bird cards in the decree, lost {} vp(s)".format(self.turn_player, self.phase, self.sub_phase,
                                                                                                     bird_card_in_decree_count, vp_lost))
