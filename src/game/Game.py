@@ -56,7 +56,7 @@ class Game:
 
         # Game Data
         self.turn_count: int = 0
-        self.turn_player: Faction = Faction.MARQUISE
+        self.turn_player: Faction = Faction.EYRIE
         self.phase: Phase = Phase.BIRDSONG
         self.sub_phase = 0
         self.is_in_action_sub_phase: bool = False
@@ -270,7 +270,7 @@ class Game:
 
         self.build_roost(self.board.areas[0])
         self.board.areas[0].add_warrior(Warrior.EYRIE, 6)
-        self.activate_leader(EyrieLeader.CHARISMATIC)
+        self.activate_leader(EyrieLeader.DESPOT)
 
         # Take Cards
         self.shuffle_draw_pile()
@@ -387,7 +387,7 @@ class Game:
         return len(self.find_available_source_clearings(Faction.MARQUISE)) > 0
 
     def marquise_build_check(self):
-        return len(self.get_buildable_clearing(Faction.MARQUISE)) > 0
+        return len(self.get_buildable_clearings(Faction.MARQUISE)) > 0
 
     def marquise_recruit_check(self):
         return self.count_buildings(Building.RECRUITER) > 0
@@ -801,7 +801,6 @@ class Game:
             if len(self.decree_counter[decree_action]) > 0:
                 actions.append(Action("Turmoil", self.eyrie_turmoil))
             else:
-                # TODO: next, to BATTLE
                 actions.append(Action("Next", self.eyrie_move_next))
 
         return actions
@@ -831,16 +830,22 @@ class Game:
     def generate_actions_eyrie_battle(self) -> list[Action]:
         actions: list[Action] = self.generate_actions_select_clearing_battle(Faction.EYRIE)
 
-        decree_action = DecreeAction.BATTLE
+        decree_action: DecreeAction = DecreeAction.BATTLE
 
         if len(actions) == 0:
             if len(self.decree_counter[decree_action]) > 0:
                 actions.append(Action("Turmoil", self.eyrie_turmoil))
             else:
-                # TODO: next, to BUILD
-                actions.append(Action("Next"))
+                actions.append(Action("Next", self.eyrie_battle_next))
 
         return actions
+
+    def eyrie_battle_next(self):
+        LOGGER.info("{}:{}:{}:battle_next".format(self.turn_player, self.phase, self.sub_phase))
+        self.update_prompt_eyrie_decree(DecreeAction.BUILD)
+
+        self.prompt += " Choose area to build roost in."
+        self.set_actions(self.generate_actions_eyrie_build())
 
     def eyrie_choose_battle_in(self, clearing: Area):
         LOGGER.info(
@@ -850,9 +855,37 @@ class Game:
         self.prompt += " Choose enemy faction to battle."
         self.set_actions(self.generate_actions_select_faction_battle(Faction.EYRIE, clearing))
 
-    # TODO: eyrie resolve decree: BATTLE, BUILD
+    def generate_actions_eyrie_build(self):
+        actions: list[Action] = self.generate_actions_select_buildable_clearing(Faction.EYRIE)
 
-    # TODO: eyrie evening
+        decree_action: DecreeAction = DecreeAction.BUILD
+
+        if len(actions) == 0:
+            if len(self.decree_counter[decree_action]) > 0:
+                actions.append(Action("Turmoil", self.eyrie_turmoil))
+            else:
+                actions.append(Action("Next", self.eyrie_build_next))
+
+        return actions
+
+    def eyrie_build(self, clearing: Area):
+
+        building_slot_index = clearing.buildings.index(Building.EMPTY)
+        clearing.buildings[building_slot_index] = Building.ROOST
+        self.eyrie.roost_tracker += 1
+
+        LOGGER.info(
+            "{}:{}:{}:eyrie_build built {} in clearing #{}".format(self.turn_player, self.phase, self.sub_phase,
+                                                                   Building.ROOST, clearing.area_index))
+
+        self.update_prompt_eyrie_decree(DecreeAction.BUILD)
+        self.set_actions(self.generate_actions_select_buildable_clearing(Faction.EYRIE))
+
+    def eyrie_build_next(self):
+        # TODO: eyrie build next
+        pass
+
+    # TODO: eyrie resolve decree: BATTLE, BUILD
 
     def eyrie_evening(self):
         roost_tracker = self.eyrie.roost_tracker
@@ -865,7 +898,6 @@ class Game:
         self.take_card_from_draw_pile(Faction.EYRIE, card_to_draw)
         card_in_hand_count = len(self.eyrie.cards_in_hand)
         if card_in_hand_count > 5:
-            # TODO: discard card down to 5
             self.prompt = "Select card to discard down to 5 cards (currently {} cards in hand)".format(card_in_hand_count)
             self.set_actions(self.generate_actions_select_card_to_discard(Faction.EYRIE))
         else:
@@ -1087,9 +1119,7 @@ class Game:
             )
 
             self.update_prompt_eyrie_decree(decree_action)
-            self.set_actions(self.generate_actions_eyrie_recruit())
-
-            self.eyrie_recruit_next()
+            self.set_actions(self.generate_actions_eyrie_move())
 
     def find_available_source_clearings(self, faction: Faction):
         movable_clearings = []
@@ -1162,22 +1192,25 @@ class Game:
                 self.add_warrior(faction, area, amount)
 
     def generate_actions_select_buildable_clearing(self, faction):
-        clearings = self.get_buildable_clearing(faction)
+        buildable_clearings = self.get_buildable_clearings(faction)
         actions = []
 
         if faction == Faction.MARQUISE:
-            for clearing in clearings:
+            for clearing in buildable_clearings:
                 actions.append(
                     Action("{}".format(clearing),
                            perform(self.marquise_daylight_build_select_building, clearing)))
 
         elif faction == Faction.EYRIE:
-            pass
+            for clearing in buildable_clearings:
+                actions.append(
+                    Action("{}".format(clearing),
+                           perform(self.eyrie_build, clearing)))
 
         return actions
 
     def generate_actions_select_building(self, faction, clearing):
-        buildings = self.get_buildable_building(faction, clearing)
+        buildings = self.get_buildable_buildings(faction, clearing)
         actions = []
 
         if faction == Faction.MARQUISE:
@@ -1207,22 +1240,33 @@ class Game:
             self.marquise_action_count -= 1
             self.set_actions([Action('Next', perform(self.marquise_daylight_1_next))])
         elif faction == Faction.EYRIE:
-            pass
+            self.eyrie_build(clearing)
 
-    def get_buildable_clearing(self, faction):
-        buildable_clearing = []
+    def get_buildable_clearings(self, faction) -> list[Area]:
+        buildable_clearings: list[Area] = []
 
         if faction == Faction.MARQUISE:
             for clearing in self.board.areas:
                 if clearing.ruler() == Warrior.MARQUISE and clearing.buildings.count(
                         Building.EMPTY) > 0 and self.marquise_get_min_cost_building() <= \
                         self.count_woods_from_clearing(clearing)[1]:
-                    buildable_clearing.append(clearing)
-            return buildable_clearing
-        elif faction == Faction.EYRIE:
-            pass
+                    buildable_clearings.append(clearing)
 
-    def get_buildable_building(self, faction, clearing):
+        elif faction == Faction.EYRIE:
+            decree_can_build_in: {Suit: bool} = {}
+            for suit in Suit:
+                decree_can_build_in[suit] = count_decree_action_static(self.decree_counter, DecreeAction.BUILD, suit)
+
+            for clearing in self.board.areas:
+                if clearing.ruler() == Warrior.EYRIE and \
+                        clearing.buildings.count(Building.EMPTY) > 0 and \
+                        self.eyrie.roost_tracker < len(EyrieBoard.ROOST_REWARD_VP) - 1 and \
+                        decree_can_build_in[clearing.suit]:  # roost tracker in range [0, 6]
+                    buildable_clearings.append(clearing)
+
+        return buildable_clearings
+
+    def get_buildable_buildings(self, faction, clearing):
         buildings = []
 
         if faction == Faction.MARQUISE:
@@ -1233,10 +1277,9 @@ class Game:
             for building, tracker in building_tracker.items():
                 if woods >= cost[tracker]:
                     buildings.append(building)
-
-            return buildings
         elif faction == Faction.EYRIE:
-            pass
+            buildings.append(Building.ROOST)
+        return buildings
 
     def count_buildings(self, building):
         total = 0
