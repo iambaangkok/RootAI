@@ -201,8 +201,8 @@ class Game:
             self.board.add_path(path[0], path[1])
 
         # Faction Board
-        self.marquise = MarquiseBoard("Marquise de Cat", Colors.ORANGE, 14, Vector2(0, 0.0 * Config.SCREEN_HEIGHT))
-        self.eyrie = EyrieBoard("Eyrie Dynasties", Colors.BLUE, 24, Vector2(0, 0.5 * Config.SCREEN_HEIGHT))
+        self.marquise = MarquiseBoard("Marquise de Cat", Colors.ORANGE, 25 - 11, Vector2(0, 0.0 * Config.SCREEN_HEIGHT))
+        self.eyrie = EyrieBoard("Eyrie Dynasties", Colors.BLUE, 20 - 6, Vector2(0, 0.5 * Config.SCREEN_HEIGHT))
 
         # Action Board
         self.action_arrow_pos = Vector2(0, 0)
@@ -221,16 +221,17 @@ class Game:
                  Action('Overwork'),
                  Action('Next', perform(self.marquise_daylight_2_next))]
             ],
-            Phase.EVENING: [[Action('End turn', perform(self.eyrie_birdsong_1_next))]]
+            Phase.EVENING: [[Action('End turn', perform(self.eyrie_emergency_orders))]]
         }
         self.eyrie_base_actions: {Phase: [[Action]]} = {
             Phase.BIRDSONG: [
-                [Action('Next', perform(self.eyrie_birdsong_1_next))],
+                [Action('Next', perform(self.eyrie_emergency_orders))],
                 [],
-                [Action('Next', perform(self.eyrie_birdsong_3_next))]],
+                []
+            ],
             Phase.DAYLIGHT: [
-                [Action('Next', perform(self.eyrie_daylight_1_next))],
-                [Action('Resolve the Decree'), Action('Next')]
+                [],
+                []
             ],
             Phase.EVENING: [[Action('Next')]]
         }
@@ -574,8 +575,8 @@ class Game:
     def check_event_eyrie(self, event: pygame.event.Event):
         self.current_action.function()
 
-    def eyrie_birdsong_1_next(self):
-        LOGGER.info("{}:{}:{}:next".format(self.turn_player, self.phase, self.sub_phase))
+    def eyrie_emergency_orders(self):
+        LOGGER.info("{}:{}:{}:eyrie_emergency_orders".format(self.turn_player, self.phase, self.sub_phase))
 
         if len(self.eyrie.cards_in_hand) == 0:
             self.take_card_from_draw_pile(Faction.EYRIE)
@@ -583,26 +584,26 @@ class Game:
         self.sub_phase = 1
 
         self.prompt = "Select Card To Add To Decree"
-        self.set_actions(self.generate_actions_add_card_to_decree())
+        self.set_actions(self.generate_actions_add_to_the_decree_first())
 
-    def generate_actions_add_card_to_decree(self) -> list[Action]:
+    def generate_actions_add_to_the_decree_first(self) -> list[Action]:
         actions: list[Action] = []
         if self.addable_count > 0:
             for card in self.eyrie.cards_in_hand:
                 if self.added_bird_card and card.suit == Suit.BIRD:
                     continue
                 actions.append(Action('{} ({})'.format(card.name, card.suit),
-                                      perform(self.select_card_to_add_to_decree_one, card)))
+                                      perform(self.select_card_to_add_to_the_decree_first, card)))
 
         return actions
 
-    def select_card_to_add_to_decree_one(self, card: PlayingCard):
+    def select_card_to_add_to_the_decree_first(self, card: PlayingCard):
         self.select_card(card)
 
         self.prompt = "Select Decree ({} ({}))".format(card.name, card.suit)
-        self.set_actions(self.generate_actions_add_to_decree())
+        self.set_actions(self.generate_actions_add_to_the_decree_additional())
 
-    def generate_actions_add_to_decree(self) -> list[Action]:
+    def generate_actions_add_to_the_decree_additional(self) -> list[Action]:
         actions: list[Action] = []
         for decree_action in DecreeAction:
             actions.append(
@@ -624,38 +625,39 @@ class Game:
 
         if self.addable_count != 0:
             self.prompt = "Select ANOTHER card to add to the Decree"
-            self.set_actions(self.generate_actions_add_card_to_decree() + [
-                Action("Skip", perform(self.eyrie_birdsong_2_card_2_skip))
+            self.set_actions(self.generate_actions_add_to_the_decree_first() + [
+                Action("Skip", perform(self.eyrie_add_to_the_decree_additional_skip))
             ])
         else:
-            self.eyrie_birdsong_2_to_sub_phase_3()
+            self.eyrie_a_new_roost()
 
-    def eyrie_birdsong_2_card_2_skip(self):
+    def eyrie_add_to_the_decree_additional_skip(self):
         LOGGER.info("{}:{}:{}:card_2_skip".format(self.turn_player, self.phase, self.sub_phase))
-        self.eyrie_birdsong_2_to_sub_phase_3()
+        self.eyrie_a_new_roost()
 
-    def eyrie_birdsong_2_to_sub_phase_3(self):
+    def eyrie_a_new_roost(self):
         self.sub_phase = 2
-        self.prompt = """If you have no roost, place a roost and 3 warriors in the clearing with the fewest total pieces. (Select Clearing)"""
+        self.prompt = "If you have no roost, place a roost and 3 warriors in the clearing with the fewest total pieces. (Select Clearing)"
 
         if self.eyrie.roost_tracker == 0:
-            self.set_actions(self.generate_actions_place_roost_and_3_warriors() + [
-                self.eyrie_base_actions[self.phase][self.sub_phase][0]
-            ])
+            self.set_actions(self.generate_actions_place_roost_and_3_warriors())
         else:
             self.set_actions()
 
     def generate_actions_place_roost_and_3_warriors(self) -> list[Action]:
         actions: list[Action] = []
-        min_token_areas = [area for area in self.board.get_min_token_areas() if Building.EMPTY in area.buildings]
+        min_token_areas = [area for area in self.board.get_min_warrior_areas() if Building.EMPTY in area.buildings]
         for area in min_token_areas:
             actions.append(Action("Area {}".format(area.area_index), perform(self.place_roost_and_3_warriors, area)))
 
         return actions
 
     def place_roost_and_3_warriors(self, area: Area):
+        LOGGER.info("{}:{}:{}:place_roost_and_3_warriors at area#{}".format(self.turn_player, self.phase, self.sub_phase, area.area_index))
         self.add_warrior(Faction.EYRIE, area, 3)
         self.build_roost(area)
+
+        self.set_actions([Action('Next, to Daylight', perform(self.eyrie_birdsong_to_daylight))])
 
     def build_roost(self, area: Area):
         LOGGER.info("{}:{}:{}:{} built {} at area#{}".format(
@@ -665,14 +667,14 @@ class Game:
         self.eyrie.roost_tracker += 1
         area.buildings[area.buildings.index(Building.EMPTY)] = Building.ROOST
 
-    def eyrie_birdsong_3_next(self):
-        LOGGER.info("{}:{}:{}:next".format(self.turn_player, self.phase, self.sub_phase))
+    def eyrie_birdsong_to_daylight(self):
+        LOGGER.info("{}:{}:{}:eyrie_birdsong_to_daylight".format(self.turn_player, self.phase, self.sub_phase))
 
         self.phase = Phase.DAYLIGHT
         self.sub_phase = 0
 
         self.prompt = "Craft Cards"
-        self.set_actions()
+        self.set_actions([Action('Next, to Resolve the Decree', perform(self.eyrie_daylight_craft_to_resolve_the_decree))])
 
     def get_roost_count_by_suit(self) -> {Suit: int}:
         roost_count: {Suit: int} = {
@@ -688,7 +690,7 @@ class Game:
 
         return roost_count
 
-    def eyrie_daylight_1_next(self):
+    def eyrie_daylight_craft_to_resolve_the_decree(self):
         LOGGER.info("{}:{}:{}:next".format(self.turn_player, self.phase, self.sub_phase))
 
         self.sub_phase = 1
@@ -698,16 +700,17 @@ class Game:
         self.set_actions(self.generate_actions_eyrie_recruit())
 
     def eyrie_turmoil(self):
-        # humuliate
+        # humiliate
         self.eyrie_turmoil_humiliate()
         # purge
         self.eyrie_turmoil_purge()
-        # depose -> rest
-        self.eyrie_turmoil_depose()
+        # depose, then rest
+        self.eyrie_turmoil_depose_then_rest()
 
     def eyrie_turmoil_humiliate(self):
         bird_card_in_decree_count = self.eyrie.count_card_in_decree_with_suit(Suit.BIRD)
-        vp_lost = min(self.board.faction_points[Faction.EYRIE], bird_card_in_decree_count)  # TODO: investigate vp lost not matching bird cards in self.eyrie.decree
+        vp_lost = min(self.board.faction_points[Faction.EYRIE],
+                      bird_card_in_decree_count)
         self.board.lose_vp(Faction.EYRIE, vp_lost)
         LOGGER.info("{}:{}:{}:turmoil:humiliate: {} bird cards in the decree, lost {} vp(s)".format(self.turn_player, self.phase, self.sub_phase,
                                                                                                     bird_card_in_decree_count, vp_lost))
@@ -717,11 +720,11 @@ class Game:
             for card in self.eyrie.decree[decree]:
                 if card.name is not LOYAL_VIZIER.name:
                     self.discard_card(self.eyrie.decree[decree], card)
-                else:
-                    self.eyrie.decree[decree].remove(card)
+
+        self.eyrie.reset_decree()
         LOGGER.info("{}:{}:{}:turmoil:purge: discarded all decree cards except loyal viziers".format(self.turn_player, self.phase, self.sub_phase))
 
-    def eyrie_turmoil_depose(self):
+    def eyrie_turmoil_depose_then_rest(self):
         current_leader = self.eyrie.get_active_leader()
 
         self.eyrie.deactivate_current_leader()
@@ -780,7 +783,7 @@ class Game:
             if len(self.decree_counter[decree_action]) > 0:
                 actions.append(Action("Turmoil", self.eyrie_turmoil))
             else:
-                actions.append(Action("Next, to MOVE", self.eyrie_recruit_next))
+                actions.append(Action("Next, to MOVE", self.eyrie_recruit_to_move))
 
         return actions
 
@@ -797,7 +800,7 @@ class Game:
         self.update_prompt_eyrie_decree(decree_action)
         self.set_actions(self.generate_actions_eyrie_recruit())
 
-    def eyrie_recruit_next(self):
+    def eyrie_recruit_to_move(self):
         LOGGER.info("{}:{}:{}:recruit_next".format(self.turn_player, self.phase, self.sub_phase))
         self.update_prompt_eyrie_decree(DecreeAction.MOVE)
         self.prompt += " Choose area to move from."
@@ -812,7 +815,7 @@ class Game:
             if len(self.decree_counter[decree_action]) > 0:
                 actions.append(Action("Turmoil", self.eyrie_turmoil))
             else:
-                actions.append(Action("Next, To BATTLE", self.eyrie_move_next))
+                actions.append(Action("Next, To BATTLE", self.eyrie_move_to_battle))
 
         return actions
 
@@ -831,7 +834,7 @@ class Game:
         self.prompt += " Choose number of warriors to move."
         self.set_actions(self.generate_actions_select_warriors(faction, src, dest))
 
-    def eyrie_move_next(self):
+    def eyrie_move_to_battle(self):
         LOGGER.info("{}:{}:{}:eyrie_move_next".format(self.turn_player, self.phase, self.sub_phase))
         self.update_prompt_eyrie_decree(DecreeAction.BATTLE)
         self.prompt += " Choose area to battle in."
@@ -847,11 +850,11 @@ class Game:
             if len(self.decree_counter[decree_action]) > 0:
                 actions.append(Action("Turmoil", self.eyrie_turmoil))
             else:
-                actions.append(Action("Next, To BUILD", self.eyrie_battle_next))
+                actions.append(Action("Next, To BUILD", self.eyrie_battle_to_build))
 
         return actions
 
-    def eyrie_battle_next(self):
+    def eyrie_battle_to_build(self):
         LOGGER.info("{}:{}:{}:eyrie_battle_next".format(self.turn_player, self.phase, self.sub_phase))
         self.update_prompt_eyrie_decree(DecreeAction.BUILD)
 
@@ -875,7 +878,7 @@ class Game:
             if len(self.decree_counter[decree_action]) > 0:
                 actions.append(Action("Turmoil", self.eyrie_turmoil))
             else:
-                actions.append(Action("Next, To Evening", self.eyrie_build_next))
+                actions.append(Action("Next, To Evening", self.eyrie_build_to_evening))
 
         return actions
 
@@ -894,7 +897,7 @@ class Game:
         self.update_prompt_eyrie_decree(DecreeAction.BUILD)
         self.set_actions(self.generate_actions_eyrie_build())
 
-    def eyrie_build_next(self):
+    def eyrie_build_to_evening(self):
         self.eyrie_evening()
 
     def eyrie_evening(self):
@@ -913,9 +916,9 @@ class Game:
             self.prompt = "Select card to discard down to 5 cards (currently {} cards in hand)".format(card_in_hand_count)
             self.set_actions(self.generate_actions_select_card_to_discard(Faction.EYRIE))
         else:
-            self.eyrie_evening_next()
+            self.eyrie_evening_to_marquise()
 
-    def eyrie_evening_next(self):
+    def eyrie_evening_to_marquise(self):
         LOGGER.info("{}:{}:{}:eyrie_evening_next".format(self.turn_player, self.phase, self.sub_phase))
         self.turn_player = Faction.MARQUISE
         self.phase = Phase.BIRDSONG
@@ -968,8 +971,8 @@ class Game:
         return actions
 
     def craft_card(self, faction: Faction, card: PlayingCard):
+        LOGGER.info("{}:{}:{}:Crafted {} card".format(self.turn_player, self.phase, self.sub_phase, card.name))
         if faction == Faction.MARQUISE:
-            LOGGER.info("{}:{}:{}:Crafted {} card".format(self.turn_player, self.phase, self.sub_phase, card.name))
             if card.phase == PlayingCardPhase.IMMEDIATE:
                 self.board.faction_points[Faction.MARQUISE] += card.reward_vp
                 if card.reward_item is not None:
@@ -986,17 +989,17 @@ class Game:
             self.set_actions([Action("Next", self.marquise_daylight_craft)])
 
         elif faction == Faction.EYRIE:
-            LOGGER.info("{}:{}:{}:Crafted {} card".format(self.turn_player, self.phase, self.sub_phase, card.name))
-
             if card.phase == PlayingCardPhase.IMMEDIATE:
                 # Gain VP
-                if self.eyrie.get_active_leader() == EyrieLeader.BUILDER:
-                    self.board.faction_points[Warrior.EYRIE] += card.reward_vp
-                else:
-                    self.board.faction_points[Warrior.EYRIE] += 1
+                if card.reward_vp > 0:
+                    if self.eyrie.get_active_leader() == EyrieLeader.BUILDER:
+                        self.board.faction_points[Warrior.EYRIE] += card.reward_vp
+                    else:
+                        self.board.faction_points[Warrior.EYRIE] += 1
 
                 # Gain Item
-                self.eyrie.items[card.reward_item] += 1
+                if card.reward_item is not None:
+                    self.eyrie.items[card.reward_item] += 1
 
                 self.discard_card(self.eyrie.cards_in_hand, card)
             else:
@@ -1279,6 +1282,8 @@ class Game:
                     continue
                 if clearing.buildings.count(Building.EMPTY) == 0:
                     continue
+                if clearing.buildings.count(Building.ROOST) != 0:
+                    continue
                 if decree_can_build_in[clearing.suit] == 0 and decree_can_build_in[Suit.BIRD] == 0:
                     continue
                 buildable_clearings.append(clearing)
@@ -1461,7 +1466,7 @@ class Game:
                 self.set_actions([Action('Next',
                                          perform(self.marquise_daylight_1_next))])
             elif self.turn_player == Faction.EYRIE:
-                self.eyrie_move_next()
+                self.eyrie_move_to_battle()
 
         else:
 
@@ -1479,7 +1484,7 @@ class Game:
                 self.set_actions([Action('Next',
                                          perform(self.marquise_daylight_1_next))])
             elif self.turn_player == Faction.EYRIE:
-                self.eyrie_move_next()
+                self.eyrie_move_to_battle()
         elif attacker_remaining_hits > 0:
             actions = self.generate_actions_select_tokens_warriors_to_remove(attacker, defender,
                                                                              attacker_remaining_hits,
@@ -1573,7 +1578,7 @@ class Game:
                 # TODO
                 pass
             elif faction == Faction.EYRIE:
-                self.eyrie_evening_next()
+                self.eyrie_evening_to_marquise()
 
     def faction_to_faction_board(self, faction: Faction) -> FactionBoard:
         if faction == Faction.MARQUISE:

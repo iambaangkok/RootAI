@@ -66,14 +66,14 @@ class Board:
         self.areas[area_1].connected_clearings.append(self.areas[area_2])
         self.areas[area_2].connected_clearings.append(self.areas[area_1])
 
-    def get_min_token_areas(self) -> list[Area]:
-        min_token_areas: list[Area] = []
-        min_token = math.inf
+    def get_min_warrior_areas(self) -> list[Area]:
+        min_warrior = math.inf
         for area in self.areas:
-            if min_token > area.sum_all_tokens():
-                min_token = area.sum_all_tokens()
+            sum_warrior = area.sum_all_warriors()
+            if min_warrior > sum_warrior:
+                min_warrior = sum_warrior
 
-        return [area for area in self.areas if area.sum_all_tokens() == min_token]
+        return [area for area in self.areas if area.sum_all_pieces() == min_warrior]
 
     def item_available(self, item: Item) -> bool:
         for item_index in ITEM_SUPPLY_INDEX[item]:

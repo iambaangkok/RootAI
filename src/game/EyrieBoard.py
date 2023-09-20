@@ -79,6 +79,14 @@ class EyrieBoard(FactionBoard):
         for leader in self.leaders.keys():
             self.leaders[leader] = LeaderStatus.INACTIVE
 
+    def reset_decree(self):
+        self.decree = {
+            DecreeAction.RECRUIT: [],
+            DecreeAction.MOVE: [],
+            DecreeAction.BATTLE: [],
+            DecreeAction.BUILD: []
+        }
+
     def activate_leader(self, leader: EyrieLeader) -> bool:
         if self.leaders[leader] == LeaderStatus.USED:
             LOGGER.warning("{} is already {}".format(leader, LeaderStatus.USED))

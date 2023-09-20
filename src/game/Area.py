@@ -295,16 +295,18 @@ class Area:
     def remove_building(self, building):
         self.buildings.remove(building)
 
-    def sum_all_tokens(self) -> int:
-        sum_of_tokens = 0
+    def sum_all_pieces(self) -> int:
+        sum_of_pieces = 0
 
         for token in self.token_count.keys():
-            sum_of_tokens += self.token_count[token]
-        for warrior in self.warrior_count.keys():
-            sum_of_tokens += self.warrior_count[warrior]
-        sum_of_tokens += len(self.buildings) - self.buildings.count(Building.EMPTY)
+            sum_of_pieces += self.token_count[token]
+        sum_of_pieces += self.sum_all_warriors()
+        sum_of_pieces += len(self.buildings) - self.buildings.count(Building.EMPTY)
 
-        return sum_of_tokens
+        return sum_of_pieces
+
+    def sum_all_warriors(self) -> int:
+        return sum([self.warrior_count[warrior] for warrior in self.warrior_count.keys()])
 
     def get_warrior_count(self, warrior: Warrior) -> int:
         return self.warrior_count[warrior]
