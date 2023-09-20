@@ -222,11 +222,11 @@ class Game:
                  Action('Next', perform(self.marquise_daylight_2_next))]
             ],
             Phase.EVENING: [[Action('Next', perform(self.marquise_evening_next))],
-                            [Action('End turn', perform(self.eyrie_emergency_orders))]]
+                            [Action('End turn', perform(self.eyrie_start))]]
         }
         self.eyrie_base_actions: {Phase: [[Action]]} = {
             Phase.BIRDSONG: [
-                [Action('Next', perform(self.eyrie_emergency_orders))],
+                [Action('Next', perform(self.eyrie_start))],
                 [],
                 []
             ],
@@ -378,7 +378,7 @@ class Game:
         else:
             if self.marquise_march_check():
                 self.marquise_march_count = 2
-                actions.append(Action('March', perform(self.marquise_daylight_march_move_from)))  # TODO: March 2 times
+                actions.append(Action('March', perform(self.marquise_daylight_march_move_from)))
             if self.marquise_build_check():
                 actions.append(Action('Build', perform(self.marquise_daylight_build_select_clearing)))
             if self.marquise_recruit_check():
@@ -488,7 +488,6 @@ class Game:
             self.set_actions()
 
     # TODO: Field Hospital
-    # TODO: Check Keep Token
 
     def get_workshop_count_by_suit(self) -> {Suit: int}:
         workshop_count: {Suit: int} = {
@@ -612,7 +611,7 @@ class Game:
     def check_event_eyrie(self, event: pygame.event.Event):
         self.current_action.function()
 
-    def eyrie_emergency_orders(self):
+    def eyrie_start(self):
         LOGGER.info("{}:{}:{}:eyrie turn begins".format(self.turn_player, self.phase, self.sub_phase))
 
         if len(self.eyrie.cards_in_hand) == 0:
