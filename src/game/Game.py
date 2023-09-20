@@ -609,9 +609,10 @@ class Game:
         self.current_action.function()
 
     def eyrie_emergency_orders(self):
-        LOGGER.info("{}:{}:{}:eyrie_emergency_orders".format(self.turn_player, self.phase, self.sub_phase))
+        LOGGER.info("{}:{}:{}:eyrie turn begins".format(self.turn_player, self.phase, self.sub_phase))
 
         if len(self.eyrie.cards_in_hand) == 0:
+            LOGGER.info("{}:{}:{}:eyrie_emergency_orders".format(self.turn_player, self.phase, self.sub_phase))
             self.take_card_from_draw_pile(Faction.EYRIE)
 
         self.turn_player = Faction.EYRIE
@@ -946,7 +947,7 @@ class Game:
         roost_tracker = self.eyrie.roost_tracker
         vp = EyrieBoard.ROOST_REWARD_VP[roost_tracker]
         card_to_draw = 1 + EyrieBoard.ROOST_REWARD_CARD[roost_tracker]
-
+        # TODO: make gain_vp, a wrapper for board.gain_vp that will also check for win condition
         self.board.gain_vp(Faction.EYRIE, vp)
         LOGGER.info(
             "{}:{}:{}:eyrie_evening: roost tracker {}, scored {} vps".format(self.turn_player, self.phase,
