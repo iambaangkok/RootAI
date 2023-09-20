@@ -360,7 +360,7 @@ class Game:
         self.prompt = "Select Actions (Remaining Action: {})".format(self.marquise_action_count)
         self.sub_phase = 1
 
-        if self.marquise_action_count == 0:  # TODO: Hawks for Hire action
+        if self.marquise_action_count == 0:
             self.prompt = "No action remaining. Proceed to next phase.".format(self.marquise_action_count)
             if self.marquise_hawks_for_hire_check():
                 self.prompt = "No action remaining. Discard BIRD suit card to gain extra action.".format(
@@ -376,6 +376,8 @@ class Game:
                 actions.append(Action('Recruit', perform(self.marquise_daylight_recruit)))
             if self.marquise_overwork_check():
                 actions.append(Action('Overwork', perform(self.marquise_daylight_overwork_1)))
+            if self.marquise_battle_check():
+                actions.append(Action('Battle', perform(self.marquise_daylight_battle_1)))
 
         actions.append(Action('Next', perform(self.marquise_daylight_2_next)))
         self.set_actions(actions)
@@ -394,6 +396,9 @@ class Game:
 
     def marquise_overwork_check(self):
         return len(self.find_available_overwork_clearings()) > 0
+
+    def marquise_battle_check(self):
+        return len(self.get_battlable_clearing(Faction.MARQUISE)) > 0
 
     def marquise_daylight_hawks_for_hire_select_card(self):
         self.prompt = "Select card to discard"
@@ -425,9 +430,13 @@ class Game:
         self.marquise_action_count -= 1
         self.set_actions([Action('Next', self.marquise_daylight_1_next)])
 
-    def marquise_daylight_battle(self):  # TODO: Refactor Battle Method
-        self.prompt = "Battle"
+    def marquise_daylight_battle_1(self):  # TODO: Refactor Battle Method
+        self.prompt = "Select Clearing"
         self.set_actions(self.generate_actions_select_clearing_battle(Faction.MARQUISE))
+
+    def marquise_daylight_battle_2(self, clearing):  # TODO: Refactor Battle Method
+        self.prompt = "Select Faction"
+        self.set_actions(self.generate_actions_select_faction_battle(Faction.MARQUISE, clearing))
 
     def marquise_daylight_overwork_1(self):
         self.prompt = "Select Clearing"
@@ -627,7 +636,10 @@ class Game:
 
     def eyrie_birdsong_2_to_sub_phase_3(self):
         self.sub_phase = 2
-        self.prompt = "If you have no roost, place a roost and 3 warriors in the clearing with the fewest total pieces. (Select Clearing)"
+        self.prompt = """
+            If you have no roost, place a roost and 3 warriors in 
+            the clearing with the fewest total pieces. (Select Clearing)
+        """
 
         if self.eyrie.roost_tracker == 0:
             self.set_actions(self.generate_actions_place_roost_and_3_warriors() + [
@@ -1296,7 +1308,7 @@ class Game:
                 # TODO: if
                 actions.append(
                     Action("{}".format(clearing),
-                           perform(self.generate_actions_select_faction_battle, faction, clearing)))
+                           perform(self.marquise_daylight_battle_2, clearing)))
         elif faction == Faction.EYRIE:
             for clearing in clearings:
                 actions.append(
@@ -1409,7 +1421,6 @@ class Game:
         attacker_remaining_hits -= removed_defender_warriors
         defender_faction_board.reserved_warriors += removed_defender_warriors
 
-        # TODO: for excess damage from warriors, choose tokens or buildings to remove
         # score
         attacker_total_vp = removed_defender_warriors
         defender_total_vp = removed_attacker_warriors
@@ -1429,8 +1440,104 @@ class Game:
                                                                                    attacker_total_vp, defender_total_vp)
         )
 
+        # TODO: for excess damage from warriors, choose tokens or buildings to remove
         # TODO: continue to next action
 
+        if attacker_remaining_hits == defender_remaining_hits == 0:
+            if self.turn_player == Faction.MARQUISE:
+                self.marquise_action_count -= 1
+                self.prompt = "Battle Completed. Proceed to next action".format(attacker)
+                self.set_actions([Action('Next',
+                                         perform(self.marquise_daylight_1_next))])
+            elif self.turn_player == Faction.EYRIE:
+                pass
+
+        else:
+            self.prompt = "Battle Completed. Proceed to removing pieces phase."
+            self.set_actions(
+                [Action("Next", perform(self.post_battle, attacker, defender, attacker_remaining_hits,
+                                        defender_remaining_hits, clearing))])
+
+    def post_battle(self, attacker: Faction, defender: Faction, attacker_remaining_hits, defender_remaining_hits,
+                    clearing: Area):
+        if attacker_remaining_hits == defender_remaining_hits == 0:
+            if self.turn_player == Faction.MARQUISE:
+                self.marquise_action_count -= 1
+                self.prompt = "Both faction have no remaining hits. Proceed to next action".format(attacker)
+                self.set_actions([Action('Next',
+                                         perform(self.marquise_daylight_1_next))])
+            elif self.turn_player == Faction.EYRIE:
+                pass
+        elif attacker_remaining_hits > 0:
+            actions = self.generate_actions_select_tokens_warriors_to_remove(attacker, defender,
+                                                                             attacker_remaining_hits,
+                                                                             defender_remaining_hits,
+                                                                             clearing)
+            if len(actions) == 0:
+                self.prompt = "{}: No Token/Building can be removed.".format(defender)
+                self.set_actions([Action('Next',
+                                         perform(self.post_battle, defender, attacker, defender_remaining_hits, 0,
+                                                 clearing))])
+            else:
+                self.prompt = "{}: Select Token/Building to be removed (Remaining: {})".format(defender,
+                                                                                               attacker_remaining_hits)
+                self.set_actions(actions)
+
+        elif attacker_remaining_hits == 0:
+            self.post_battle(defender, attacker, defender_remaining_hits, attacker_remaining_hits, clearing)
+
+    def generate_actions_select_tokens_warriors_to_remove(self, attacker: Faction, defender: Faction,
+                                                          attacker_remaining_hits, defender_remaining_hits,
+                                                          clearing: Area):
+        actions = []
+        buildings = faction_to_buildings(defender)
+        tokens = faction_to_tokens(defender)
+
+        if defender == Faction.MARQUISE:
+            for token in tokens:
+                if token == Token.WOOD and clearing.token_count[token] > 0:
+                    actions.append(
+                        Action("Wood",
+                               perform(self.remove_token_building, attacker, defender, attacker_remaining_hits,
+                                       defender_remaining_hits, clearing,
+                                       Token.WOOD))
+                    )
+            for building in buildings:
+                if clearing.buildings.count(building) > 0:
+                    actions.append(
+                        Action(building.name,
+                               perform(self.remove_token_building, attacker, defender, attacker_remaining_hits,
+                                       defender_remaining_hits, clearing,
+                                       building))
+                    )
+
+        elif defender == Faction.EYRIE:
+            for building in buildings:
+                if clearing.buildings.count(building) > 0:
+                    actions.append(
+                        Action(building.name,
+                               perform(self.remove_token_building, attacker, defender, attacker_remaining_hits,
+                                       defender_remaining_hits, clearing,
+                                       building))
+                    )
+
+        return actions
+
+    def remove_token_building(self, attacker: Faction, defender: Faction, attacker_remaining_hits,
+                              defender_remaining_hits, clearing: Area,
+                              token_building):
+
+        if isinstance(token_building, Building):
+            clearing.remove_building(token_building)
+        elif isinstance(token_building, Token):
+            clearing.remove_token(token_building)
+
+        self.board.gain_vp(attacker, 1)
+
+        self.prompt = "Remove {} successfully.".format(token_building.name)
+        self.set_actions([Action('Next', perform(self.post_battle, attacker, defender, attacker_remaining_hits - 1,
+                                                 defender_remaining_hits, clearing))])
+                                                 
     def generate_actions_select_card_to_discard(self, faction: Faction) -> list[Action]:
         actions: list[Action] = []
 

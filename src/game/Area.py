@@ -292,6 +292,9 @@ class Area:
     def add_building(self, building: Building):
         self.buildings.append(building)
 
+    def remove_building(self, building):
+        self.buildings.remove(building)
+
     def sum_all_tokens(self) -> int:
         sum_of_tokens = 0
 
