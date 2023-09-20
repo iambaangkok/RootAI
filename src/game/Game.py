@@ -713,10 +713,9 @@ class Game:
 
         self.phase = Phase.DAYLIGHT
         self.sub_phase = 0
-
         self.prompt = "Craft Cards"
-        self.set_actions(
-            [Action('Next, to Resolve the Decree', perform(self.eyrie_daylight_craft_to_resolve_the_decree))])
+        self.set_actions(self.generate_actions_craft_cards(Faction.EYRIE) + [
+            Action('Next', perform(self.eyrie_daylight_craft_to_resolve_the_decree))])
 
     def get_roost_count_by_suit(self) -> {Suit: int}:
         roost_count: {Suit: int} = {
