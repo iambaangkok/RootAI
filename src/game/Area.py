@@ -220,7 +220,8 @@ class Area:
         # Wood
         if self.token_count[Token.WOOD] > 0:
             rad = math.radians(45)
-            offset = Vector2(math.cos(rad) * offset_ratio * self.radius, -1 * math.sin(rad) * offset_ratio * self.radius)
+            offset = Vector2(math.cos(rad) * offset_ratio * self.radius,
+                             -1 * math.sin(rad) * offset_ratio * self.radius)
             position = self.position + offset
 
             color = Colors.ORANGE
@@ -236,7 +237,8 @@ class Area:
         # Castle
         if self.token_count[Token.CASTLE] > 0:
             rad = math.radians(10)
-            offset = Vector2(math.cos(rad) * offset_ratio * self.radius, -1 * math.sin(rad) * offset_ratio * self.radius)
+            offset = Vector2(math.cos(rad) * offset_ratio * self.radius,
+                             -1 * math.sin(rad) * offset_ratio * self.radius)
             position = self.position + offset
 
             color = Colors.ORANGE
