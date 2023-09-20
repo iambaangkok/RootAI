@@ -222,7 +222,7 @@ class Game:
                  Action('Next', perform(self.marquise_daylight_2_next))]
             ],
             Phase.EVENING: [[Action('Next', perform(self.marquise_evening_next))],
-                            [Action('End turn', perform(self.eyrie_birdsong_1_next))]]
+                            [Action('End turn', perform(self.eyrie_emergency_orders))]]
         }
         self.eyrie_base_actions: {Phase: [[Action]]} = {
             Phase.BIRDSONG: [
@@ -241,6 +241,7 @@ class Game:
 
         # Marquise variables
         self.marquise_action_count = 3
+        self.marquise_march_count = 2
         self.marquise_recruit_action_used = False
         self.distance_from_the_keep_list = [4, 3, 2, 3, 3, 2, 1, 1, 3, 2, 1, 0]
         self.distance_from_the_keep = {}
@@ -376,6 +377,7 @@ class Game:
                                       perform(self.marquise_daylight_hawks_for_hire_select_card)))
         else:
             if self.marquise_march_check():
+                self.marquise_march_count = 2
                 actions.append(Action('March', perform(self.marquise_daylight_march_move_from)))  # TODO: March 2 times
             if self.marquise_build_check():
                 actions.append(Action('Build', perform(self.marquise_daylight_build_select_clearing)))
@@ -412,15 +414,18 @@ class Game:
         self.set_actions(self.generate_actions_select_card_hawks_for_hire())
 
     def marquise_daylight_march_move_from(self):
-        self.prompt = "Let's march. Choose area to move from."
+        self.prompt = "Let's march. Choose area to move from. (Remaining march action: {})".format(
+            self.marquise_march_count)
         self.set_actions(self.generate_actions_select_src_clearing(Faction.MARQUISE))
 
     def marquise_daylight_march_move_to(self, faction, src):
-        self.prompt = "Choose area to move to."
+        self.prompt = "Choose area to move to. (Remaining march action: {})".format(
+            self.marquise_march_count)
         self.set_actions(self.generate_actions_select_dest_clearing(faction, src))
 
     def marquise_daylight_march_select_warriors(self, faction, src, dest):
-        self.prompt = "Choose number of warriors to move."
+        self.prompt = "Choose number of warriors to move. (Remaining march action: {})".format(
+            self.marquise_march_count)
         self.set_actions(self.generate_actions_select_warriors(faction, src, dest))
 
     def marquise_daylight_build_select_clearing(self):
@@ -549,8 +554,6 @@ class Game:
             if remaining_wood == 0:
                 break
 
-    # TODO: Remove wood from closest clearing.
-    #  If have the same distance, remove from clearing that is closer to kingdom.
     def remove_wood_from_clearing(self, clearing,
                                   number):
         remaining_wood = max(number - clearing.token_count[Token.WOOD], 0)
@@ -690,7 +693,9 @@ class Game:
         return actions
 
     def place_roost_and_3_warriors(self, area: Area):
-        LOGGER.info("{}:{}:{}:place_roost_and_3_warriors at area#{}".format(self.turn_player, self.phase, self.sub_phase, area.area_index))
+        LOGGER.info(
+            "{}:{}:{}:place_roost_and_3_warriors at area#{}".format(self.turn_player, self.phase, self.sub_phase,
+                                                                    area.area_index))
         self.add_warrior(Faction.EYRIE, area, 3)
         self.build_roost(area)
 
@@ -711,7 +716,8 @@ class Game:
         self.sub_phase = 0
 
         self.prompt = "Craft Cards"
-        self.set_actions([Action('Next, to Resolve the Decree', perform(self.eyrie_daylight_craft_to_resolve_the_decree))])
+        self.set_actions(
+            [Action('Next, to Resolve the Decree', perform(self.eyrie_daylight_craft_to_resolve_the_decree))])
 
     def get_roost_count_by_suit(self) -> {Suit: int}:
         roost_count: {Suit: int} = {
@@ -762,7 +768,9 @@ class Game:
                     self.discard_card(self.eyrie.decree[decree], card)
 
         self.eyrie.reset_decree()
-        LOGGER.info("{}:{}:{}:turmoil:purge: discarded all decree cards except loyal viziers".format(self.turn_player, self.phase, self.sub_phase))
+        LOGGER.info("{}:{}:{}:turmoil:purge: discarded all decree cards except loyal viziers".format(self.turn_player,
+                                                                                                     self.phase,
+                                                                                                     self.sub_phase))
 
     def eyrie_turmoil_depose_then_rest(self):
         current_leader = self.eyrie.get_active_leader()
@@ -1172,9 +1180,16 @@ class Game:
             src.remove_warrior(Warrior.MARQUISE, num)
             dest.add_warrior(Warrior.MARQUISE, num)
 
-            self.prompt = "The warriors has been moved."
-            self.marquise_action_count -= 1
-            self.set_actions([Action('Next', perform(self.marquise_daylight_1_next))])
+            self.marquise_march_count -= 1
+            if self.marquise_march_count > 0:
+                self.prompt = "The warriors has been moved. (Remaining march action: {})".format(
+                    self.marquise_march_count)
+                self.set_actions([Action('Next', perform(self.marquise_daylight_march_move_from))])
+            else:
+                self.marquise_action_count -= 1
+                self.prompt = "The warriors has been moved. (Remaining march action: {})".format(
+                    self.marquise_march_count)
+                self.set_actions([Action('Next', perform(self.marquise_daylight_1_next))])
         elif faction == Faction.EYRIE:
             src.remove_warrior(Warrior.EYRIE, num)
             dest.add_warrior(Warrior.EYRIE, num)
