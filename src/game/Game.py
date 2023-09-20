@@ -241,6 +241,8 @@ class Game:
         # Marquise variables
         self.marquise_action_count = 3
         self.marquise_recruit_action_used = False
+        self.distance_from_the_keep_list = [4, 3, 2, 3, 3, 2, 1, 1, 3, 2, 1, 0]
+        self.distance_from_the_keep = {}
 
         # # Add Card To Decree variables
         self.selected_card: PlayingCard | None = None
@@ -268,6 +270,9 @@ class Game:
 
         for i in range(1, len(self.board.areas)):
             self.board.areas[i].add_warrior(Warrior.MARQUISE, 1)
+
+        for i in range(0, len(self.board.areas)):
+            self.distance_from_the_keep[self.board.areas[i]] = self.distance_from_the_keep_list[i]
 
         self.build_roost(self.board.areas[0])
         self.board.areas[0].add_warrior(Warrior.EYRIE, 6)
@@ -370,7 +375,7 @@ class Game:
                                       perform(self.marquise_daylight_hawks_for_hire_select_card)))
         else:
             if self.marquise_march_check():
-                actions.append(Action('March', perform(self.marquise_daylight_march_move_from)))
+                actions.append(Action('March', perform(self.marquise_daylight_march_move_from)))  # TODO: March 2 times
             if self.marquise_build_check():
                 actions.append(Action('Build', perform(self.marquise_daylight_build_select_clearing)))
             if self.marquise_recruit_check():
@@ -498,22 +503,28 @@ class Game:
 
     def marquise_bfs_count_wood(self, clearing: Area):
         visited = []
-        queue: list[Area] = [clearing]
+        order: list[tuple[int, tuple[int, Area]]] = []
+        queue: list[tuple[int, Area]] = [(0, clearing)]
 
         total_wood = 0
 
         while queue:
-            u = queue.pop(0)
+            dist, u = queue.pop(0)
             if u in visited:
                 continue
             visited.append(u)
+            order.append((dist, (self.distance_from_the_keep[u], u)))
             total_wood += u.token_count[Token.WOOD]
 
             for v in u.connected_clearings:
                 if v.ruler() == Warrior.MARQUISE:
-                    queue.append(v)
+                    queue.append((dist + 1, v))
+        def hash_value(item : tuple[int, tuple[int, Area]]):
+            return item[0] * 10 + item[1][0]
 
-        return visited, total_wood
+        order.sort(key=hash_value)
+
+        return order, total_wood
 
     def marquise_get_min_cost_building(self):
         cost = self.marquise.building_cost
@@ -526,9 +537,12 @@ class Game:
 
         return min_cost
 
-    def remove_wood(self, number, order):
+    def remove_wood(self, number, orders: list[tuple[int, tuple[int, Area]]]):
         remaining_wood = number
-        for clearing in order:
+        print(orders)
+        for order in orders:
+            clearing = order[1][1]
+            print(clearing)
             remaining_wood = self.remove_wood_from_clearing(clearing, remaining_wood)
             if remaining_wood == 0:
                 break
@@ -728,10 +742,14 @@ class Game:
 
     def eyrie_turmoil_humiliate(self):
         bird_card_in_decree_count = self.eyrie.count_card_in_decree_with_suit(Suit.BIRD)
-        vp_lost = min(self.board.faction_points[Faction.EYRIE], bird_card_in_decree_count)  # TODO: investigate vp lost not matching bird cards in self.eyrie.decree
+        vp_lost = min(self.board.faction_points[Faction.EYRIE],
+                      bird_card_in_decree_count)  # TODO: investigate vp lost not matching bird cards in self.eyrie.decree
         self.board.lose_vp(Faction.EYRIE, vp_lost)
-        LOGGER.info("{}:{}:{}:turmoil:humiliate: {} bird cards in the decree, lost {} vp(s)".format(self.turn_player, self.phase, self.sub_phase,
-                                                                                                    bird_card_in_decree_count, vp_lost))
+        LOGGER.info("{}:{}:{}:turmoil:humiliate: {} bird cards in the decree, lost {} vp(s)".format(self.turn_player,
+                                                                                                    self.phase,
+                                                                                                    self.sub_phase,
+                                                                                                    bird_card_in_decree_count,
+                                                                                                    vp_lost))
 
     def eyrie_turmoil_purge(self):
         for decree in DecreeAction:
@@ -930,7 +948,8 @@ class Game:
 
         self.board.gain_vp(Faction.EYRIE, vp)
         LOGGER.info(
-            "{}:{}:{}:eyrie_evening: roost tracker {}, scored {} vps".format(self.turn_player, self.phase, self.sub_phase, self.eyrie.roost_tracker,
+            "{}:{}:{}:eyrie_evening: roost tracker {}, scored {} vps".format(self.turn_player, self.phase,
+                                                                             self.sub_phase, self.eyrie.roost_tracker,
                                                                              vp))
 
         self.take_card_from_draw_pile(Faction.EYRIE, card_to_draw)
@@ -1470,7 +1489,6 @@ class Game:
                                                                                    defender_total_hits,
                                                                                    attacker_total_vp, defender_total_vp)
         )
-
 
         # remove decree counter
         if self.turn_player == Faction.EYRIE:
