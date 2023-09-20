@@ -520,7 +520,8 @@ class Game:
             for v in u.connected_clearings:
                 if v.ruler() == Warrior.MARQUISE:
                     queue.append((dist + 1, v))
-        def hash_value(item : tuple[int, tuple[int, Area]]):
+
+        def hash_value(item: tuple[int, tuple[int, Area]]):
             return item[0] * 10 + item[1][0]
 
         order.sort(key=hash_value)
@@ -629,17 +630,17 @@ class Game:
                 if self.added_bird_card and card.suit == Suit.BIRD:
                     continue
                 actions.append(Action('{} ({})'.format(card.name, card.suit),
-                                      perform(self.select_card_to_add_to_the_decree_first, card)))
+                                      perform(self.select_card_to_add_to_the_decree, card)))
 
         return actions
 
-    def select_card_to_add_to_the_decree_first(self, card: PlayingCard):
+    def select_card_to_add_to_the_decree(self, card: PlayingCard):
         self.select_card(card)
 
         self.prompt = "Select Decree ({} ({}))".format(card.name, card.suit)
-        self.set_actions(self.generate_actions_add_to_the_decree_additional())
+        self.set_actions(self.generate_actions_add_to_the_decree())
 
-    def generate_actions_add_to_the_decree_additional(self) -> list[Action]:
+    def generate_actions_add_to_the_decree(self) -> list[Action]:
         actions: list[Action] = []
         for decree_action in DecreeAction:
             actions.append(
@@ -678,7 +679,7 @@ class Game:
         if self.eyrie.roost_tracker == 0:
             self.set_actions(self.generate_actions_place_roost_and_3_warriors())
         else:
-            self.set_actions()
+            self.eyrie_birdsong_to_daylight()
 
     def generate_actions_place_roost_and_3_warriors(self) -> list[Action]:
         actions: list[Action] = []
