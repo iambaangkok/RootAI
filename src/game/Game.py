@@ -56,7 +56,7 @@ class Game:
 
         # Game Data
         self.turn_count: int = 0
-        self.turn_player: Faction = Faction.EYRIE
+        self.turn_player: Faction = Faction.MARQUISE
         self.phase: Phase = Phase.BIRDSONG
         self.sub_phase = 0
         self.is_in_action_sub_phase: bool = False
@@ -221,7 +221,8 @@ class Game:
                  Action('Overwork'),
                  Action('Next', perform(self.marquise_daylight_2_next))]
             ],
-            Phase.EVENING: [[Action('End turn', perform(self.eyrie_birdsong_1_next))]]
+            Phase.EVENING: [[Action('Next', perform(self.marquise_evening_next))],
+                            [Action('End turn', perform(self.eyrie_birdsong_1_next))]]
         }
         self.eyrie_base_actions: {Phase: [[Action]]} = {
             Phase.BIRDSONG: [
@@ -430,11 +431,11 @@ class Game:
         self.marquise_action_count -= 1
         self.set_actions([Action('Next', self.marquise_daylight_1_next)])
 
-    def marquise_daylight_battle_1(self):  # TODO: Refactor Battle Method
+    def marquise_daylight_battle_1(self):
         self.prompt = "Select Clearing"
         self.set_actions(self.generate_actions_select_clearing_battle(Faction.MARQUISE))
 
-    def marquise_daylight_battle_2(self, clearing):  # TODO: Refactor Battle Method
+    def marquise_daylight_battle_2(self, clearing):
         self.prompt = "Select Faction"
         self.set_actions(self.generate_actions_select_faction_battle(Faction.MARQUISE, clearing))
 
@@ -454,7 +455,7 @@ class Game:
         self.marquise_action_count -= 1
         self.set_actions([Action('Next', self.marquise_daylight_1_next)])
 
-    def marquise_daylight_2_next(self):  # TODO: Draw cards
+    def marquise_daylight_2_next(self):
         self.prompt = "Draw one card, plus one card per draw bonus"
         number_of_card_to_be_drawn = self.marquise.get_reward_card() + 1
         self.take_card_from_draw_pile(Faction.MARQUISE, number_of_card_to_be_drawn)
@@ -462,6 +463,21 @@ class Game:
         self.phase = Phase.EVENING
         self.sub_phase = 0
         self.set_actions()
+
+    def marquise_evening_next(self):
+        self.phase = Phase.EVENING
+        self.sub_phase = 1
+        card_in_hand_count = len(self.marquise.cards_in_hand)
+        if card_in_hand_count > 5:
+            self.prompt = "Select card to discard down to 5 cards (currently {} cards in hand)".format(
+                card_in_hand_count)
+            self.set_actions(self.generate_actions_select_card_to_discard(Faction.MARQUISE))
+        else:
+            self.prompt = "MARQUISE's turn ends"
+            self.set_actions()
+
+    # TODO: Field Hospital
+    # TODO: Check Keep Token
 
     def get_workshop_count_by_suit(self) -> {Suit: int}:
         workshop_count: {Suit: int} = {
@@ -517,7 +533,10 @@ class Game:
             if remaining_wood == 0:
                 break
 
-    def remove_wood_from_clearing(self, clearing, number):  # TODO
+    # TODO: Remove wood from closest clearing.
+    #  If have the same distance, remove from clearing that is closer to kingdom.
+    def remove_wood_from_clearing(self, clearing,
+                                  number):
         remaining_wood = max(number - clearing.token_count[Token.WOOD], 0)
         clearing.token_count[Token.WOOD] -= (
             min(number, clearing.token_count[Token.WOOD]))
@@ -580,6 +599,8 @@ class Game:
         if len(self.eyrie.cards_in_hand) == 0:
             self.take_card_from_draw_pile(Faction.EYRIE)
 
+        self.turn_player = Faction.EYRIE
+        self.phase = Phase.BIRDSONG
         self.sub_phase = 1
 
         self.prompt = "Select Card To Add To Decree"
@@ -712,7 +733,8 @@ class Game:
         bird_card_in_decree_count = self.eyrie.count_card_in_decree_with_suit(Suit.BIRD)
         vp_lost = min(self.board.faction_points[Faction.EYRIE], bird_card_in_decree_count)
         self.board.lose_vp(Faction.EYRIE, vp_lost)
-        LOGGER.info("{}:{}:{}:turmoil:humiliate: lost {} vp(s)".format(self.turn_player, self.phase, self.sub_phase, vp_lost))
+        LOGGER.info(
+            "{}:{}:{}:turmoil:humiliate: lost {} vp(s)".format(self.turn_player, self.phase, self.sub_phase, vp_lost))
 
     def eyrie_turmoil_purge(self):
         for decree in DecreeAction:
@@ -721,7 +743,9 @@ class Game:
                     self.discard_card(self.eyrie.decree[decree], card)
                 else:
                     self.eyrie.decree[decree].remove(card)
-        LOGGER.info("{}:{}:{}:turmoil:purge: discarded all decree cards except loyal viziers".format(self.turn_player, self.phase, self.sub_phase))
+        LOGGER.info("{}:{}:{}:turmoil:purge: discarded all decree cards except loyal viziers".format(self.turn_player,
+                                                                                                     self.phase,
+                                                                                                     self.sub_phase))
 
     def eyrie_turmoil_depose(self):
         current_leader = self.eyrie.get_active_leader()
@@ -732,7 +756,8 @@ class Game:
         if len(inactive_leaders) == 0:
             self.eyrie.a_new_generation()
 
-        LOGGER.info("{}:{}:{}:turmoil:depose: {} deposed".format(self.turn_player, self.phase, self.sub_phase, current_leader))
+        LOGGER.info(
+            "{}:{}:{}:turmoil:depose: {} deposed".format(self.turn_player, self.phase, self.sub_phase, current_leader))
         self.prompt = "Select New Eyrie Leader:"
         self.set_actions(self.generate_actions_eyrie_select_new_leader(inactive_leaders))
 
@@ -747,7 +772,9 @@ class Game:
 
     def eyrie_select_new_leader(self, leader: EyrieLeader):
         self.eyrie.activate_leader(leader)
-        LOGGER.info("{}:{}:{}:turmoil:depose: {} selected as new leader".format(self.turn_player, self.phase, self.sub_phase, leader))
+        LOGGER.info(
+            "{}:{}:{}:turmoil:depose: {} selected as new leader".format(self.turn_player, self.phase, self.sub_phase,
+                                                                        leader))
         self.eyrie_turmoil_rest()
 
     def eyrie_turmoil_rest(self):
@@ -910,7 +937,8 @@ class Game:
         self.take_card_from_draw_pile(Faction.EYRIE, card_to_draw)
         card_in_hand_count = len(self.eyrie.cards_in_hand)
         if card_in_hand_count > 5:
-            self.prompt = "Select card to discard down to 5 cards (currently {} cards in hand)".format(card_in_hand_count)
+            self.prompt = "Select card to discard down to 5 cards (currently {} cards in hand)".format(
+                card_in_hand_count)
             self.set_actions(self.generate_actions_select_card_to_discard(Faction.EYRIE))
         else:
             self.eyrie_evening_next()
@@ -1305,7 +1333,6 @@ class Game:
 
         if faction == Faction.MARQUISE:
             for clearing in clearings:
-                # TODO: if
                 actions.append(
                     Action("{}".format(clearing),
                            perform(self.marquise_daylight_battle_2, clearing)))
@@ -1395,7 +1422,6 @@ class Game:
         dices: list[int] = [randint(0, 4), randint(0, 4)]
         attacker_roll: int = max(dices)
         defender_roll: int = min(dices)
-        # TODO: add marquise extra_hit logic, if there is any
 
         defender_defenseless_extra_hits: int = 1 if (
                 clearing.get_warrior_count(faction_to_warrior(defender)) == 0) else 0
@@ -1429,7 +1455,6 @@ class Game:
         self.board.gain_vp(attacker, attacker_total_vp)  # or this vp?
         defender_faction_board.victory_point += defender_total_vp
         self.board.gain_vp(defender, defender_total_vp)
-        # TODO: score for tokens and buildings removed
 
         LOGGER.info(
             "{}:{}:{}:battle: {} vs {}, total hits {}:{}, vps gained {}:{}".format(self.turn_player, self.phase,
@@ -1439,9 +1464,6 @@ class Game:
                                                                                    defender_total_hits,
                                                                                    attacker_total_vp, defender_total_vp)
         )
-
-        # TODO: for excess damage from warriors, choose tokens or buildings to remove
-        # TODO: continue to next action
 
         if attacker_remaining_hits == defender_remaining_hits == 0:
             if self.turn_player == Faction.MARQUISE:
@@ -1537,28 +1559,32 @@ class Game:
         self.prompt = "Remove {} successfully.".format(token_building.name)
         self.set_actions([Action('Next', perform(self.post_battle, attacker, defender, attacker_remaining_hits - 1,
                                                  defender_remaining_hits, clearing))])
-                                                 
+
     def generate_actions_select_card_to_discard(self, faction: Faction) -> list[Action]:
         actions: list[Action] = []
 
         faction_board = self.faction_to_faction_board(faction)
 
         for card in faction_board.cards_in_hand:
-            actions.append(Action("Card {} ({})".format(card.name, card.suit), perform(self.select_card_to_discard, faction, card)))
+            actions.append(Action("Card {} ({})".format(card.name, card.suit),
+                                  perform(self.select_card_to_discard, faction, card)))
 
         return actions
 
     def select_card_to_discard(self, faction: Faction, card: PlayingCard):
         faction_board = self.faction_to_faction_board(faction)
-        LOGGER.info("{}:{}:{}:{}:discard_card {} ({}) discarded".format(self.turn_player, self.phase, self.sub_phase, faction, card.name, card.suit))
+        LOGGER.info(
+            "{}:{}:{}:{}:discard_card {} ({}) discarded".format(self.turn_player, self.phase, self.sub_phase, faction,
+                                                                card.name, card.suit))
         self.discard_card(faction_board.cards_in_hand, card)
         card_in_hand_count = len(faction_board.cards_in_hand)
         if card_in_hand_count > 5:
-            self.prompt = "Select card to discard down to 5 cards (currently {} cards in hand)".format(card_in_hand_count)
+            self.prompt = "Select card to discard down to 5 cards (currently {} cards in hand)".format(
+                card_in_hand_count)
             self.set_actions(self.generate_actions_select_card_to_discard(faction))
         else:
             if faction == Faction.MARQUISE:
-                # TODO
+                self.marquise_evening_next()
                 pass
             elif faction == Faction.EYRIE:
                 self.eyrie_evening_next()
