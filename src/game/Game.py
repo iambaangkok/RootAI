@@ -219,9 +219,9 @@ class Game:
                 [Action('Battle'), Action('March', perform(self.marquise_daylight_march_move_from)), Action('Recruit'),
                  Action('Build'),
                  Action('Overwork'),
-                 Action('Next', perform(self.marquise_daylight_2_next))]
+                 Action('Next', perform(self.marquise_evening_draw_card))]
             ],
-            Phase.EVENING: [[Action('Next', perform(self.marquise_evening_next))],
+            Phase.EVENING: [[Action('Next', perform(self.marquise_evening_discard_card))],
                             [Action('End turn', perform(self.eyrie_start))]]
         }
         self.eyrie_base_actions: {Phase: [[Action]]} = {
@@ -388,7 +388,7 @@ class Game:
             if self.marquise_battle_check():
                 actions.append(Action('Battle', perform(self.marquise_daylight_battle_select_clearing)))
 
-        actions.append(Action('Next', perform(self.marquise_daylight_2_next)))
+        actions.append(Action('Next', perform(self.marquise_evening_draw_card)))
         self.set_actions(actions)
 
     def marquise_hawks_for_hire_check(self):
@@ -466,7 +466,7 @@ class Game:
         self.marquise_action_count -= 1
         self.set_actions([Action('Next', self.marquise_daylight_1_next)])
 
-    def marquise_daylight_2_next(self):
+    def marquise_evening_draw_card(self):
         self.prompt = "Draw one card, plus one card per draw bonus"
         number_of_card_to_be_drawn = self.marquise.get_reward_card() + 1
         self.take_card_from_draw_pile(Faction.MARQUISE, number_of_card_to_be_drawn)
@@ -475,7 +475,7 @@ class Game:
         self.sub_phase = 0
         self.set_actions()
 
-    def marquise_evening_next(self):
+    def marquise_evening_discard_card(self):
         self.phase = Phase.EVENING
         self.sub_phase = 1
         card_in_hand_count = len(self.marquise.cards_in_hand)
@@ -486,8 +486,6 @@ class Game:
         else:
             self.prompt = "MARQUISE's turn ends"
             self.set_actions()
-
-    # TODO: Field Hospital
 
     def get_workshop_count_by_suit(self) -> {Suit: int}:
         workshop_count: {Suit: int} = {
@@ -1685,7 +1683,7 @@ class Game:
             self.set_actions(self.generate_actions_select_card_to_discard(faction))
         else:
             if faction == Faction.MARQUISE:
-                self.marquise_evening_next()
+                self.marquise_evening_discard_card()
                 pass
             elif faction == Faction.EYRIE:
                 self.eyrie_evening_to_marquise()
