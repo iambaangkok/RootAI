@@ -713,6 +713,8 @@ class Game:
 
         self.phase = Phase.DAYLIGHT
         self.sub_phase = 0
+
+    def eyrie_daylight_craft(self):
         self.prompt = "Craft Cards"
         self.set_actions(self.generate_actions_craft_cards(Faction.EYRIE) + [
             Action('Next', perform(self.eyrie_daylight_craft_to_resolve_the_decree))])
@@ -1057,6 +1059,7 @@ class Game:
             else:
                 self.eyrie.cards_in_hand.remove(card)
                 self.eyrie.crafted_cards.append(card)
+            self.eyrie_daylight_craft()
 
     def get_craftable_cards(self, faction: Faction) -> list[PlayingCard]:
         craftable_cards: list[PlayingCard] = []
