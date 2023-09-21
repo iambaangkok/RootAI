@@ -1556,28 +1556,30 @@ class Game:
         for card in discarable_cards:
             actions.append(
                 Action("{} ({})".format(card.name, card.suit),
-                       perform(self.marquise_field_hospital, num_warriors, attacker, defender, attacker_remaining_hits,
+                       perform(self.marquise_field_hospital, card, num_warriors, attacker, defender, attacker_remaining_hits,
                                defender_remaining_hits, clearing)))
 
         return actions
 
-    def marquise_field_hospital(self, num_warriors, attacker, defender, attacker_remaining_hits,
-                                defender_remaining_hits, clearing):
+    def marquise_field_hospital(self, card, num_warriors, attacker, defender, attacker_remaining_hits,
+                                defender_remaining_hits, target_clearing):
+        LOGGER.info(
+            "{}:{}:{}:{}:discard_card {} ({}) discarded".format(self.turn_player, self.phase, self.sub_phase, Faction.MARQUISE,
+                                                                card.name, card.suit))
+
+        self.discard_card(self.marquise.cards_in_hand, card)
         for clearing in self.board.areas:
             if clearing.token_count[Token.CASTLE] > 0:
                 clearing.add_warrior(Warrior.MARQUISE, num_warriors)
                 break
 
-        self.post_battle(attacker, defender, attacker_remaining_hits, defender_remaining_hits, clearing)
+        self.post_battle(attacker, defender, attacker_remaining_hits, defender_remaining_hits, target_clearing)
 
     def post_battle(self, attacker: Faction, defender: Faction, attacker_remaining_hits, defender_remaining_hits,
                     clearing: Area):
         if attacker_remaining_hits == defender_remaining_hits == 0:
             if self.turn_player == Faction.MARQUISE:
                 self.marquise_action_count -= 1
-                # self.prompt = "Both faction have no remaining hits. Proceed to next action".format(attacker)
-                # self.set_actions([Action('Next',
-                #                          perform(self.marquise_daylight_1_next))])
                 self.marquise_daylight_1_next()
             elif self.turn_player == Faction.EYRIE:
                 self.eyrie_move_to_battle()
