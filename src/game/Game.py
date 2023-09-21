@@ -713,6 +713,8 @@ class Game:
 
         self.phase = Phase.DAYLIGHT
         self.sub_phase = 0
+
+    def eyrie_daylight_craft(self):
         self.prompt = "Craft Cards"
         self.set_actions(self.generate_actions_craft_cards(Faction.EYRIE) + [
             Action('Next', perform(self.eyrie_daylight_craft_to_resolve_the_decree))])
@@ -746,7 +748,7 @@ class Game:
         # purge
         self.eyrie_turmoil_purge()
         # depose, then rest
-        self.eyrie_turmoil_depose_then_rest()
+        self.eyrie_turmoil_depose()
 
     def eyrie_turmoil_humiliate(self):
         bird_card_in_decree_count = self.eyrie.count_card_in_decree_with_suit(Suit.BIRD)
@@ -770,7 +772,7 @@ class Game:
                                                                                                      self.phase,
                                                                                                      self.sub_phase))
 
-    def eyrie_turmoil_depose_then_rest(self):
+    def eyrie_turmoil_depose(self):
         current_leader = self.eyrie.get_active_leader()
 
         self.eyrie.deactivate_current_leader()
@@ -1057,6 +1059,7 @@ class Game:
             else:
                 self.eyrie.cards_in_hand.remove(card)
                 self.eyrie.crafted_cards.append(card)
+            self.eyrie_daylight_craft()
 
     def get_craftable_cards(self, faction: Faction) -> list[PlayingCard]:
         craftable_cards: list[PlayingCard] = []
