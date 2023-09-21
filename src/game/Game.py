@@ -384,9 +384,9 @@ class Game:
             if self.marquise_recruit_check():
                 actions.append(Action('Recruit', perform(self.marquise_daylight_recruit)))
             if self.marquise_overwork_check():
-                actions.append(Action('Overwork', perform(self.marquise_daylight_overwork_1)))
+                actions.append(Action('Overwork', perform(self.marquise_daylight_overwork_select_clearing)))
             if self.marquise_battle_check():
-                actions.append(Action('Battle', perform(self.marquise_daylight_battle_1)))
+                actions.append(Action('Battle', perform(self.marquise_daylight_battle_select_clearing)))
 
         actions.append(Action('Next', perform(self.marquise_daylight_2_next)))
         self.set_actions(actions)
@@ -442,21 +442,21 @@ class Game:
         self.marquise_action_count -= 1
         self.set_actions([Action('Next', self.marquise_daylight_1_next)])
 
-    def marquise_daylight_battle_1(self):
+    def marquise_daylight_battle_select_clearing(self):
         self.prompt = "Select Clearing"
         self.set_actions(self.generate_actions_select_clearing_battle(Faction.MARQUISE))
 
-    def marquise_daylight_battle_2(self, clearing):
+    def marquise_daylight_battle_select_faction(self, clearing):
         self.prompt = "Select Faction"
         self.set_actions(self.generate_actions_select_faction_battle(Faction.MARQUISE, clearing))
 
-    def marquise_daylight_overwork_1(self):
+    def marquise_daylight_overwork_select_clearing(self):
         self.prompt = "Select Clearing"
-        self.set_actions(self.generate_actions_select_clearing_overwork())
+        self.set_actions(self.generate_actions_overwork_select_clearing())
 
-    def marquise_daylight_overwork_2(self, clearing):
+    def marquise_daylight_overwork_select_card_to_discard(self, clearing):
         self.prompt = "Select Card"
-        self.set_actions(self.generate_actions_select_card_overwork(clearing))
+        self.set_actions(self.generate_actions_overwork_select_card(clearing))
 
     def marquise_overwork(self, clearing, card):
         self.discard_card(self.marquise.cards_in_hand, card)
@@ -568,18 +568,18 @@ class Game:
     def sawmill_clearing(self, area):
         return area.buildings.count(Building.SAWMILL) > 0
 
-    def generate_actions_select_clearing_overwork(self):
+    def generate_actions_overwork_select_clearing(self):
         available_clearing = self.find_available_overwork_clearings()
         actions: list[Action] = []
 
         for clearing in available_clearing:
             actions.append(
                 Action("{}".format(clearing.area_index),
-                       perform(self.marquise_daylight_overwork_2, clearing)))
+                       perform(self.marquise_daylight_overwork_select_card_to_discard, clearing)))
 
         return actions
 
-    def generate_actions_select_card_overwork(self, clearing):
+    def generate_actions_overwork_select_card(self, clearing):
         discardable_card = [card for card in self.marquise.cards_in_hand if card.suit == clearing.suit]
         actions: list[Action] = []
 
@@ -1381,7 +1381,7 @@ class Game:
             for clearing in clearings:
                 actions.append(
                     Action("{}".format(clearing),
-                           perform(self.marquise_daylight_battle_2, clearing)))
+                           perform(self.marquise_daylight_battle_select_faction, clearing)))
         elif faction == Faction.EYRIE:
             for clearing in clearings:
                 actions.append(
