@@ -748,7 +748,7 @@ class Game:
         # purge
         self.eyrie_turmoil_purge()
         # depose, then rest
-        self.eyrie_turmoil_depose_then_rest()
+        self.eyrie_turmoil_depose()
 
     def eyrie_turmoil_humiliate(self):
         bird_card_in_decree_count = self.eyrie.count_card_in_decree_with_suit(Suit.BIRD)
@@ -772,7 +772,7 @@ class Game:
                                                                                                      self.phase,
                                                                                                      self.sub_phase))
 
-    def eyrie_turmoil_depose_then_rest(self):
+    def eyrie_turmoil_depose(self):
         current_leader = self.eyrie.get_active_leader()
 
         self.eyrie.deactivate_current_leader()
