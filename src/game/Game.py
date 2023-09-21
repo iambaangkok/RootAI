@@ -671,14 +671,14 @@ class Game:
             self.eyrie_a_new_roost()
 
     def eyrie_add_to_the_decree_additional_skip(self):
-        LOGGER.info("{}:{}:{}:card_2_skip".format(self.turn_player, self.phase, self.sub_phase))
+        LOGGER.info("{}:{}:{}:eyrie_add_to_the_decree_additional_skip".format(self.turn_player, self.phase, self.sub_phase))
         self.eyrie_a_new_roost()
 
     def eyrie_a_new_roost(self):
         self.sub_phase = 2
-        self.prompt = "If you have no roost, place a roost and 3 warriors in the clearing with the fewest total pieces. (Select Clearing)"
 
         if self.eyrie.roost_tracker == 0:
+            self.prompt = "If you have no roost, place a roost and 3 warriors in the clearing with the fewest total pieces. (Select Clearing)"
             self.set_actions(self.generate_actions_place_roost_and_3_warriors())
         else:
             self.eyrie_birdsong_to_daylight()
@@ -713,6 +713,7 @@ class Game:
 
         self.phase = Phase.DAYLIGHT
         self.sub_phase = 0
+        self.eyrie_daylight_craft()
 
     def eyrie_daylight_craft(self):
         self.prompt = "Craft Cards"
@@ -1338,7 +1339,7 @@ class Game:
                 decree_can_build_in[suit] = count_decree_action_static(self.decree_counter, DecreeAction.BUILD, suit)
 
             for clearing in self.board.areas:
-                if self.eyrie.roost_tracker >= len(EyrieBoard.ROOST_REWARD_VP):  # roost tracker in range [0, 6]
+                if self.eyrie.roost_tracker > len(EyrieBoard.ROOST_REWARD_VP):  # roost tracker in range [0, 7]
                     break
                 if clearing.ruler() != Warrior.EYRIE:
                     continue
@@ -1584,10 +1585,10 @@ class Game:
             elif self.turn_player == Faction.EYRIE:
                 self.eyrie_move_to_battle()
         elif attacker_remaining_hits > 0:
-            actions = self.generate_actions_select_tokens_warriors_to_remove(attacker, defender,
-                                                                             attacker_remaining_hits,
-                                                                             defender_remaining_hits,
-                                                                             clearing)
+            actions = self.generate_actions_select_piece_to_remove(attacker, defender,
+                                                                   attacker_remaining_hits,
+                                                                   defender_remaining_hits,
+                                                                   clearing)
             if len(actions) == 0:
                 self.prompt = "{}: No Token/Building can be removed.".format(defender)
                 self.set_actions([Action('Next',
@@ -1608,9 +1609,9 @@ class Game:
         elif attacker_remaining_hits == 0:
             self.post_battle(defender, attacker, defender_remaining_hits, attacker_remaining_hits, clearing)
 
-    def generate_actions_select_tokens_warriors_to_remove(self, attacker: Faction, defender: Faction,
-                                                          attacker_remaining_hits, defender_remaining_hits,
-                                                          clearing: Area):
+    def generate_actions_select_piece_to_remove(self, attacker: Faction, defender: Faction,
+                                                attacker_remaining_hits, defender_remaining_hits,
+                                                clearing: Area):
         actions = []
         buildings = faction_to_buildings(defender)
         tokens = faction_to_tokens(defender)
