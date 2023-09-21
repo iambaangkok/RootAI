@@ -1512,30 +1512,70 @@ class Game:
         if self.turn_player == Faction.EYRIE:
             self.remove_decree_counter(DecreeAction.BATTLE, clearing.suit)
 
-        if attacker_remaining_hits == defender_remaining_hits == 0:
-            if self.turn_player == Faction.MARQUISE:
-                self.marquise_action_count -= 1
-                self.prompt = "Battle Completed. Proceed to next action".format(attacker)
-                self.set_actions([Action('Next',
-                                         perform(self.marquise_daylight_1_next))])
-            elif self.turn_player == Faction.EYRIE:
-                self.eyrie_move_to_battle()
+        self.post_battle_marquise_field_hospital(attacker, defender, removed_attacker_warriors,
+                                                 removed_defender_warriors,
+                                                 attacker_remaining_hits, defender_remaining_hits, clearing)
 
-        else:
-
-            self.prompt = "Battle Completed. Proceed to removing pieces phase."
+    def post_battle_marquise_field_hospital(self, attacker, defender, removed_attacker_warriors,
+                                            removed_defender_warriors,
+                                            attacker_remaining_hits, defender_remaining_hits, clearing):
+        if attacker == Faction.MARQUISE and removed_attacker_warriors > 0 and self.marquise_field_hospital_check(clearing):
+            self.prompt = "MARQUISE: Discard a card matching warrior's clearing to bring {} warriors back to the keep.".format(
+                removed_attacker_warriors)
             self.set_actions(
-                [Action("Next", perform(self.post_battle, attacker, defender, attacker_remaining_hits,
-                                        defender_remaining_hits, clearing))])
+                self.generate_actions_field_hospital_select_card_to_discard(removed_attacker_warriors, attacker,
+                                                                            defender, attacker_remaining_hits,
+                                                                            defender_remaining_hits,
+                                                                            clearing))
+        elif defender == Faction.MARQUISE and removed_defender_warriors > 0 and self.marquise_field_hospital_check(clearing):
+            self.prompt = "MARQUISE: Discard a card matching warrior's clearing to bring {} warriors back to the keep.".format(
+                removed_defender_warriors)
+            self.set_actions(
+                self.generate_actions_field_hospital_select_card_to_discard(removed_defender_warriors, attacker,
+                                                                            defender, attacker_remaining_hits,
+                                                                            defender_remaining_hits,
+                                                                            clearing))
+        else:
+            self.post_battle(attacker, defender, attacker_remaining_hits, defender_remaining_hits, clearing)
+
+    def marquise_field_hospital_check(self, clearing: Area):
+        return len(self.marquise_field_hospital_get_cards(clearing)) > 0
+
+    def marquise_field_hospital_get_cards(self, clearing):
+        return [card for card in self.marquise.cards_in_hand if card.suit == clearing.suit]
+
+    def generate_actions_field_hospital_select_card_to_discard(self, num_warriors, attacker, defender,
+                                                               attacker_remaining_hits, defender_remaining_hits,
+                                                               clearing):
+        discarable_cards = self.marquise_field_hospital_get_cards(clearing)
+        actions = []
+
+        for card in discarable_cards:
+            actions.append(
+                Action("{} ({})".format(card.name, card.suit),
+                       perform(self.marquise_field_hospital, num_warriors, attacker, defender, attacker_remaining_hits,
+                               defender_remaining_hits, clearing)))
+
+        return actions
+
+    def marquise_field_hospital(self, num_warriors, attacker, defender, attacker_remaining_hits,
+                                defender_remaining_hits, clearing):
+        for clearing in self.board.areas:
+            if clearing.token_count[Token.CASTLE] > 0:
+                clearing.add_warrior(Warrior.MARQUISE, num_warriors)
+                break
+
+        self.post_battle(attacker, defender, attacker_remaining_hits, defender_remaining_hits, clearing)
 
     def post_battle(self, attacker: Faction, defender: Faction, attacker_remaining_hits, defender_remaining_hits,
                     clearing: Area):
         if attacker_remaining_hits == defender_remaining_hits == 0:
             if self.turn_player == Faction.MARQUISE:
                 self.marquise_action_count -= 1
-                self.prompt = "Both faction have no remaining hits. Proceed to next action".format(attacker)
-                self.set_actions([Action('Next',
-                                         perform(self.marquise_daylight_1_next))])
+                # self.prompt = "Both faction have no remaining hits. Proceed to next action".format(attacker)
+                # self.set_actions([Action('Next',
+                #                          perform(self.marquise_daylight_1_next))])
+                self.marquise_daylight_1_next()
             elif self.turn_player == Faction.EYRIE:
                 self.eyrie_move_to_battle()
         elif attacker_remaining_hits > 0:
@@ -1552,7 +1592,8 @@ class Game:
                 if attacker == Faction.EYRIE:
                     if self.eyrie.get_active_leader() == EyrieLeader.DESPOT:
                         LOGGER.info(
-                            "{}:{}:{}:post_battle: despot, gain 1 additional vp".format(self.turn_player, self.phase, self.sub_phase))
+                            "{}:{}:{}:post_battle: despot, gain 1 additional vp".format(self.turn_player, self.phase,
+                                                                                        self.sub_phase))
                         self.board.gain_vp(Faction.EYRIE, 1)
 
                 self.prompt = "{}: Select Token/Building to be removed (Remaining: {})".format(defender,
