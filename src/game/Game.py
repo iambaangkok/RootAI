@@ -1621,7 +1621,7 @@ class Game:
                 if token == Token.WOOD and clearing.token_count[token] > 0:
                     actions.append(
                         Action("Wood",
-                               perform(self.remove_token_building, attacker, defender, attacker_remaining_hits,
+                               perform(self.remove_piece, attacker, defender, attacker_remaining_hits,
                                        defender_remaining_hits, clearing,
                                        Token.WOOD))
                     )
@@ -1629,7 +1629,7 @@ class Game:
                 if clearing.buildings.count(building) > 0:
                     actions.append(
                         Action(building.name,
-                               perform(self.remove_token_building, attacker, defender, attacker_remaining_hits,
+                               perform(self.remove_piece, attacker, defender, attacker_remaining_hits,
                                        defender_remaining_hits, clearing,
                                        building))
                     )
@@ -1639,16 +1639,16 @@ class Game:
                 if clearing.buildings.count(building) > 0:
                     actions.append(
                         Action(building.name,
-                               perform(self.remove_token_building, attacker, defender, attacker_remaining_hits,
+                               perform(self.remove_piece, attacker, defender, attacker_remaining_hits,
                                        defender_remaining_hits, clearing,
                                        building))
                     )
 
         return actions
 
-    def remove_token_building(self, attacker: Faction, defender: Faction, attacker_remaining_hits,
-                              defender_remaining_hits, clearing: Area,
-                              token_building):
+    def remove_piece(self, attacker: Faction, defender: Faction, attacker_remaining_hits,
+                     defender_remaining_hits, clearing: Area,
+                     token_building):
 
         if isinstance(token_building, Building):
             clearing.remove_building(token_building)
