@@ -242,6 +242,7 @@ class Game:
         # Marquise variables
         self.marquise_action_count = 3
         self.marquise_march_count = 2
+        self.marquise_recruit_count = 1
         self.marquise_recruit_action_used = False
         self.distance_from_the_keep_list = [4, 3, 2, 3, 3, 2, 1, 1, 3, 2, 1, 0]
         self.distance_from_the_keep = {}
@@ -342,6 +343,7 @@ class Game:
     def marquise_birdsong_next(self):
         # set marquise action count to 3
         self.marquise_action_count = 3
+        self.marquise_recruit_count = 1
         # Place one wood at each sawmill
         for area in self.board.areas:
             area.token_count[Token.WOOD] += area.buildings.count(Building.SAWMILL)
@@ -401,7 +403,7 @@ class Game:
         return len(self.get_buildable_clearings(Faction.MARQUISE)) > 0
 
     def marquise_recruit_check(self):
-        return self.count_buildings(Building.RECRUITER) > 0
+        return self.count_buildings(Building.RECRUITER) > 0 and self.marquise_recruit_count > 0
 
     def marquise_overwork_check(self):
         return len(self.find_available_overwork_clearings()) > 0
@@ -438,6 +440,7 @@ class Game:
 
     def marquise_daylight_recruit(self):
         self.recruit(Faction.MARQUISE)
+        self.marquise_recruit_count -= 1
         self.prompt = "The Marquise warriors are coming to town."
         self.marquise_action_count -= 1
         self.set_actions([Action('Next', self.marquise_daylight_1_next)])
@@ -669,7 +672,8 @@ class Game:
             self.eyrie_a_new_roost()
 
     def eyrie_add_to_the_decree_additional_skip(self):
-        LOGGER.info("{}:{}:{}:eyrie_add_to_the_decree_additional_skip".format(self.turn_player, self.phase, self.sub_phase))
+        LOGGER.info(
+            "{}:{}:{}:eyrie_add_to_the_decree_additional_skip".format(self.turn_player, self.phase, self.sub_phase))
         self.eyrie_a_new_roost()
 
     def eyrie_a_new_roost(self):
@@ -1513,15 +1517,17 @@ class Game:
         # remove decree counter
         if self.turn_player == Faction.EYRIE:
             self.remove_decree_counter(DecreeAction.BATTLE, clearing.suit)
-
-        self.post_battle_marquise_field_hospital(attacker, defender, removed_attacker_warriors,
-                                                 removed_defender_warriors,
-                                                 attacker_remaining_hits, defender_remaining_hits, clearing)
+            self.post_battle(attacker, defender, attacker_remaining_hits, defender_remaining_hits, clearing)
+        else:
+            self.post_battle_marquise_field_hospital(attacker, defender, removed_attacker_warriors,
+                                                     removed_defender_warriors,
+                                                     attacker_remaining_hits, defender_remaining_hits, clearing)
 
     def post_battle_marquise_field_hospital(self, attacker, defender, removed_attacker_warriors,
                                             removed_defender_warriors,
                                             attacker_remaining_hits, defender_remaining_hits, clearing):
-        if attacker == Faction.MARQUISE and removed_attacker_warriors > 0 and self.marquise_field_hospital_check(clearing):
+        if attacker == Faction.MARQUISE and removed_attacker_warriors > 0 and self.marquise_field_hospital_check(
+                clearing):
             self.prompt = "MARQUISE: Discard a card matching warrior's clearing to bring {} warriors back to the keep.".format(
                 removed_attacker_warriors)
             self.set_actions(
@@ -1529,7 +1535,8 @@ class Game:
                                                                             defender, attacker_remaining_hits,
                                                                             defender_remaining_hits,
                                                                             clearing))
-        elif defender == Faction.MARQUISE and removed_defender_warriors > 0 and self.marquise_field_hospital_check(clearing):
+        elif defender == Faction.MARQUISE and removed_defender_warriors > 0 and self.marquise_field_hospital_check(
+                clearing):
             self.prompt = "MARQUISE: Discard a card matching warrior's clearing to bring {} warriors back to the keep.".format(
                 removed_defender_warriors)
             self.set_actions(
@@ -1555,7 +1562,8 @@ class Game:
         for card in discarable_cards:
             actions.append(
                 Action("{} ({})".format(card.name, card.suit),
-                       perform(self.marquise_field_hospital, card, num_warriors, attacker, defender, attacker_remaining_hits,
+                       perform(self.marquise_field_hospital, card, num_warriors, attacker, defender,
+                               attacker_remaining_hits,
                                defender_remaining_hits, clearing)))
 
         return actions
@@ -1563,7 +1571,8 @@ class Game:
     def marquise_field_hospital(self, card, num_warriors, attacker, defender, attacker_remaining_hits,
                                 defender_remaining_hits, target_clearing):
         LOGGER.info(
-            "{}:{}:{}:{}:discard_card {} ({}) discarded".format(self.turn_player, self.phase, self.sub_phase, Faction.MARQUISE,
+            "{}:{}:{}:{}:discard_card {} ({}) discarded".format(self.turn_player, self.phase, self.sub_phase,
+                                                                Faction.MARQUISE,
                                                                 card.name, card.suit))
 
         self.discard_card(self.marquise.cards_in_hand, card)
