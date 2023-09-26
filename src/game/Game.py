@@ -1109,6 +1109,8 @@ class Game:
             if card.craft_requirement is None:
                 continue
             for suit in card.craft_requirement.keys():
+                if card.craft_requirement is None:
+                    continue
                 if card.craft_requirement[suit] > crafting_station[suit]:
                     can_craft = False
                 elif (card.reward_item is not None) and (not self.board.item_available(card.reward_item)):
