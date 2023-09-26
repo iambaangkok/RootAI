@@ -312,7 +312,7 @@ class Game:
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
+                self.running = False
             if event.type == pygame.KEYDOWN:
                 self.move_arrow(event.key)
 
@@ -363,7 +363,7 @@ class Game:
         if self.board.faction_points[faction] >= config['game']['victory-point-limit']:
             LOGGER.info(
                 "GAME_END:VP:MARQUISE {} vs EYRIE {}".format(self.board.faction_points[Faction.MARQUISE], self.board.faction_points[Faction.EYRIE]))
-            pygame.quit()
+            self.running = False
 
     #####
     # MARQUISE
@@ -565,10 +565,10 @@ class Game:
 
     def remove_wood(self, number, orders: list[tuple[int, tuple[int, Area]]]):
         remaining_wood = number
-        print(orders)
+        LOGGER.info("remove_wood:orders = {}".format(orders))
         for order in orders:
             clearing = order[1][1]
-            print(clearing)
+            LOGGER.info("remove_wood:clearing = {}".format(clearing.area_index))
             remaining_wood = self.remove_wood_from_clearing(clearing, remaining_wood)
             if remaining_wood == 0:
                 break
@@ -1001,7 +1001,7 @@ class Game:
             self.eyrie_evening_to_marquise()
 
     def eyrie_evening_to_marquise(self):
-        LOGGER.info("{}:{}:{}:eyrie_evening_next".format(self.turn_player, self.phase, self.sub_phase))
+        LOGGER.info("{}:{}:{}:eyrie_evening_to_marquise".format(self.turn_player, self.phase, self.sub_phase))
         self.turn_player = Faction.MARQUISE
         self.phase = Phase.BIRDSONG
         self.sub_phase = 0
@@ -1204,7 +1204,7 @@ class Game:
     def move_warriors(self, faction, src: Area, dest: Area, num):
         LOGGER.info(
             "{}:{}:{}:{} move {} warrior(s) from Clearing #{} to Clearing #{}".format(self.turn_player, self.phase,
-                                                                                      self.sub_phase, self.turn_player,
+                                                                                      self.sub_phase, faction,
                                                                                       num, src,
                                                                                       dest))
 
