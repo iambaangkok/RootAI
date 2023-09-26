@@ -5,6 +5,7 @@ from src.config import Config, Colors
 from src.game.Building import Building
 from src.game.Item import Item
 from src.game.PlayingCard import PlayingCard
+from src.game.Suit import Suit
 from src.utils import text_utils
 from src.utils.draw_utils import draw_key_value, draw_cards
 
@@ -28,6 +29,12 @@ class FactionBoard:
         self.crafted_cards: list[PlayingCard] = []
         self.cards_in_hand: list[PlayingCard] = []
 
+        self.crafting_pieces_count = {
+            Suit.FOX: 0,
+            Suit.RABBIT: 0,
+            Suit.MOUSE: 0
+        }
+
         self.reserved_warriors: int = reserved_warriors
 
         self.victory_point = 0
@@ -35,6 +42,25 @@ class FactionBoard:
         self.starting_point: Vector2 = starting_point
 
         self.text_surface: Surface = Config.FONT_MD_BOLD.render(name, True, color)
+
+    def can_spend_crafting_piece(self, suit: Suit | str, amount: int) -> bool:
+        if suit == Suit.BIRD:
+            return sum([self.crafting_pieces_count[suit_] for suit_ in self.crafting_pieces_count.keys()]) >= amount
+        else:
+            return self.crafting_pieces_count[suit] >= amount
+
+    def spend_crafting_piece(self, suit: Suit | str, amount: int):
+        if suit == Suit.BIRD:
+            # TODO: which suit to spend for ROYAL CLAIM BIRD suit requirement??, this is only a makeshift temporary implementation
+            for _suit in self.crafting_pieces_count.keys():
+                if amount != 0 and amount <= self.crafting_pieces_count[_suit]:
+                    self.crafting_pieces_count[_suit] -= amount
+                else:
+                    amount -= self.crafting_pieces_count[Suit.FOX]
+                    self.crafting_pieces_count[_suit] = 0
+        else:
+            self.crafting_pieces_count[suit] -= amount
+
 
     def draw(self, screen: Surface):
         pygame.draw.rect(screen, self.color, Rect(self.starting_point,

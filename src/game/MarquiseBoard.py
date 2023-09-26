@@ -34,13 +34,6 @@ class MarquiseBoard(FactionBoard):
             Building.RECRUITER: [0, 0, 1, 1, 2, 2]
         }
 
-        self.workshop_count = {
-            Suit.BIRD: 0,
-            Suit.FOX: 0,
-            Suit.RABBIT: 0,
-            Suit.MOUSE: 0
-        }
-
     def get_reward(self, building):
         return self.building_reward[building][self.building_trackers[building]]
 

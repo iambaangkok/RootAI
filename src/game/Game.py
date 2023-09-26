@@ -348,7 +348,7 @@ class Game:
         for area in self.board.areas:
             area.token_count[Token.WOOD] += area.buildings.count(Building.SAWMILL)
         # Next phase
-        self.marquise.workshop_count = self.get_workshop_count_by_suit()
+        self.marquise.crafting_pieces_count = self.get_workshop_count_by_suit()
 
         self.phase = Phase.DAYLIGHT
         self.prompt = "Want to craft something, squire?"
@@ -491,18 +491,7 @@ class Game:
             self.set_actions()
 
     def get_workshop_count_by_suit(self) -> {Suit: int}:
-        workshop_count: {Suit: int} = {
-            Suit.BIRD: 0,
-            Suit.FOX: 0,
-            Suit.RABBIT: 0,
-            Suit.MOUSE: 0
-        }
-
-        for clearing in self.board.areas:
-            if Building.WORKSHOP in clearing.buildings:
-                workshop_count[clearing.suit] += clearing.buildings.count(Building.WORKSHOP)
-
-        return workshop_count
+        return self.get_building_count_by_suit(Building.WORKSHOP)
 
     def count_woods_from_clearing(self, clearing):
         return self.marquise_bfs_count_wood(clearing)
@@ -715,6 +704,9 @@ class Game:
 
         self.phase = Phase.DAYLIGHT
         self.sub_phase = 0
+
+        self.eyrie.crafting_pieces_count = self.get_building_count_by_suit(Building.ROOST)
+
         self.eyrie_daylight_craft()
 
     def eyrie_daylight_craft(self):
@@ -1036,11 +1028,11 @@ class Game:
                     self.marquise.items[card.reward_item] += 1
                 self.discard_card(self.marquise.cards_in_hand, card)
             else:
-                self.discard_card(self.marquise.cards_in_hand, card)
+                self.marquise.cards_in_hand.remove(card)
                 self.marquise.crafted_cards.append(card)
 
-            for requirement in card.craft_requirement:
-                self.marquise.workshop_count[requirement] -= 1
+            for suit in card.craft_requirement.keys():
+                self.marquise.spend_crafting_piece(suit, card.craft_requirement[suit])
 
             self.prompt = "{} has been crafted.".format(card.name)
             self.set_actions([Action("Next", self.marquise_daylight_craft)])
@@ -1062,6 +1054,9 @@ class Game:
             else:
                 self.eyrie.cards_in_hand.remove(card)
                 self.eyrie.crafted_cards.append(card)
+
+            for suit in card.craft_requirement.keys():
+                self.marquise.spend_crafting_piece(suit, card.craft_requirement[suit])
             self.eyrie_daylight_craft()
 
     def get_craftable_cards(self, faction: Faction) -> list[PlayingCard]:
@@ -1071,7 +1066,7 @@ class Game:
         crafting_station: {Suit: int} = {}
         if faction == Faction.MARQUISE:
             cards_in_hand = self.marquise.cards_in_hand
-            crafting_station = self.marquise.workshop_count
+            crafting_station = self.marquise.crafting_pieces_count
         elif faction == Faction.EYRIE:
             cards_in_hand = self.eyrie.cards_in_hand
             crafting_station = self.get_roost_count_by_suit()
@@ -1678,6 +1673,20 @@ class Game:
                                   perform(self.select_card_to_discard, faction, card)))
 
         return actions
+
+    def get_building_count_by_suit(self, building: Building | str) -> {Suit: int}:
+        building_count: {Suit: int} = {
+            Suit.BIRD: 0,
+            Suit.FOX: 0,
+            Suit.RABBIT: 0,
+            Suit.MOUSE: 0
+        }
+
+        for clearing in self.board.areas:
+            if building in clearing.buildings:
+                building_count[clearing.suit] += clearing.buildings.count(building)
+
+        return building_count
 
     def select_card_to_discard(self, faction: Faction, card: PlayingCard):
         faction_board = self.faction_to_faction_board(faction)
