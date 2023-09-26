@@ -1,5 +1,6 @@
 simulation:
   f-key-action: random # current | random
+  framerate: 60
 
 game:
   victory-point-limit: 30
