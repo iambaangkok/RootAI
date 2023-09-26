@@ -144,10 +144,14 @@ class Game:
                         Item.CROSSBOW),
             PlayingCard(46, PlayingCardName.SCOUTING_PARTY, Suit.MOUSE, PlayingCardPhase.BATTLE, {Suit.MOUSE: 2}),
             PlayingCard(47, PlayingCardName.SCOUTING_PARTY, Suit.MOUSE, PlayingCardPhase.BATTLE, {Suit.MOUSE: 2}),
-            # PlayingCard(48, PlayingCardName.CODEBREAKERS, Suit.MOUSE, PlayingCardPhase.DAYLIGHT, {Suit.MOUSE: 1}),
-            # PlayingCard(49, PlayingCardName.CODEBREAKERS, Suit.MOUSE, PlayingCardPhase.DAYLIGHT, {Suit.MOUSE: 1}),
+            PlayingCard(48, PlayingCardName.CODEBREAKERS, Suit.MOUSE, PlayingCardPhase.DAYLIGHT, {Suit.MOUSE: 1}),
+            PlayingCard(49, PlayingCardName.CODEBREAKERS, Suit.MOUSE, PlayingCardPhase.DAYLIGHT, {Suit.MOUSE: 1}),
             PlayingCard(50, PlayingCardName.FAVOR_OF_THE_MICE, Suit.MOUSE, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 3}),
 
+            PlayingCard(51, PlayingCardName.DOMINANCE_BIRD, Suit.BIRD, PlayingCardPhase.DAYLIGHT),
+            PlayingCard(52, PlayingCardName.DOMINANCE_FOX, Suit.FOX, PlayingCardPhase.DAYLIGHT),
+            PlayingCard(53, PlayingCardName.DOMINANCE_RABBIT, Suit.RABBIT, PlayingCardPhase.DAYLIGHT),
+            PlayingCard(54, PlayingCardName.DOMINANCE_MOUSE, Suit.MOUSE, PlayingCardPhase.DAYLIGHT)
         ]
         self.discard_pile: list[PlayingCard] = []
 
@@ -1097,6 +1101,7 @@ class Game:
 
         cards_in_hand: list[PlayingCard] = []
         crafting_station: {Suit: int} = {}
+        faction_board = self.faction_to_faction_board(faction)
         if faction == Faction.MARQUISE:
             cards_in_hand = self.marquise.cards_in_hand
             crafting_station = self.marquise.crafting_pieces_count
@@ -1111,6 +1116,8 @@ class Game:
             for suit in card.craft_requirement.keys():
                 if card.craft_requirement[suit] > crafting_station[suit]:
                     can_craft = False
+                if not faction_board.can_spend_crafting_piece(suit, card.craft_requirement[suit]):
+                    can_craft = False 
                 elif (card.reward_item is not None) and (not self.board.item_available(card.reward_item)):
                     can_craft = False
             if can_craft:
@@ -1848,6 +1855,6 @@ class Game:
             # flip() the display to put your work on screen
             pygame.display.flip()
 
-            self.delta_time = self.clock.tick(Config.FRAME_RATE) / 1000
+            self.delta_time = self.clock.tick(config['simulation']['framerate']) / 1000
 
         pygame.quit()

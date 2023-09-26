@@ -38,13 +38,13 @@ class PlayingCardName(StrEnum):
     INVESTMENTS = "Investments"
     SWORD = "Sword"
     SCOUTING_PARTY = "Scouting Party"
-    # CODEBREAKERS = "Codebreakers"
+    CODEBREAKERS = "Codebreakers"
     FAVOR_OF_THE_MICE = "Favor of the Mice"
 
-    # DOMINANCE_BIRD = "Dominance (Bird)"
-    # DOMINANCE_FOX = "Dominance (Fox)"
-    # DOMINANCE_RABBIT = "Dominance (Rabbit)"
-    # DOMINANCE_MOUSE = "Dominance (Mouse)"
+    DOMINANCE_BIRD = "Dominance (Bird)"
+    DOMINANCE_FOX = "Dominance (Fox)"
+    DOMINANCE_RABBIT = "Dominance (Rabbit)"
+    DOMINANCE_MOUSE = "Dominance (Mouse)"
 
     ROYAL_VIZIER = "Royal Vizier"
 
