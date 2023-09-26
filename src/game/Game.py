@@ -1239,7 +1239,7 @@ class Game:
             for area in self.board.areas:
                 if len(self.find_available_destination_clearings(faction, area)) <= 0:
                     continue
-                if area.ruler() == Warrior.MARQUISE:
+                if area.ruler() == Warrior.MARQUISE and area.warrior_count[Warrior.MARQUISE] > 0:
                     movable_clearings.append(area)
                 else:
                     for connected_area in area.connected_clearings:
@@ -1256,7 +1256,7 @@ class Game:
                     continue
                 if len(self.find_available_destination_clearings(faction, area)) <= 0:
                     continue
-                if area.ruler() == Warrior.EYRIE:
+                if area.ruler() == Warrior.EYRIE and area.warrior_count[Warrior.EYRIE] > 0:
                     movable_clearings.append(area)
                 else:
                     for connected_area in area.connected_clearings:
