@@ -283,6 +283,7 @@ class Game:
 
         self.build_roost(self.board.areas[0])
         self.board.areas[0].add_warrior(Warrior.EYRIE, 6)
+        self.board.areas[0].add_warrior(Warrior.MARQUISE, 3)
         self.activate_leader(EyrieLeader.CHARISMATIC)
 
         # Take Cards
@@ -362,7 +363,8 @@ class Game:
         self.board.gain_vp(faction, vp)
         if self.board.faction_points[faction] >= config['game']['victory-point-limit']:
             LOGGER.info(
-                "GAME_END:VP:MARQUISE {} vs EYRIE {}".format(self.board.faction_points[Faction.MARQUISE], self.board.faction_points[Faction.EYRIE]))
+                "GAME_END:VP:MARQUISE {} vs EYRIE {}".format(self.board.faction_points[Faction.MARQUISE],
+                                                             self.board.faction_points[Faction.EYRIE]))
             self.running = False
 
     #####
@@ -656,7 +658,9 @@ class Game:
                     continue
                 actions.append(Action('{} ({})'.format(card.name, card.suit),
                                       perform(self.select_card_to_add_to_the_decree, card)))
-        LOGGER.info("{}:{}:{}:generate_actions_add_to_the_decree_first {}".format(self.turn_player, self.phase, self.sub_phase, len(actions)))
+        LOGGER.info(
+            "{}:{}:{}:generate_actions_add_to_the_decree_first {}".format(self.turn_player, self.phase, self.sub_phase,
+                                                                          len(actions)))
         return actions
 
     def select_card_to_add_to_the_decree(self, card: PlayingCard):
@@ -1429,13 +1433,13 @@ class Game:
             for enemy_faction in enemy_factions:
                 actions.append(
                     Action("{}".format(enemy_faction),
-                           perform(self.battle, faction, clearing, enemy_faction)))
+                           perform(self.pre_battle, faction, clearing, enemy_faction)))
 
         elif faction == Faction.EYRIE:
             for enemy_faction in enemy_factions:
                 actions.append(
                     Action("{}".format(enemy_faction),
-                           perform(self.battle, faction, clearing, enemy_faction)))
+                           perform(self.pre_battle, faction, clearing, enemy_faction)))
 
         return actions
 
@@ -1490,6 +1494,115 @@ class Game:
 
         return factions
 
+    def pre_battle(self, attacker, clearing, defender: Faction):
+        actions = []
+
+        if defender == Faction.MARQUISE:
+            available_ambush = [card for card in self.marquise.cards_in_hand if
+                                card.name == PlayingCardName.AMBUSH]
+            for card in available_ambush:
+                actions.append(Action('Discard {}'.format(card.name),
+                                      perform(self.pre_battle_2, attacker, clearing, defender, card, True)))
+
+        elif defender == Faction.EYRIE:
+            available_ambush = [card for card in self.eyrie.cards_in_hand if
+                                card.name == PlayingCardName.AMBUSH]
+            for card in available_ambush:
+                actions.append(Action('Discard {}'.format(card.name),
+                                      perform(self.pre_battle_2, attacker, clearing, defender, card, True)))
+
+        if len(actions) == 0:
+            self.battle(attacker, clearing, defender)
+        else:
+            actions.append(Action('Next', perform(self.battle, attacker, clearing, defender)))
+            self.prompt = "{}: Do you want to discard AMBUSH card?".format(defender)
+            self.set_actions(actions)
+
+    def pre_battle_2(self, attacker, clearing, defender,
+                     defender_discarding_card: PlayingCard = None, ambush_success=False, ):
+        actions = []
+
+        if defender_discarding_card is not None:
+            if defender == Faction.MARQUISE:
+                self.discard_card(self.marquise.cards_in_hand, defender_discarding_card)
+            elif defender == Faction.EYRIE:
+                self.discard_card(self.eyrie.cards_in_hand, defender_discarding_card)
+
+        if attacker == Faction.MARQUISE:
+            available_ambush = [card for card in self.marquise.cards_in_hand if
+                                card.name == PlayingCardName.AMBUSH and (
+                                            card.suit == clearing.suit or card.suit == Suit.BIRD)]
+            for ambush_card in available_ambush:
+                actions.append(
+                    Action('Discard {}'.format(ambush_card.name),
+                           perform(self.ambush, attacker, clearing, defender, ambush_card, False)))
+        elif attacker == Faction.EYRIE:
+            available_ambush = [card for card in self.eyrie.cards_in_hand if
+                                card.name == PlayingCardName.AMBUSH and (
+                                            card.suit == clearing.suit or card.suit == Suit.BIRD)]
+            for ambush_card in available_ambush:
+                actions.append(
+                    Action('Discard {}'.format(ambush_card.name),
+                           perform(self.ambush, attacker, clearing, defender, ambush_card, False)))
+
+        if len(actions) == 0:
+            self.ambush(attacker, clearing, defender, None, ambush_success)
+        else:
+            actions.append(Action('Next', perform(self.ambush, attacker, clearing, defender, None, ambush_success)))
+            self.prompt = "{}: Do you want to discard AMBUSH card to cancel the effect of the defender?".format(
+                defender)
+            self.set_actions(actions)
+
+    def ambush(self, attacker, clearing, defender, attacker_discarding_card: PlayingCard = None, ambush_success=False):
+        if attacker_discarding_card is not None:
+            if attacker == Faction.MARQUISE:
+                self.discard_card(self.marquise.cards_in_hand, attacker_discarding_card)
+            elif attacker == Faction.EYRIE:
+                self.discard_card(self.eyrie.cards_in_hand, attacker_discarding_card)
+
+        if not ambush_success:
+            self.battle(attacker, clearing, defender)
+        else:
+            LOGGER.info("Ambush Success ({})".format(defender))
+
+            defender_faction_board = self.faction_to_faction_board(defender)
+
+            # deal hits
+            attacker_remaining_hits = 2
+            # to defender
+            removed_defender_warriors = clearing.remove_warrior(faction_to_warrior(defender), attacker_remaining_hits)
+            attacker_remaining_hits -= removed_defender_warriors
+            defender_faction_board.reserved_warriors += removed_defender_warriors
+
+            # score
+            attacker_total_vp = removed_defender_warriors
+            self.gain_vp(attacker, attacker_total_vp)
+
+            if attacker_remaining_hits > 0:
+                self.post_ambush(attacker, clearing, defender, attacker_remaining_hits)
+            else:
+                self.battle(attacker, clearing, defender)
+
+    def post_ambush(self, attacker, clearing, defender, attacker_remaining_hits):
+        actions = self.generate_actions_select_piece_to_remove(attacker, defender,
+                                                               attacker_remaining_hits,
+                                                               0,
+                                                               clearing, self.post_ambush_remove_piece)
+        if len(actions) == 0:
+            self.prompt = "{}: No Token/Building can be removed.".format(defender)
+            self.set_actions([Action('Next',
+                                     perform(self.battle, attacker, clearing, defender))])
+        else:
+            self.prompt = "{}: Select Token/Building to be removed (Remaining: {})".format(defender,
+                                                                                           attacker_remaining_hits)
+            self.set_actions(actions)
+
+    def post_ambush_remove_piece(self, attacker, defender, attacker_remaining_hits, defender_remaining_hits, clearing,
+                                 piece):
+        self.remove_piece(attacker, clearing, piece)
+        self.prompt = "Remove {} successfully.".format(piece.name)
+        self.set_actions([Action('Next', perform(self.battle, attacker, clearing, defender))])
+
     def battle(self, attacker: Faction, clearing: Area, defender: Faction):
         # TODO: ambush and foil ambush logic
 
@@ -1529,9 +1642,7 @@ class Game:
         attacker_total_vp = removed_defender_warriors
         defender_total_vp = removed_attacker_warriors
 
-        attacker_faction_board.victory_point += attacker_total_vp  # @DarkTXYZ do we use this vp
-        self.gain_vp(attacker, attacker_total_vp)  # or this vp?
-        defender_faction_board.victory_point += defender_total_vp
+        self.gain_vp(attacker, attacker_total_vp)
         self.gain_vp(defender, defender_total_vp)
 
         LOGGER.info(
@@ -1624,7 +1735,7 @@ class Game:
             actions = self.generate_actions_select_piece_to_remove(attacker, defender,
                                                                    attacker_remaining_hits,
                                                                    defender_remaining_hits,
-                                                                   clearing)
+                                                                   clearing, self.post_battle_remove_piece)
             if len(actions) == 0:
                 self.prompt = "{}: No Token/Building can be removed.".format(defender)
                 self.set_actions([Action('Next',
@@ -1647,7 +1758,7 @@ class Game:
 
     def generate_actions_select_piece_to_remove(self, attacker: Faction, defender: Faction,
                                                 attacker_remaining_hits, defender_remaining_hits,
-                                                clearing: Area):
+                                                clearing: Area, func: any):
         actions = []
         buildings = faction_to_buildings(defender)
         tokens = faction_to_tokens(defender)
@@ -1657,7 +1768,7 @@ class Game:
                 if token == Token.WOOD and clearing.token_count[token] > 0:
                     actions.append(
                         Action("Wood",
-                               perform(self.remove_piece, attacker, defender, attacker_remaining_hits,
+                               perform(func, attacker, defender, attacker_remaining_hits,
                                        defender_remaining_hits, clearing,
                                        Token.WOOD))
                     )
@@ -1665,7 +1776,7 @@ class Game:
                 if clearing.buildings.count(building) > 0:
                     actions.append(
                         Action(building.name,
-                               perform(self.remove_piece, attacker, defender, attacker_remaining_hits,
+                               perform(func, attacker, defender, attacker_remaining_hits,
                                        defender_remaining_hits, clearing,
                                        building))
                     )
@@ -1675,27 +1786,28 @@ class Game:
                 if clearing.buildings.count(building) > 0:
                     actions.append(
                         Action(building.name,
-                               perform(self.remove_piece, attacker, defender, attacker_remaining_hits,
+                               perform(func, attacker, defender, attacker_remaining_hits,
                                        defender_remaining_hits, clearing,
                                        building))
                     )
 
         return actions
 
-    def remove_piece(self, attacker: Faction, defender: Faction, attacker_remaining_hits,
-                     defender_remaining_hits, clearing: Area,
-                     token_building):
-
-        if isinstance(token_building, Building):
-            clearing.remove_building(token_building)
-        elif isinstance(token_building, Token):
-            clearing.remove_token(token_building)
-
-        self.gain_vp(attacker, 1)
-
-        self.prompt = "Remove {} successfully.".format(token_building.name)
+    def post_battle_remove_piece(self, attacker, defender, attacker_remaining_hits, defender_remaining_hits, clearing,
+                                 piece):
+        self.remove_piece(attacker, clearing, piece)
+        self.prompt = "Remove {} successfully.".format(piece.name)
         self.set_actions([Action('Next', perform(self.post_battle, attacker, defender, attacker_remaining_hits - 1,
                                                  defender_remaining_hits, clearing))])
+
+    def remove_piece(self, attacker: Faction, clearing: Area, piece):
+
+        if isinstance(piece, Building):
+            clearing.remove_building(piece)
+        elif isinstance(piece, Token):
+            clearing.remove_token(piece)
+
+        self.gain_vp(attacker, 1)
 
     def generate_actions_select_card_to_discard(self, faction: Faction) -> list[Action]:
         actions: list[Action] = []
