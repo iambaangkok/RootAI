@@ -1114,6 +1114,8 @@ class Game:
             if card.craft_requirement is None:
                 continue
             for suit in card.craft_requirement.keys():
+                if card.craft_requirement is None:
+                    continue
                 if card.craft_requirement[suit] > crafting_station[suit]:
                     can_craft = False
                 if not faction_board.can_spend_crafting_piece(suit, card.craft_requirement[suit]):
