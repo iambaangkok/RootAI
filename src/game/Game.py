@@ -60,7 +60,7 @@ class Game:
 
         # Game Data
         self.turn_count: int = 0
-        self.turn_player: Faction = Faction.MARQUISE
+        self.turn_player: Faction = Faction.EYRIE
         self.phase: Phase = Phase.BIRDSONG
         self.sub_phase = 0
         self.is_in_action_sub_phase: bool = False
@@ -752,8 +752,9 @@ class Game:
 
     def eyrie_daylight_craft(self):
         self.prompt = "Craft Cards"
-        self.set_actions(self.generate_actions_craft_cards(Faction.EYRIE) + [
-            Action('Next', perform(self.eyrie_daylight_craft_to_resolve_the_decree))])
+        self.set_actions(self.generate_actions_craft_cards(Faction.EYRIE)
+                         + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_daylight_craft)
+                         + [Action('Next', perform(self.eyrie_daylight_craft_to_resolve_the_decree))])
 
     def get_roost_count_by_suit(self) -> {Suit: int}:
         roost_count: {Suit: int} = {
@@ -770,13 +771,21 @@ class Game:
         return roost_count
 
     def eyrie_daylight_craft_to_resolve_the_decree(self):
-        LOGGER.info("{}:{}:{}:next".format(self.turn_player, self.phase, self.sub_phase))
+        LOGGER.info("{}:{}:{}:eyrie_daylight_craft_to_resolve_the_decree".format(self.turn_player, self.phase, self.sub_phase))
 
         self.sub_phase = 1
 
         self.decree_counter = deepcopy(self.eyrie.decree)
+        self.eyrie_pre_recruit()
+
+    def eyrie_pre_recruit(self):
+        LOGGER.info("{}:{}:{}:eyrie_pre_recruit".format(self.turn_player, self.phase, self.sub_phase))
+
         self.update_prompt_eyrie_decree(DecreeAction.RECRUIT)
-        self.set_actions(self.generate_actions_eyrie_recruit())
+        self.prompt += " Recruit in Area:"
+        self.set_actions(self.generate_actions_eyrie_recruit()
+                         + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_recruit))
+        # TODO: add + self.generate_actions_activate_dominance_card(Faction.MARQUISE, continuation_func)
 
     def eyrie_turmoil(self):
         # humiliate
@@ -871,7 +880,7 @@ class Game:
             if len(self.decree_counter[decree_action]) > 0:
                 actions.append(Action("Turmoil", self.eyrie_turmoil))
             else:
-                actions.append(Action("Next, to MOVE", self.eyrie_recruit_to_move))
+                actions.append(Action("Next, to MOVE", self.eyrie_pre_move))
 
         return actions
 
@@ -885,14 +894,14 @@ class Game:
             "{}:{}:{}:{} recruited in area {}".format(self.turn_player, self.phase, self.sub_phase, Faction.EYRIE,
                                                       area.area_index))
 
-        self.update_prompt_eyrie_decree(decree_action)
-        self.set_actions(self.generate_actions_eyrie_recruit())
+        self.eyrie_pre_recruit()
 
-    def eyrie_recruit_to_move(self):
-        LOGGER.info("{}:{}:{}:recruit_next".format(self.turn_player, self.phase, self.sub_phase))
+    def eyrie_pre_move(self):
+        LOGGER.info("{}:{}:{}:eyrie_pre_move".format(self.turn_player, self.phase, self.sub_phase))
         self.update_prompt_eyrie_decree(DecreeAction.MOVE)
         self.prompt += " Choose area to move from."
-        self.set_actions(self.generate_actions_eyrie_move())
+        self.set_actions(self.generate_actions_eyrie_move()
+                         + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_move))
 
     def generate_actions_eyrie_move(self) -> list[Action]:
         actions: list[Action] = self.generate_actions_select_src_clearing(Faction.EYRIE)
@@ -903,7 +912,7 @@ class Game:
             if len(self.decree_counter[decree_action]) > 0:
                 actions.append(Action("Turmoil", self.eyrie_turmoil))
             else:
-                actions.append(Action("Next, To BATTLE", self.eyrie_move_to_battle))
+                actions.append(Action("Next, To BATTLE", self.eyrie_pre_battle))
 
         return actions
 
@@ -922,12 +931,13 @@ class Game:
         self.prompt += " Choose number of warriors to move."
         self.set_actions(self.generate_actions_select_warriors(faction, src, dest))
 
-    def eyrie_move_to_battle(self):
-        LOGGER.info("{}:{}:{}:eyrie_move_next".format(self.turn_player, self.phase, self.sub_phase))
+    def eyrie_pre_battle(self):
+        LOGGER.info("{}:{}:{}:eyrie_pre_battle".format(self.turn_player, self.phase, self.sub_phase))
         self.update_prompt_eyrie_decree(DecreeAction.BATTLE)
         self.prompt += " Choose area to battle in."
 
-        self.set_actions(self.generate_actions_eyrie_battle())
+        self.set_actions(self.generate_actions_eyrie_battle()
+                         + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_battle))
 
     def generate_actions_eyrie_battle(self) -> list[Action]:
         actions: list[Action] = self.generate_actions_select_clearing_battle(Faction.EYRIE)
@@ -938,16 +948,17 @@ class Game:
             if len(self.decree_counter[decree_action]) > 0:
                 actions.append(Action("Turmoil", self.eyrie_turmoil))
             else:
-                actions.append(Action("Next, To BUILD", self.eyrie_battle_to_build))
+                actions.append(Action("Next, To BUILD", self.eyrie_pre_build))
 
         return actions
 
-    def eyrie_battle_to_build(self):
-        LOGGER.info("{}:{}:{}:eyrie_battle_next".format(self.turn_player, self.phase, self.sub_phase))
+    def eyrie_pre_build(self):
+        LOGGER.info("{}:{}:{}:eyrie_pre_battle".format(self.turn_player, self.phase, self.sub_phase))
         self.update_prompt_eyrie_decree(DecreeAction.BUILD)
 
         self.prompt += " Choose area to build roost in."
-        self.set_actions(self.generate_actions_eyrie_build())
+        self.set_actions(self.generate_actions_eyrie_build()
+                         + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_build))
 
     def eyrie_choose_battle_in(self, clearing: Area):
         LOGGER.info(
@@ -1118,12 +1129,10 @@ class Game:
             if card.craft_requirement is None:
                 continue
             for suit in card.craft_requirement.keys():
-                if card.craft_requirement is None:
-                    continue
                 if card.craft_requirement[suit] > crafting_station[suit]:
                     can_craft = False
                 if not faction_board.can_spend_crafting_piece(suit, card.craft_requirement[suit]):
-                    can_craft = False 
+                    can_craft = False
                 elif (card.reward_item is not None) and (not self.board.item_available(card.reward_item)):
                     can_craft = False
             if can_craft:
@@ -1737,7 +1746,7 @@ class Game:
                 self.marquise_action_count -= 1
                 self.marquise_daylight_1_next()
             elif self.turn_player == Faction.EYRIE:
-                self.eyrie_move_to_battle()
+                self.eyrie_pre_battle()
         elif attacker_remaining_hits > 0:
             actions = self.generate_actions_select_piece_to_remove(attacker, defender,
                                                                    attacker_remaining_hits,
@@ -1858,6 +1867,35 @@ class Game:
                 pass
             elif faction == Faction.EYRIE:
                 self.eyrie_evening_to_marquise()
+
+    def generate_actions_activate_dominance_card(self, faction: Faction, continuation_func: any) -> list[Action]:
+        actions: list[Action] = []
+        faction_board = self.faction_to_faction_board(faction)
+
+        if self.board.faction_points[faction] < 10:
+            return []
+
+        if faction_board.dominance_card is not None:
+            return []
+
+        for card in faction_board.cards_in_hand:
+            if card.name not in PlayingCard.DOMINANCE_CARD_NAMES:
+                continue
+            actions.append(Action("Activate {}".format(card.name), perform(self.activate_dominance_card, faction, card, perform(continuation_func))))
+
+        return actions
+
+    def activate_dominance_card(self, faction: Faction, card: PlayingCard, continuation_func: any):
+        LOGGER.info(
+            "{}:{}:{}:{}:activate_dominance_card {} ".format(self.turn_player, self.phase, self.sub_phase, faction,
+                                                             card.name))
+
+        faction_board = self.faction_to_faction_board(faction)
+
+        faction_board.dominance_card = card
+        faction_board.cards_in_hand.remove(card)
+
+        continuation_func()
 
     def faction_to_faction_board(self, faction: Faction) -> FactionBoard:
         if faction == Faction.MARQUISE:
