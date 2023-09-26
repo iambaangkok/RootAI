@@ -58,6 +58,8 @@ class PlayingCardPhase(StrEnum):
 
 
 class PlayingCard:
+    DOMINANCE_CARD_NAMES = [PlayingCardName.DOMINANCE_BIRD, PlayingCardName.DOMINANCE_FOX, PlayingCardName.DOMINANCE_RABBIT, PlayingCardName.DOMINANCE_MOUSE]
+
     def __init__(self, card_id: int, name: PlayingCardName | str, suit: Suit, phase: PlayingCardPhase, craft_requirement: {Suit: int} = None,
                  reward_vp: int = 0, reward_item: Item | None = None):
         self.card_id: int = card_id

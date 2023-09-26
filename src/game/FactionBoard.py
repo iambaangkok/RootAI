@@ -43,6 +43,8 @@ class FactionBoard:
 
         self.text_surface: Surface = Config.FONT_MD_BOLD.render(name, True, color)
 
+        self.dominance_card: PlayingCard | None = None
+
     def can_spend_crafting_piece(self, suit: Suit | str, amount: int) -> bool:
         if suit == Suit.BIRD:
             return sum([self.crafting_pieces_count[suit_] for suit_ in self.crafting_pieces_count.keys()]) >= amount
@@ -80,6 +82,42 @@ class FactionBoard:
         self.draw_cards_in_hand_count(screen, self.starting_point + Vector2(5, 45 * 5 + self.text_surface.get_height() + 20))
 
         self.draw_reserved_warriors(screen, self.starting_point + Vector2(5, 45 * 5 + 25 + self.text_surface.get_height() + 20))
+
+        self.draw_dominance_card(screen)
+
+    def draw_dominance_card(self, screen):
+        size_ratio: float = 0.03
+
+        radius = size_ratio * Config.SCREEN_WIDTH/4
+        color = Colors.WHITE
+        width = 1
+        text = ""
+
+        offset: Vector2 = Vector2(-radius-2, radius+2)
+        position: Vector2 = Vector2(self.starting_point.x + Config.SCREEN_WIDTH/4, self.starting_point.y) + offset
+
+        if self.dominance_card is not None:
+            if self.dominance_card.suit is Suit.MOUSE:
+                color = Colors.MOUSE
+                text = "M"
+            elif self.dominance_card.suit is Suit.RABBIT:
+                color = Colors.RABBIT
+                text = "R"
+            elif self.dominance_card.suit is Suit.FOX:
+                color = Colors.FOX
+                text = "F"
+            elif self.dominance_card.suit is Suit.BIRD:
+                color = Colors.BIRD
+                text = "B"
+
+        pygame.draw.circle(screen, color, position, radius, width)
+
+        # text
+        surface = Config.FONT_1.render(text, True, color)
+        surface_rect = surface.get_rect()
+        surface_rect.center = position
+
+        screen.blit(surface, surface_rect)
 
     def draw_crafted_items(self, screen: Surface, starting_point: Vector2):
         # Text
