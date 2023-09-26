@@ -9,6 +9,9 @@ from src.game.Faction import Faction
 from src.game.Item import Item
 from src.utils.geometry_utils import get_path_points
 
+import yaml
+config = yaml.safe_load(open("config/config.yml"))
+
 FACTION_NAMES = ['Marquise de Cat', 'The Decree', 'Woodland Alliance', 'Vagabond']
 FACTION_ALIAS = {
     Faction.MARQUISE: 'MC',
@@ -87,10 +90,10 @@ class Board:
                 self.item_supply_available[item_index] = False
                 break
 
-    def gain_vp(self, faction: Faction, vp):
+    def gain_vp(self, faction: Faction, vp: int):
         self.faction_points[faction] += vp
 
-    def lose_vp(self, faction: Faction, vp):
+    def lose_vp(self, faction: Faction, vp: int):
         self.faction_points[faction] += vp
 
     #####

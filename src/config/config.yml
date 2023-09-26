@@ -1,0 +1,5 @@
+simulation:
+  f-key-action: random # current | random
+
+game:
+  victory-point-limit: 30

@@ -25,6 +25,10 @@ from src.game.Warrior import Warrior
 from src.utils.draw_utils import draw_text_in_rect
 from src.utils.utils import perform, faction_to_warrior, faction_to_tokens, faction_to_buildings
 
+import yaml
+
+config = yaml.safe_load(open("config/config.yml"))
+
 LOGGER = logging.getLogger('logger')
 
 
@@ -298,21 +302,40 @@ class Game:
     #####
     # Update
     def update(self):
-        for event in pygame.event.get():
+        keys = pygame.key.get_pressed()  # Checking pressed (hold) keys
+        if keys[pygame.K_f]:
+            if config['simulation']['f-key-action'] == 'current':
+                self.current_action.function()
+            elif config['simulation']['f-key-action'] == 'random':
+                self.random_arrow()
+                self.current_action.function()
 
+        for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                self.running = False
+                pygame.quit()
             if event.type == pygame.KEYDOWN:
                 self.move_arrow(event.key)
 
+                if event.key == pygame.K_r:
+                    self.random_arrow()
+
                 # Whose turn is this?
-                if event.key == pygame.K_RETURN:
+                if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
                     if self.turn_player == Faction.MARQUISE:
                         self.check_event_marquise(event)
                     elif self.turn_player == Faction.EYRIE:
                         self.check_event_eyrie(event)
 
         self.fps = self.calculate_fps()
+
+    def random_arrow(self):
+        self.reset_arrow()
+
+        row = len(self.actions)
+        rand = randint(0, row - 1)
+
+        self.action_arrow_pos += Vector2(0, rand)
+        self.current_action = self.actions[int(self.action_arrow_pos.y)]
 
     def move_arrow(self, direction):
         update_arrow = {
@@ -334,6 +357,13 @@ class Game:
     def reset_arrow(self):
         self.action_arrow_pos.y = 0
         self.current_action = self.actions[int(self.action_arrow_pos.y)]
+
+    def gain_vp(self, faction: Faction, vp: int):
+        self.board.gain_vp(faction, vp)
+        if self.board.faction_points[faction] >= config['game']['victory-point-limit']:
+            LOGGER.info(
+                "GAME_END:VP:MARQUISE {} vs EYRIE {}".format(self.board.faction_points[Faction.MARQUISE], self.board.faction_points[Faction.EYRIE]))
+            pygame.quit()
 
     #####
     # MARQUISE
@@ -612,6 +642,9 @@ class Game:
         self.phase = Phase.BIRDSONG
         self.sub_phase = 1
 
+        self.added_bird_card = False
+        self.addable_count = 2
+
         self.prompt = "Select Card To Add To Decree"
         self.set_actions(self.generate_actions_add_to_the_decree_first())
 
@@ -623,7 +656,7 @@ class Game:
                     continue
                 actions.append(Action('{} ({})'.format(card.name, card.suit),
                                       perform(self.select_card_to_add_to_the_decree, card)))
-
+        LOGGER.info("{}:{}:{}:generate_actions_add_to_the_decree_first {}".format(self.turn_player, self.phase, self.sub_phase, len(actions)))
         return actions
 
     def select_card_to_add_to_the_decree(self, card: PlayingCard):
@@ -775,6 +808,7 @@ class Game:
 
         if len(inactive_leaders) == 0:
             self.eyrie.a_new_generation()
+            inactive_leaders = self.eyrie.get_inactive_leader()
 
         LOGGER.info(
             "{}:{}:{}:turmoil:depose: {} deposed".format(self.turn_player, self.phase, self.sub_phase, current_leader))
@@ -951,8 +985,7 @@ class Game:
         roost_tracker = self.eyrie.roost_tracker
         vp = EyrieBoard.ROOST_REWARD_VP[roost_tracker]
         card_to_draw = 1 + EyrieBoard.ROOST_REWARD_CARD[roost_tracker]
-        # TODO: make gain_vp, a wrapper for board.gain_vp that will also check for win condition
-        self.board.gain_vp(Faction.EYRIE, vp)
+        self.gain_vp(Faction.EYRIE, vp)
         LOGGER.info(
             "{}:{}:{}:eyrie_evening: roost tracker {}, scored {} vps".format(self.turn_player, self.phase,
                                                                              self.sub_phase, self.eyrie.roost_tracker,
@@ -1023,7 +1056,7 @@ class Game:
         LOGGER.info("{}:{}:{}:Crafted {} card".format(self.turn_player, self.phase, self.sub_phase, card.name))
         if faction == Faction.MARQUISE:
             if card.phase == PlayingCardPhase.IMMEDIATE:
-                self.board.faction_points[Faction.MARQUISE] += card.reward_vp
+                self.gain_vp(faction, card.reward_vp)
                 if card.reward_item is not None:
                     self.marquise.items[card.reward_item] += 1
                 self.discard_card(self.marquise.cards_in_hand, card)
@@ -1042,9 +1075,9 @@ class Game:
                 # Gain VP
                 if card.reward_vp > 0:
                     if self.eyrie.get_active_leader() == EyrieLeader.BUILDER:
-                        self.board.faction_points[Warrior.EYRIE] += card.reward_vp
+                        self.gain_vp(faction, card.reward_vp)
                     else:
-                        self.board.faction_points[Warrior.EYRIE] += 1
+                        self.gain_vp(faction, 1)
 
                 # Gain Item
                 if card.reward_item is not None:
@@ -1204,6 +1237,8 @@ class Game:
 
         if faction == Faction.MARQUISE:
             for area in self.board.areas:
+                if len(self.find_available_destination_clearings(faction, area)) <= 0:
+                    continue
                 if area.ruler() == Warrior.MARQUISE:
                     movable_clearings.append(area)
                 else:
@@ -1219,6 +1254,8 @@ class Game:
             for area in self.board.areas:
                 if decree_can_move_from[area.suit] == 0 and decree_can_move_from[Suit.BIRD] == 0:
                     continue
+                if len(self.find_available_destination_clearings(faction, area)) <= 0:
+                    continue
                 if area.ruler() == Warrior.EYRIE:
                     movable_clearings.append(area)
                 else:
@@ -1230,25 +1267,20 @@ class Game:
         return movable_clearings
 
     def find_available_destination_clearings(self, faction: Faction, src: Area):
-        dests = []
+        dests: list[Area] = []
+        warrior: Warrior = faction_to_warrior(faction)
 
-        if faction == Faction.MARQUISE:
-            if src.ruler() == Warrior.MARQUISE:
-                for connect_area in src.connected_clearings:
+        if src.ruler() == warrior:
+            for connect_area in src.connected_clearings:
+                if src == connect_area:
+                    continue
+                dests.append(connect_area)
+        else:
+            for connect_area in src.connected_clearings:
+                if src == connect_area:
+                    continue
+                if connect_area.ruler() == warrior:
                     dests.append(connect_area)
-            else:
-                for connect_area in src.connected_clearings:
-                    if connect_area.ruler() == Warrior.MARQUISE:
-                        dests.append(connect_area)
-
-        elif faction == Faction.EYRIE:
-            if src.ruler() == Warrior.EYRIE:
-                for connect_area in src.connected_clearings:
-                    dests.append(connect_area)
-            else:
-                for connect_area in src.connected_clearings:
-                    if connect_area.ruler() == Warrior.EYRIE:
-                        dests.append(connect_area)
 
         return dests
 
@@ -1306,7 +1338,7 @@ class Game:
             ind = clearing.buildings.index(Building.EMPTY)
             clearing.buildings[ind] = building
 
-            self.board.gain_vp(Faction.MARQUISE, self.marquise.get_reward(building))
+            self.gain_vp(Faction.MARQUISE, self.marquise.get_reward(building))
             wood_cost = self.marquise.build_action_update(building)
 
             self.remove_wood(wood_cost, self.count_woods_from_clearing(clearing)[0])
@@ -1496,9 +1528,9 @@ class Game:
         defender_total_vp = removed_attacker_warriors
 
         attacker_faction_board.victory_point += attacker_total_vp  # @DarkTXYZ do we use this vp
-        self.board.gain_vp(attacker, attacker_total_vp)  # or this vp?
+        self.gain_vp(attacker, attacker_total_vp)  # or this vp?
         defender_faction_board.victory_point += defender_total_vp
-        self.board.gain_vp(defender, defender_total_vp)
+        self.gain_vp(defender, defender_total_vp)
 
         LOGGER.info(
             "{}:{}:{}:battle: {} vs {}, total hits {}:{}, vps gained {}:{}".format(self.turn_player, self.phase,
@@ -1602,7 +1634,7 @@ class Game:
                         LOGGER.info(
                             "{}:{}:{}:post_battle: despot, gain 1 additional vp".format(self.turn_player, self.phase,
                                                                                         self.sub_phase))
-                        self.board.gain_vp(Faction.EYRIE, 1)
+                        self.gain_vp(Faction.EYRIE, 1)
 
                 self.prompt = "{}: Select Token/Building to be removed (Remaining: {})".format(defender,
                                                                                                attacker_remaining_hits)
@@ -1657,7 +1689,7 @@ class Game:
         elif isinstance(token_building, Token):
             clearing.remove_token(token_building)
 
-        self.board.gain_vp(attacker, 1)
+        self.gain_vp(attacker, 1)
 
         self.prompt = "Remove {} successfully.".format(token_building.name)
         self.set_actions([Action('Next', perform(self.post_battle, attacker, defender, attacker_remaining_hits - 1,
