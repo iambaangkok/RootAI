@@ -147,7 +147,7 @@ class Game:
             PlayingCard(49, PlayingCardName.FAVOR_OF_THE_MICE, Suit.MOUSE, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 3}),
 
             PlayingCard(50, PlayingCardName.DOMINANCE_RABBIT, Suit.RABBIT, PlayingCardPhase.DAYLIGHT),
-            PlayingCard(51, PlayingCardName.DOMINANCE_MOUSE, Suit.MOUSE, PlayingCardPhase.DAYLIGHT)
+            PlayingCard(51, PlayingCardName.DOMINANCE_MOUSE, Suit.MOUSE, PlayingCardPhase.DAYLIGHT),
             PlayingCard(52, PlayingCardName.DOMINANCE_BIRD, Suit.BIRD, PlayingCardPhase.DAYLIGHT),
             PlayingCard(53, PlayingCardName.DOMINANCE_FOX, Suit.FOX, PlayingCardPhase.DAYLIGHT),
         ]
@@ -252,6 +252,12 @@ class Game:
         self.marquise_recruit_action_used = False
         self.distance_from_the_keep_list = [4, 3, 2, 3, 3, 2, 1, 1, 3, 2, 1, 0]
         self.distance_from_the_keep = {}
+
+        # Battle variables
+        self.armorers_enable = {
+            Faction.MARQUISE: False,
+            Faction.EYRIE: False
+        }
 
         # # Add Card To Decree variables
         self.selected_card: PlayingCard | None = None
@@ -769,7 +775,8 @@ class Game:
         return roost_count
 
     def eyrie_daylight_craft_to_resolve_the_decree(self):
-        LOGGER.info("{}:{}:{}:eyrie_daylight_craft_to_resolve_the_decree".format(self.turn_player, self.phase, self.sub_phase))
+        LOGGER.info(
+            "{}:{}:{}:eyrie_daylight_craft_to_resolve_the_decree".format(self.turn_player, self.phase, self.sub_phase))
 
         self.sub_phase = 1
 
@@ -1516,14 +1523,14 @@ class Game:
                                 card.name == PlayingCardName.AMBUSH]
             for card in available_ambush:
                 actions.append(Action('Discard {}'.format(card.name),
-                                      perform(self.pre_battle_2, attacker, clearing, defender, card, True)))
+                                      perform(self.pre_ambush, attacker, clearing, defender, card, True)))
 
         elif defender == Faction.EYRIE:
             available_ambush = [card for card in self.eyrie.cards_in_hand if
                                 card.name == PlayingCardName.AMBUSH]
             for card in available_ambush:
                 actions.append(Action('Discard {}'.format(card.name),
-                                      perform(self.pre_battle_2, attacker, clearing, defender, card, True)))
+                                      perform(self.pre_ambush, attacker, clearing, defender, card, True)))
 
         if len(actions) == 0:
             self.battle(attacker, clearing, defender)
@@ -1532,8 +1539,8 @@ class Game:
             self.prompt = "{}: Do you want to discard AMBUSH card?".format(defender)
             self.set_actions(actions)
 
-    def pre_battle_2(self, attacker, clearing, defender,
-                     defender_discarding_card: PlayingCard = None, ambush_success=False, ):
+    def pre_ambush(self, attacker, clearing, defender,
+                   defender_discarding_card: PlayingCard = None, ambush_success=False, ):
         actions = []
 
         if defender_discarding_card is not None:
@@ -1618,11 +1625,6 @@ class Game:
         self.set_actions([Action('Next', perform(self.battle, attacker, clearing, defender))])
 
     def battle(self, attacker: Faction, clearing: Area, defender: Faction):
-        # TODO: ambush and foil ambush logic
-
-        attacker_faction_board = self.faction_to_faction_board(attacker)
-        defender_faction_board = self.faction_to_faction_board(defender)
-
         # roll dice and add extra hits
         dices: list[int] = [randint(0, 4), randint(0, 4)]
         attacker_roll: int = max(dices)
@@ -1639,6 +1641,82 @@ class Game:
             faction_to_warrior(attacker))) + attacker_extra_hits + defender_defenseless_extra_hits
         defender_total_hits: int = min(defender_roll,
                                        clearing.get_warrior_count(faction_to_warrior(defender))) + defender_extra_hits
+
+        self.armorers_enable[attacker] = False
+        self.armorers_enable[defender] = False
+        self.battle_armorers(attacker, defender, attacker_total_hits, defender_total_hits, attacker_roll, defender_roll,
+                             clearing)
+
+    def battle_armorers(self, attacker, defender, attacker_total_hits, defender_total_hits, attacker_roll,
+                        defender_roll, clearing):
+        attacker_armorers_actions = self.generate_actions_armorers(attacker, attacker, defender, attacker_total_hits,
+                                                                   defender_total_hits,
+                                                                   attacker_roll, defender_roll, clearing)
+        defender_armorers_actions = self.generate_actions_armorers(defender, attacker, defender, attacker_total_hits,
+                                                                   defender_total_hits,
+                                                                   attacker_roll, defender_roll, clearing)
+        if len(attacker_armorers_actions) > 0:
+            self.prompt = "{}: Discard Armorers to ignored rolled hits.".format(attacker)
+            self.set_actions(attacker_armorers_actions + [Action('Next',
+                                                                 perform(self.battle_deal_hits,
+                                                                         attacker, defender,
+                                                                         attacker_total_hits,
+                                                                         defender_total_hits,
+                                                                         clearing))])
+        elif len(defender_armorers_actions) > 0:
+            self.prompt = "{}: Discard Armorers to ignored rolled hits.".format(defender)
+            self.set_actions(defender_armorers_actions + [Action('Next',
+                                                                 perform(self.battle_deal_hits,
+                                                                         attacker, defender,
+                                                                         attacker_total_hits,
+                                                                         defender_total_hits,
+                                                                         clearing))])
+        else:
+            print("Before:", attacker_total_hits, defender_total_hits)
+            if self.armorers_enable[defender]:
+                attacker_total_hits = max(attacker_total_hits - attacker_roll, 0)
+                self.armorers_enable[attacker] = False
+            if self.armorers_enable[attacker]:
+                defender_total_hits = max(defender_total_hits - defender_roll, 0)
+                self.armorers_enable[defender] = False
+            print("After:", attacker_total_hits, defender_total_hits)
+            self.battle_deal_hits(attacker, defender, attacker_total_hits, defender_total_hits, clearing)
+
+    def generate_actions_armorers(self, faction, attacker, defender, attacker_total_hits, defender_total_hits,
+                                  attacker_roll, defender_roll, clearing):
+        actions = []
+        if faction == Faction.MARQUISE:
+            armorers = [card for card in self.marquise.crafted_cards if card.name == PlayingCardName.ARMORERS]
+            for card in armorers:
+                actions.append(Action('Discard {}'.format(card.name),
+                                      perform(self.armorers, faction, card, attacker, defender, attacker_total_hits,
+                                              defender_total_hits, attacker_roll, defender_roll, clearing)))
+        elif faction == Faction.EYRIE:
+            armorers = [card for card in self.eyrie.crafted_cards if card.name == PlayingCardName.ARMORERS]
+            for card in armorers:
+                actions.append(Action('Discard {}'.format(card.name),
+                                      perform(self.armorers, faction, card, attacker, defender, attacker_total_hits,
+                                              defender_total_hits, attacker_roll, defender_roll, clearing)))
+
+        return actions
+
+    def armorers(self, faction, card, attacker, defender, attacker_total_hits, defender_total_hits, attacker_roll,
+                 defender_roll, clearing):
+        if faction == Faction.MARQUISE:
+            self.discard_card(self.marquise.crafted_cards, card)
+            self.armorers_enable[Faction.MARQUISE] = True
+            LOGGER.info(
+                "{}:{}:{}:battle:{} discard Armorers".format(self.turn_player, self.phase,
+                                                                                       self.sub_phase,faction))
+        elif faction == Faction.EYRIE:
+            self.discard_card(self.eyrie.crafted_cards, card)
+            self.armorers_enable[Faction.EYRIE] = True
+        self.battle_armorers(attacker, defender, attacker_total_hits, defender_total_hits, attacker_roll, defender_roll,
+                             clearing)
+
+    def battle_deal_hits(self, attacker, defender, attacker_total_hits, defender_total_hits, clearing):
+        attacker_faction_board = self.faction_to_faction_board(attacker)
+        defender_faction_board = self.faction_to_faction_board(defender)
 
         # deal hits
         attacker_remaining_hits = attacker_total_hits
@@ -1879,7 +1957,8 @@ class Game:
         for card in faction_board.cards_in_hand:
             if card.name not in PlayingCard.DOMINANCE_CARD_NAMES:
                 continue
-            actions.append(Action("Activate {}".format(card.name), perform(self.activate_dominance_card, faction, card, perform(continuation_func))))
+            actions.append(Action("Activate {}".format(card.name),
+                                  perform(self.activate_dominance_card, faction, card, perform(continuation_func))))
 
         return actions
 
