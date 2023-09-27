@@ -7,9 +7,13 @@ from src.config import Config, Colors
 from src.game.Area import Area
 from src.game.Faction import Faction
 from src.game.Item import Item
+from src.game.Suit import Suit
 from src.utils.geometry_utils import get_path_points
 
 import yaml
+
+from src.utils.utils import faction_to_warrior
+
 config = yaml.safe_load(open("config/config.yml"))
 
 FACTION_NAMES = ['Marquise de Cat', 'The Decree', 'Woodland Alliance', 'Vagabond']
@@ -95,6 +99,11 @@ class Board:
 
     def lose_vp(self, faction: Faction, vp: int):
         self.faction_points[faction] -= vp
+
+    def count_ruling_clearing_by_faction_and_suit(self, faction: Faction, suit: Suit) -> int:
+        warrior = faction_to_warrior(faction)
+
+        return len([area for area in self.areas if area.ruler() == warrior and area.suit == suit])
 
     #####
     # Render
