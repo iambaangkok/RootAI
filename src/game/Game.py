@@ -368,12 +368,47 @@ class Game:
         self.current_action = self.actions[int(self.action_arrow_pos.y)]
 
     def gain_vp(self, faction: Faction, vp: int):
+        if self.faction_to_faction_board(faction).dominance_card is not None:
+            return
         self.board.gain_vp(faction, vp)
+        self.check_win_condition(faction)
+
+    def check_win_condition(self, faction: Faction):
+        faction_board = self.faction_to_faction_board(faction)
+        if faction_board.dominance_card is None:
+            self.check_win_condition_vp(faction)
+        else:
+            self.check_win_condition_dominance(faction)
+
+    def check_win_condition_vp(self, faction: Faction):
         if self.board.faction_points[faction] >= config['game']['victory-point-limit']:
             LOGGER.info(
                 "GAME_END:VP:MARQUISE {} vs EYRIE {}".format(self.board.faction_points[Faction.MARQUISE],
                                                              self.board.faction_points[Faction.EYRIE]))
-            self.running = False
+            self.end_game()
+
+    def check_win_condition_dominance(self, faction: Faction):
+        faction_board = self.faction_to_faction_board(faction)
+        warrior = faction_to_warrior(faction)
+
+        areas = self.board.areas
+
+        winning_dominance: PlayingCard | None = None
+
+        if faction_board.dominance_card.name == PlayingCardName.DOMINANCE_BIRD:
+            if (areas[0].ruler() == warrior and areas[11].ruler() == warrior) or (areas[2].ruler() == warrior and areas[8].ruler() == warrior):
+                winning_dominance = faction_board.dominance_card
+        elif self.board.count_ruling_clearing_by_faction_and_suit(faction, faction_board.dominance_card.suit) >= 3:
+            winning_dominance = faction_board.dominance_card
+
+        if winning_dominance is not None:
+            LOGGER.info(
+                "GAME_END:DOMINANCE:{}, {} Wins".format(winning_dominance.name,
+                                                        faction))
+            self.end_game()
+
+    def end_game(self):
+        self.running = False
 
     #####
     # MARQUISE
@@ -381,6 +416,10 @@ class Game:
         self.current_action.function()
 
     def marquise_birdsong_next(self):
+        LOGGER.info("{}:{}:{}:marquise turn begins".format(self.turn_player, self.phase, self.sub_phase))
+
+        self.check_win_condition(Faction.MARQUISE)
+
         # set marquise action count to 3
         self.marquise_action_count = 3
         self.marquise_recruit_count = 1
@@ -402,8 +441,9 @@ class Game:
 
     def marquise_daylight_craft(self):
         self.prompt = "What cards do you want to craft?"
-        self.set_actions(self.generate_actions_craft_cards(Faction.MARQUISE) + [
-            Action('Next', perform(self.marquise_daylight_1_next))])
+        self.set_actions(self.generate_actions_craft_cards(Faction.MARQUISE)
+                         + self.generate_actions_activate_dominance_card(Faction.MARQUISE, self.marquise_daylight_craft)
+                         + [Action('Next', perform(self.marquise_daylight_1_next))])
 
     def marquise_daylight_1_next(self):
         actions = []
@@ -431,7 +471,8 @@ class Game:
                 actions.append(Action('Battle', perform(self.marquise_daylight_battle_select_clearing)))
 
         actions.append(Action('Next', perform(self.marquise_evening_draw_card)))
-        self.set_actions(actions)
+        self.set_actions(actions
+                         + self.generate_actions_activate_dominance_card(Faction.MARQUISE, self.marquise_daylight_1_next))
 
     def marquise_hawks_for_hire_check(self):
         return len([card for card in self.marquise.cards_in_hand if card.suit == Suit.BIRD]) > 0
@@ -643,6 +684,8 @@ class Game:
 
     def eyrie_start(self):
         LOGGER.info("{}:{}:{}:eyrie turn begins".format(self.turn_player, self.phase, self.sub_phase))
+
+        self.check_win_condition(Faction.EYRIE)
 
         if len(self.eyrie.cards_in_hand) == 0:
             LOGGER.info("{}:{}:{}:eyrie_emergency_orders".format(self.turn_player, self.phase, self.sub_phase))
@@ -1968,6 +2011,8 @@ class Game:
                                                              card.name))
 
         faction_board = self.faction_to_faction_board(faction)
+
+        self.board.faction_points[faction] = -1
 
         faction_board.dominance_card = card
         faction_board.cards_in_hand.remove(card)
