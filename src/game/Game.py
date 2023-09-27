@@ -60,7 +60,7 @@ class Game:
 
         # Game Data
         self.turn_count: int = 0
-        self.turn_player: Faction = Faction.EYRIE
+        self.turn_player: Faction = Faction.MARQUISE
         self.phase: Phase = Phase.BIRDSONG
         self.sub_phase = 0
         self.is_in_action_sub_phase: bool = False
@@ -291,7 +291,6 @@ class Game:
 
         self.build_roost(self.board.areas[0])
         self.board.areas[0].add_warrior(Warrior.EYRIE, 6)
-        self.board.areas[0].add_warrior(Warrior.MARQUISE, 3)
         self.activate_leader(EyrieLeader.CHARISMATIC)
 
         # Take Cards
@@ -396,7 +395,8 @@ class Game:
         winning_dominance: PlayingCard | None = None
 
         if faction_board.dominance_card.name == PlayingCardName.DOMINANCE_BIRD:
-            if (areas[0].ruler() == warrior and areas[11].ruler() == warrior) or (areas[2].ruler() == warrior and areas[8].ruler() == warrior):
+            if (areas[0].ruler() == warrior and areas[11].ruler() == warrior) or (
+                    areas[2].ruler() == warrior and areas[8].ruler() == warrior):
                 winning_dominance = faction_board.dominance_card
         elif self.board.count_ruling_clearing_by_faction_and_suit(faction, faction_board.dominance_card.suit) >= 3:
             winning_dominance = faction_board.dominance_card
@@ -472,7 +472,8 @@ class Game:
 
         actions.append(Action('Next', perform(self.marquise_evening_draw_card)))
         self.set_actions(actions
-                         + self.generate_actions_activate_dominance_card(Faction.MARQUISE, self.marquise_daylight_1_next))
+                         + self.generate_actions_activate_dominance_card(Faction.MARQUISE,
+                                                                         self.marquise_daylight_1_next))
 
     def marquise_hawks_for_hire_check(self):
         return len([card for card in self.marquise.cards_in_hand if card.suit == Suit.BIRD]) > 0
@@ -520,6 +521,8 @@ class Game:
         self.set_actions(self.generate_actions_select_building(Faction.MARQUISE, clearing))
 
     def marquise_daylight_recruit(self):
+        LOGGER.info("{}:{}:{}:MARQUISE recruit.".format(self.turn_player, self.phase, self.sub_phase))
+
         self.recruit(Faction.MARQUISE)
         self.marquise_recruit_count -= 1
         self.prompt = "The Marquise warriors are coming to town."
@@ -542,11 +545,14 @@ class Game:
         self.prompt = "Select Card"
         self.set_actions(self.generate_actions_overwork_select_card(clearing))
 
-    def marquise_overwork(self, clearing, card):
+    def marquise_overwork(self, clearing: Area, card):
+        LOGGER.info("{}:{}:{}:MARQUISE overwork on clearing #{}".format(self.turn_player, self.phase, self.sub_phase,
+                                                                        clearing.area_index))
+
         self.discard_card(self.marquise.cards_in_hand, card)
         clearing.token_count[Token.WOOD] += 1
 
-        self.prompt = "Overwork: Done"
+        self.prompt = "Overwork complete"
         self.marquise_action_count -= 1
         self.set_actions([Action('Next', self.marquise_daylight_1_next)])
 
@@ -616,10 +622,8 @@ class Game:
 
     def remove_wood(self, number, orders: list[tuple[int, tuple[int, Area]]]):
         remaining_wood = number
-        LOGGER.info("remove_wood:orders = {}".format(orders))
         for order in orders:
             clearing = order[1][1]
-            LOGGER.info("remove_wood:clearing = {}".format(clearing.area_index))
             remaining_wood = self.remove_wood_from_clearing(clearing, remaining_wood)
             if remaining_wood == 0:
                 break
@@ -1128,7 +1132,7 @@ class Game:
                     self.marquise.items[card.reward_item] += 1
                 self.discard_card(self.marquise.cards_in_hand, card)
             else:
-                self.marquise.cards_in_hand.remove(card)
+                self.discard_card(self.marquise.cards_in_hand, card)
                 self.marquise.crafted_cards.append(card)
 
             for suit in card.craft_requirement.keys():
@@ -1591,6 +1595,8 @@ class Game:
                 self.discard_card(self.marquise.cards_in_hand, defender_discarding_card)
             elif defender == Faction.EYRIE:
                 self.discard_card(self.eyrie.cards_in_hand, defender_discarding_card)
+            LOGGER.info(
+                "{}:{}:{}:battle:{} discard AMBUSH".format(self.turn_player, self.phase, self.sub_phase, defender))
 
         if attacker == Faction.MARQUISE:
             available_ambush = [card for card in self.marquise.cards_in_hand if
@@ -1623,53 +1629,66 @@ class Game:
                 self.discard_card(self.marquise.cards_in_hand, attacker_discarding_card)
             elif attacker == Faction.EYRIE:
                 self.discard_card(self.eyrie.cards_in_hand, attacker_discarding_card)
+            LOGGER.info(
+                "{}:{}:{}:battle:{} discard AMBUSH".format(self.turn_player, self.phase, self.sub_phase, attacker))
 
         if not ambush_success:
+            LOGGER.info(
+                "{}:{}:{}:battle:Foil Ambush ({}'s AMBUSH will be canceled)".format(self.turn_player, self.phase,
+                                                                                    self.sub_phase, defender))
             self.battle(attacker, clearing, defender)
         else:
-            LOGGER.info("Ambush Success ({})".format(defender))
+            LOGGER.info(
+                "{}:{}:{}:battle:{}'s Ambush Success".format(self.turn_player, self.phase, self.sub_phase, defender))
 
-            defender_faction_board = self.faction_to_faction_board(defender)
+            attacker_faction_board = self.faction_to_faction_board(attacker)
 
             # deal hits
-            attacker_remaining_hits = 2
+            defender_remaining_hits = 2
             # to defender
-            removed_defender_warriors = clearing.remove_warrior(faction_to_warrior(defender), attacker_remaining_hits)
-            attacker_remaining_hits -= removed_defender_warriors
-            defender_faction_board.reserved_warriors += removed_defender_warriors
+            removed_attacker_warriors = clearing.remove_warrior(faction_to_warrior(attacker), defender_remaining_hits)
+            defender_remaining_hits -= removed_attacker_warriors
+            attacker_faction_board.reserved_warriors += removed_attacker_warriors
 
             # score
-            attacker_total_vp = removed_defender_warriors
-            self.gain_vp(attacker, attacker_total_vp)
+            defender_total_vp = removed_attacker_warriors
+            self.gain_vp(defender, defender_total_vp)
 
-            if attacker_remaining_hits > 0:
-                self.post_ambush(attacker, clearing, defender, attacker_remaining_hits)
+            if defender_remaining_hits > 0:
+                self.post_ambush(attacker, clearing, defender, defender_remaining_hits)
             else:
                 self.battle(attacker, clearing, defender)
 
-    def post_ambush(self, attacker, clearing, defender, attacker_remaining_hits):
+    def post_ambush(self, attacker, clearing, defender, defender_remaining_hits):
         actions = self.generate_actions_select_piece_to_remove(attacker, defender,
-                                                               attacker_remaining_hits,
                                                                0,
+                                                               defender_remaining_hits,
                                                                clearing, self.post_ambush_remove_piece)
         if len(actions) == 0:
-            self.prompt = "{}: No Token/Building can be removed.".format(defender)
+            self.prompt = "{}: No Token/Building can be removed.".format(attacker)
             self.set_actions([Action('Next',
                                      perform(self.battle, attacker, clearing, defender))])
         else:
-            self.prompt = "{}: Select Token/Building to be removed (Remaining: {})".format(defender,
-                                                                                           attacker_remaining_hits)
+            self.prompt = "{}: Select Token/Building to be removed (Remaining: {})".format(attacker,
+                                                                                           defender_remaining_hits)
             self.set_actions(actions)
 
     def post_ambush_remove_piece(self, attacker, defender, attacker_remaining_hits, defender_remaining_hits, clearing,
                                  piece):
+        LOGGER.info(
+            "{}:{}:{}:battle:{} remove {}'s {}".format(self.turn_player, self.phase, self.sub_phase, defender, attacker,
+                                                       piece))
+
         self.remove_piece(attacker, clearing, piece)
         self.prompt = "Remove {} successfully.".format(piece.name)
-        self.set_actions([Action('Next', perform(self.battle, attacker, clearing, defender))])
+        if defender_remaining_hits > 0:
+            self.set_actions([Action('Next', perform(self.post_ambush, attacker, clearing, defender, defender_remaining_hits - 1))])
+        else:
+            self.set_actions([Action('Next', perform(self.battle, attacker, clearing, defender))])
 
     def battle(self, attacker: Faction, clearing: Area, defender: Faction):
         # roll dice and add extra hits
-        dices: list[int] = [randint(0, 4), randint(0, 4)]
+        dices: list[int] = [randint(0, 3), randint(0, 3)]
         attacker_roll: int = max(dices)
         defender_roll: int = min(dices)
 
@@ -1715,14 +1734,12 @@ class Game:
                                                                          defender_total_hits,
                                                                          clearing))])
         else:
-            print("Before:", attacker_total_hits, defender_total_hits)
             if self.armorers_enable[defender]:
                 attacker_total_hits = max(attacker_total_hits - attacker_roll, 0)
                 self.armorers_enable[attacker] = False
             if self.armorers_enable[attacker]:
                 defender_total_hits = max(defender_total_hits - defender_roll, 0)
                 self.armorers_enable[defender] = False
-            print("After:", attacker_total_hits, defender_total_hits)
             self.battle_deal_hits(attacker, defender, attacker_total_hits, defender_total_hits, clearing)
 
     def generate_actions_armorers(self, faction, attacker, defender, attacker_total_hits, defender_total_hits,
@@ -1745,15 +1762,17 @@ class Game:
 
     def armorers(self, faction, card, attacker, defender, attacker_total_hits, defender_total_hits, attacker_roll,
                  defender_roll, clearing):
+        LOGGER.info(
+            "{}:{}:{}:battle:{} discard Armorers (Rolled hits will be ignored)".format(self.turn_player, self.phase,
+                                                         self.sub_phase, faction))
+
         if faction == Faction.MARQUISE:
             self.discard_card(self.marquise.crafted_cards, card)
             self.armorers_enable[Faction.MARQUISE] = True
-            LOGGER.info(
-                "{}:{}:{}:battle:{} discard Armorers".format(self.turn_player, self.phase,
-                                                                                       self.sub_phase,faction))
         elif faction == Faction.EYRIE:
             self.discard_card(self.eyrie.crafted_cards, card)
             self.armorers_enable[Faction.EYRIE] = True
+
         self.battle_armorers(attacker, defender, attacker_total_hits, defender_total_hits, attacker_roll, defender_roll,
                              clearing)
 
@@ -1861,6 +1880,10 @@ class Game:
     def post_battle(self, attacker: Faction, defender: Faction, attacker_remaining_hits, defender_remaining_hits,
                     clearing: Area):
         if attacker_remaining_hits == defender_remaining_hits == 0:
+            LOGGER.info(
+                "{}:{}:{}:battle:Battle end".format(self.turn_player, self.phase,
+                                                                            self.sub_phase))
+
             if self.turn_player == Faction.MARQUISE:
                 self.marquise_action_count -= 1
                 self.marquise_daylight_1_next()
@@ -1930,7 +1953,11 @@ class Game:
 
     def post_battle_remove_piece(self, attacker, defender, attacker_remaining_hits, defender_remaining_hits, clearing,
                                  piece):
-        self.remove_piece(attacker, clearing, piece)
+        LOGGER.info(
+            "{}:{}:{}:battle:{} remove {}'s {}".format(self.turn_player, self.phase, self.sub_phase, attacker, defender,
+                                                       piece))
+
+        self.remove_piece(defender, clearing, piece)
         self.prompt = "Remove {} successfully.".format(piece.name)
         self.set_actions([Action('Next', perform(self.post_battle, attacker, defender, attacker_remaining_hits - 1,
                                                  defender_remaining_hits, clearing))])
