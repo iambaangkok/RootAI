@@ -147,7 +147,7 @@ class Game:
             PlayingCard(49, PlayingCardName.FAVOR_OF_THE_MICE, Suit.MOUSE, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 3}),
 
             PlayingCard(50, PlayingCardName.DOMINANCE_RABBIT, Suit.RABBIT, PlayingCardPhase.DAYLIGHT),
-            PlayingCard(51, PlayingCardName.DOMINANCE_MOUSE, Suit.MOUSE, PlayingCardPhase.DAYLIGHT)
+            PlayingCard(51, PlayingCardName.DOMINANCE_MOUSE, Suit.MOUSE, PlayingCardPhase.DAYLIGHT),
             PlayingCard(52, PlayingCardName.DOMINANCE_BIRD, Suit.BIRD, PlayingCardPhase.DAYLIGHT),
             PlayingCard(53, PlayingCardName.DOMINANCE_FOX, Suit.FOX, PlayingCardPhase.DAYLIGHT),
         ]

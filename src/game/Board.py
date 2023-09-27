@@ -94,7 +94,7 @@ class Board:
         self.faction_points[faction] += vp
 
     def lose_vp(self, faction: Faction, vp: int):
-        self.faction_points[faction] += vp
+        self.faction_points[faction] -= vp
 
     #####
     # Render
