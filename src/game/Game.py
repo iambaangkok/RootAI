@@ -1698,7 +1698,7 @@ class Game:
         defender_armorers_actions = self.generate_actions_armorers(defender, attacker, defender, attacker_total_hits,
                                                                    defender_total_hits,
                                                                    attacker_roll, defender_roll, clearing)
-        if len(attacker_armorers_actions) > 0:
+        if len(attacker_armorers_actions) > 0 and not self.armorers_enable[attacker]:
             self.prompt = "{}: Discard Armorers to ignored rolled hits.".format(attacker)
             self.set_actions(attacker_armorers_actions + [Action('Next',
                                                                  perform(self.battle_deal_hits,
@@ -1706,7 +1706,7 @@ class Game:
                                                                          attacker_total_hits,
                                                                          defender_total_hits,
                                                                          clearing))])
-        elif len(defender_armorers_actions) > 0:
+        elif len(defender_armorers_actions) > 0 and not self.armorers_enable[defender]:
             self.prompt = "{}: Discard Armorers to ignored rolled hits.".format(defender)
             self.set_actions(defender_armorers_actions + [Action('Next',
                                                                  perform(self.battle_deal_hits,
