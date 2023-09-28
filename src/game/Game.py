@@ -60,7 +60,7 @@ class Game:
 
         # Game Data
         self.turn_count: int = 0
-        self.turn_player: Faction = Faction.MARQUISE
+        self.turn_player: Faction = Faction.EYRIE
         self.phase: Phase = Phase.BIRDSONG
         self.sub_phase = 0
         self.is_in_action_sub_phase: bool = False
@@ -297,6 +297,7 @@ class Game:
 
         self.build_roost(self.board.areas[0])
         self.board.areas[0].add_warrior(Warrior.EYRIE, 6)
+        self.board.areas[10].add_warrior(Warrior.EYRIE, 6)
         self.activate_leader(EyrieLeader.CHARISMATIC)
 
         # Take Cards
@@ -1730,7 +1731,7 @@ class Game:
             "{}:{}:{}:battle:{} remove {}'s {}".format(self.turn_player, self.phase, self.sub_phase, defender, attacker,
                                                        piece))
 
-        self.remove_piece(attacker, clearing, piece)
+        self.remove_piece(attacker, clearing, defender, piece)
         self.prompt = "Remove {} successfully.".format(piece.name)
         if defender_remaining_hits > 0:
             self.set_actions(
@@ -2009,14 +2010,18 @@ class Game:
             "{}:{}:{}:battle:{} remove {}'s {}".format(self.turn_player, self.phase, self.sub_phase, attacker, defender,
                                                        piece))
 
-        self.remove_piece(defender, clearing, piece)
+        self.remove_piece(attacker, clearing, defender, piece)
         self.prompt = "Remove {} successfully.".format(piece.name)
         self.set_actions([Action('Next', perform(self.post_battle, attacker, defender, attacker_remaining_hits - 1,
                                                  defender_remaining_hits, clearing))])
 
-    def remove_piece(self, attacker: Faction, clearing: Area, piece):
+    def remove_piece(self, attacker: Faction, clearing: Area, defender: Faction, piece):
 
         if isinstance(piece, Building):
+            if defender == Faction.MARQUISE:
+                self.marquise.building_trackers[piece] -= 1
+            elif defender == Faction.EYRIE:
+                self.eyrie.roost_tracker -= 1
             clearing.remove_building(piece)
         elif isinstance(piece, Token):
             clearing.remove_token(piece)
