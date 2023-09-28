@@ -1343,6 +1343,9 @@ class Game:
             dest.add_warrior(Warrior.MARQUISE, num)
 
             self.marquise_march_count -= 1
+            LOGGER.info(
+                "{}:{}:{}:MARQUISE's remaining march action: {}".format(self.turn_player, self.phase,
+                                                                        self.sub_phase, self.marquise_march_count))
             if self.marquise_march_count > 0:
                 self.prompt = "The warriors has been moved. (Remaining march action: {})".format(
                     self.marquise_march_count)
@@ -1834,7 +1837,8 @@ class Game:
                              clearing)
 
     def battle_sappers(self, attacker, defender, attacker_total_hits, defender_total_hits, clearing):
-        defender_armorers_actions = self.generate_actions_sappers(attacker, defender, attacker_total_hits, defender_total_hits, clearing)
+        defender_armorers_actions = self.generate_actions_sappers(attacker, defender, attacker_total_hits,
+                                                                  defender_total_hits, clearing)
         if len(defender_armorers_actions) > 0 and not self.sappers_enable[defender]:
             self.prompt = "{}: Discard Armorers to add extra hits.".format(defender)
             self.set_actions(defender_armorers_actions + [Action('Next',
@@ -2060,9 +2064,7 @@ class Game:
                                                        piece))
 
         self.remove_piece(attacker, clearing, defender, piece)
-        self.prompt = "Remove {} successfully.".format(piece.name)
-        self.set_actions([Action('Next', perform(self.post_battle, attacker, defender, attacker_remaining_hits - 1,
-                                                 defender_remaining_hits, clearing))])
+        self.post_battle(attacker, defender, attacker_remaining_hits - 1, defender_remaining_hits, clearing)
 
     def remove_piece(self, attacker: Faction, clearing: Area, defender: Faction, piece):
 
