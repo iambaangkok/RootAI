@@ -531,13 +531,47 @@ class Game:
         self.set_actions(self.generate_actions_select_building(Faction.MARQUISE, clearing))
 
     def marquise_daylight_recruit(self):
-        LOGGER.info("{}:{}:{}:MARQUISE recruit.".format(self.turn_player, self.phase, self.sub_phase))
-
-        self.recruit(Faction.MARQUISE)
         self.marquise_recruit_count -= 1
-        self.prompt = "The Marquise warriors are coming to town."
         self.marquise_action_count -= 1
-        self.set_actions([Action('Next', self.marquise_daylight_1_next)])
+        LOGGER.info("{}:{}:{}:MARQUISE recruit.".format(self.turn_player, self.phase, self.sub_phase))
+        self.prompt = "Recruit warrior"
+
+        if self.marquise.reserved_warriors >= self.marquise.building_trackers[Building.RECRUITER]:
+            self.recruit(Faction.MARQUISE)
+            self.marquise_daylight_1_next()
+        else:
+            clearing_with_recruiter = [clearing for clearing in self.board.areas for _ in
+                                       range(clearing.buildings.count(Building.RECRUITER))]
+            print([clearing.area_index for clearing in self.board.areas for _ in
+                   range(clearing.buildings.count(Building.RECRUITER))])
+            self.marquise_daylight_recruit_some_clearings(clearing_with_recruiter)
+
+    def marquise_daylight_recruit_some_clearings(self, clearing_with_recruiter):
+        if clearing_with_recruiter is [] or self.marquise.reserved_warriors == 0:
+            self.marquise_daylight_1_next()
+        else:
+            actions = self.generate_actions_select_recruiter(clearing_with_recruiter)
+            self.set_actions(actions)
+            self.prompt = 'Select Clearing to add warriors'
+
+    def generate_actions_select_recruiter(self, clearing_with_recruiter):
+        actions = []
+
+        for clearing in clearing_with_recruiter:
+            remaining_clearing = clearing_with_recruiter.copy()
+            remaining_clearing.remove(clearing)
+            actions.append(Action('{}'.format(clearing.area_index), perform(self.recruit_single_clearing, clearing,
+                                                                            remaining_clearing)))
+
+        return actions
+
+    def recruit_single_clearing(self, clearing, remaining_clearing_with_recruiter):
+        self.add_warrior(Faction.MARQUISE, clearing, 1)
+        LOGGER.info(
+            "{}:{}:{}:MARQUISE adds warrior in clearing #{}".format(self.turn_player, self.phase,
+                                                                    self.sub_phase,
+                                                                    clearing.area_index))
+        self.marquise_daylight_recruit_some_clearings(remaining_clearing_with_recruiter)
 
     def marquise_daylight_battle_select_clearing(self):
         self.prompt = "Select Clearing"
@@ -850,7 +884,6 @@ class Game:
                          + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_recruit)
                          + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_recruit))
 
-
     def eyrie_turmoil(self):
         # humiliate
         self.eyrie_turmoil_humiliate()
@@ -1002,7 +1035,7 @@ class Game:
         self.prompt += " Choose area to battle in."
 
         self.set_actions(self.generate_actions_eyrie_battle()
-                         + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_battle)\
+                         + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_battle) \
                          + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_battle))
 
     def generate_actions_eyrie_battle(self) -> list[Action]:
@@ -1700,7 +1733,8 @@ class Game:
         self.remove_piece(attacker, clearing, piece)
         self.prompt = "Remove {} successfully.".format(piece.name)
         if defender_remaining_hits > 0:
-            self.set_actions([Action('Next', perform(self.post_ambush, attacker, clearing, defender, defender_remaining_hits - 1))])
+            self.set_actions(
+                [Action('Next', perform(self.post_ambush, attacker, clearing, defender, defender_remaining_hits - 1))])
         else:
             self.set_actions([Action('Next', perform(self.battle, attacker, clearing, defender))])
 
@@ -2075,13 +2109,16 @@ class Game:
             for dominance_card in self.discard_pile_dominance:
                 if dominance_card.suit == card.suit:
                     actions.append(Action("Take {} by spending {}".format(dominance_card.name, card.name),
-                                          perform(self.take_dominance_card, faction, dominance_card, card, perform(continuation_func))))
+                                          perform(self.take_dominance_card, faction, dominance_card, card,
+                                                  perform(continuation_func))))
 
         return actions
 
-    def take_dominance_card(self, faction: Faction, dominance_card: PlayingCard, card_to_spend: PlayingCard, continuation_func: any):
+    def take_dominance_card(self, faction: Faction, dominance_card: PlayingCard, card_to_spend: PlayingCard,
+                            continuation_func: any):
         LOGGER.info(
-            "{}:{}:{}:{}:take_dominance_card {} by spending {}".format(self.turn_player, self.phase, self.sub_phase, faction,
+            "{}:{}:{}:{}:take_dominance_card {} by spending {}".format(self.turn_player, self.phase, self.sub_phase,
+                                                                       faction,
                                                                        dominance_card.name, card_to_spend.name))
 
         faction_board = self.faction_to_faction_board(faction)
