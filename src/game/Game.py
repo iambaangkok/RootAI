@@ -152,6 +152,12 @@ class Game:
             PlayingCard(53, PlayingCardName.DOMINANCE_FOX, Suit.FOX, PlayingCardPhase.DAYLIGHT),
         ]
         self.discard_pile: list[PlayingCard] = []
+        self.discard_pile_dominance: list[PlayingCard] = [
+            PlayingCard(50, PlayingCardName.DOMINANCE_RABBIT, Suit.RABBIT, PlayingCardPhase.DAYLIGHT),
+            PlayingCard(51, PlayingCardName.DOMINANCE_MOUSE, Suit.MOUSE, PlayingCardPhase.DAYLIGHT),
+            PlayingCard(52, PlayingCardName.DOMINANCE_BIRD, Suit.BIRD, PlayingCardPhase.DAYLIGHT),
+            PlayingCard(53, PlayingCardName.DOMINANCE_FOX, Suit.FOX, PlayingCardPhase.DAYLIGHT),
+        ]
 
         # Board, Areas (Clearings)
         areas_offset_y = 0.05
@@ -443,6 +449,7 @@ class Game:
         self.prompt = "What cards do you want to craft?"
         self.set_actions(self.generate_actions_craft_cards(Faction.MARQUISE)
                          + self.generate_actions_activate_dominance_card(Faction.MARQUISE, self.marquise_daylight_craft)
+                         + self.generate_actions_take_dominance_card(Faction.MARQUISE, self.marquise_daylight_craft)
                          + [Action('Next', perform(self.marquise_daylight_1_next))])
 
     def marquise_daylight_1_next(self):
@@ -473,7 +480,10 @@ class Game:
         actions.append(Action('Next', perform(self.marquise_evening_draw_card)))
         self.set_actions(actions
                          + self.generate_actions_activate_dominance_card(Faction.MARQUISE,
-                                                                         self.marquise_daylight_1_next))
+                                                                         self.marquise_daylight_1_next)
+                         + self.generate_actions_take_dominance_card(Faction.MARQUISE,
+                                                                     self.marquise_daylight_1_next)
+                         )
 
     def marquise_hawks_for_hire_check(self):
         return len([card for card in self.marquise.cards_in_hand if card.suit == Suit.BIRD]) > 0
@@ -805,6 +815,7 @@ class Game:
         self.prompt = "Craft Cards"
         self.set_actions(self.generate_actions_craft_cards(Faction.EYRIE)
                          + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_daylight_craft)
+                         + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_daylight_craft)
                          + [Action('Next', perform(self.eyrie_daylight_craft_to_resolve_the_decree))])
 
     def get_roost_count_by_suit(self) -> {Suit: int}:
@@ -836,8 +847,9 @@ class Game:
         self.update_prompt_eyrie_decree(DecreeAction.RECRUIT)
         self.prompt += " Recruit in Area:"
         self.set_actions(self.generate_actions_eyrie_recruit()
-                         + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_recruit))
-        # TODO: add + self.generate_actions_activate_dominance_card(Faction.MARQUISE, continuation_func)
+                         + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_recruit)
+                         + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_recruit))
+
 
     def eyrie_turmoil(self):
         # humiliate
@@ -953,7 +965,8 @@ class Game:
         self.update_prompt_eyrie_decree(DecreeAction.MOVE)
         self.prompt += " Choose area to move from."
         self.set_actions(self.generate_actions_eyrie_move()
-                         + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_move))
+                         + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_move)
+                         + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_move))
 
     def generate_actions_eyrie_move(self) -> list[Action]:
         actions: list[Action] = self.generate_actions_select_src_clearing(Faction.EYRIE)
@@ -989,7 +1002,8 @@ class Game:
         self.prompt += " Choose area to battle in."
 
         self.set_actions(self.generate_actions_eyrie_battle()
-                         + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_battle))
+                         + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_battle)\
+                         + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_battle))
 
     def generate_actions_eyrie_battle(self) -> list[Action]:
         actions: list[Action] = self.generate_actions_select_clearing_battle(Faction.EYRIE)
@@ -1010,7 +1024,8 @@ class Game:
 
         self.prompt += " Choose area to build roost in."
         self.set_actions(self.generate_actions_eyrie_build()
-                         + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_build))
+                         + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_build)
+                         + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_build))
 
     def eyrie_choose_battle_in(self, clearing: Area):
         LOGGER.info(
@@ -1222,7 +1237,10 @@ class Game:
 
     def discard_card(self, discard_from: list[PlayingCard], card: PlayingCard):
         discard_from.remove(card)
-        self.discard_pile.append(card)
+        if card.name in PlayingCard.DOMINANCE_CARD_NAMES:
+            self.discard_pile_dominance.append(card)
+        else:
+            self.discard_pile.append(card)
 
     def generate_actions_select_src_clearing(self, faction) -> list[Action]:
         movable_clearings = self.find_available_source_clearings(faction)
@@ -1764,7 +1782,7 @@ class Game:
                  defender_roll, clearing):
         LOGGER.info(
             "{}:{}:{}:battle:{} discard Armorers (Rolled hits will be ignored)".format(self.turn_player, self.phase,
-                                                         self.sub_phase, faction))
+                                                                                       self.sub_phase, faction))
 
         if faction == Faction.MARQUISE:
             self.discard_card(self.marquise.crafted_cards, card)
@@ -1882,7 +1900,7 @@ class Game:
         if attacker_remaining_hits == defender_remaining_hits == 0:
             LOGGER.info(
                 "{}:{}:{}:battle:Battle end".format(self.turn_player, self.phase,
-                                                                            self.sub_phase))
+                                                    self.sub_phase))
 
             if self.turn_player == Faction.MARQUISE:
                 self.marquise_action_count -= 1
@@ -2039,10 +2057,39 @@ class Game:
 
         faction_board = self.faction_to_faction_board(faction)
 
-        self.board.faction_points[faction] = -1
+        self.board.faction_points[faction] = 0
 
         faction_board.dominance_card = card
         faction_board.cards_in_hand.remove(card)
+
+        continuation_func()
+
+    def generate_actions_take_dominance_card(self, faction: Faction, continuation_func: any) -> list[Action]:
+        actions: list[Action] = []
+        faction_board = self.faction_to_faction_board(faction)
+
+        if faction_board.dominance_card is not None:
+            return []
+
+        for card in faction_board.cards_in_hand:
+            for dominance_card in self.discard_pile_dominance:
+                if dominance_card.suit == card.suit:
+                    actions.append(Action("Take {} by spending {}".format(dominance_card.name, card.name),
+                                          perform(self.take_dominance_card, faction, dominance_card, card, perform(continuation_func))))
+
+        return actions
+
+    def take_dominance_card(self, faction: Faction, dominance_card: PlayingCard, card_to_spend: PlayingCard, continuation_func: any):
+        LOGGER.info(
+            "{}:{}:{}:{}:take_dominance_card {} by spending {}".format(self.turn_player, self.phase, self.sub_phase, faction,
+                                                                       dominance_card.name, card_to_spend.name))
+
+        faction_board = self.faction_to_faction_board(faction)
+
+        self.discard_card(faction_board.cards_in_hand, card_to_spend)
+
+        faction_board.cards_in_hand.append(dominance_card)
+        self.discard_pile_dominance.remove(dominance_card)
 
         continuation_func()
 
