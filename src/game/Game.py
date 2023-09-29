@@ -260,10 +260,6 @@ class Game:
         self.distance_from_the_keep = {}
 
         # Battle variables
-        self.armorers_enable = {
-            Faction.MARQUISE: False,
-            Faction.EYRIE: False
-        }
         self.sappers_enable = {
             Faction.MARQUISE: False,
             Faction.EYRIE: False
@@ -305,7 +301,6 @@ class Game:
 
         self.build_roost(self.board.areas[0])
         self.board.areas[0].add_warrior(Warrior.EYRIE, 6)
-        self.board.areas[10].add_warrior(Warrior.EYRIE, 6)
         self.activate_leader(EyrieLeader.CHARISMATIC)
 
         # Take Cards
@@ -1628,19 +1623,13 @@ class Game:
     def pre_battle(self, attacker, clearing, defender: Faction):
         actions = []
 
-        if defender == Faction.MARQUISE:
-            available_ambush = [card for card in self.marquise.cards_in_hand if
-                                card.name == PlayingCardName.AMBUSH]
-            for card in available_ambush:
-                actions.append(Action('Discard {}'.format(card.name),
-                                      perform(self.pre_ambush, attacker, clearing, defender, card, True)))
+        defender_faction_board = self.faction_to_faction_board(defender)
+        available_ambush = [card for card in defender_faction_board.cards_in_hand if
+                            card.name == PlayingCardName.AMBUSH]
 
-        elif defender == Faction.EYRIE:
-            available_ambush = [card for card in self.eyrie.cards_in_hand if
-                                card.name == PlayingCardName.AMBUSH]
-            for card in available_ambush:
-                actions.append(Action('Discard {}'.format(card.name),
-                                      perform(self.pre_ambush, attacker, clearing, defender, card, True)))
+        for card in available_ambush:
+            actions.append(Action('Discard {}'.format(card.name),
+                                  perform(self.pre_ambush, attacker, clearing, defender, card, True)))
 
         if len(actions) == 0:
             self.battle(attacker, clearing, defender)
@@ -1649,51 +1638,39 @@ class Game:
             self.prompt = "{}: Do you want to discard AMBUSH card?".format(defender)
             self.set_actions(actions)
 
-    def pre_ambush(self, attacker, clearing, defender,
-                   defender_discarding_card: PlayingCard = None, ambush_success=False, ):
+    def pre_ambush(self, attacker, clearing, defender, defender_discarding_card, ambush_success):
+        LOGGER.info(
+            "{}:{}:{}:battle:{} discard AMBUSH".format(self.turn_player, self.phase, self.sub_phase, defender))
+
+        defender_faction_board = self.faction_to_faction_board(defender)
+        self.discard_card(defender_faction_board.cards_in_hand, defender_discarding_card)
+
         actions = []
 
-        if defender_discarding_card is not None:
-            if defender == Faction.MARQUISE:
-                self.discard_card(self.marquise.cards_in_hand, defender_discarding_card)
-            elif defender == Faction.EYRIE:
-                self.discard_card(self.eyrie.cards_in_hand, defender_discarding_card)
-            LOGGER.info(
-                "{}:{}:{}:battle:{} discard AMBUSH".format(self.turn_player, self.phase, self.sub_phase, defender))
-
-        if attacker == Faction.MARQUISE:
-            available_ambush = [card for card in self.marquise.cards_in_hand if
-                                card.name == PlayingCardName.AMBUSH and (
-                                        card.suit == clearing.suit or card.suit == Suit.BIRD)]
-            for ambush_card in available_ambush:
-                actions.append(
-                    Action('Discard {}'.format(ambush_card.name),
-                           perform(self.ambush, attacker, clearing, defender, ambush_card, False)))
-        elif attacker == Faction.EYRIE:
-            available_ambush = [card for card in self.eyrie.cards_in_hand if
-                                card.name == PlayingCardName.AMBUSH and (
-                                        card.suit == clearing.suit or card.suit == Suit.BIRD)]
-            for ambush_card in available_ambush:
-                actions.append(
-                    Action('Discard {}'.format(ambush_card.name),
-                           perform(self.ambush, attacker, clearing, defender, ambush_card, False)))
+        attacker_faction_board = self.faction_to_faction_board(attacker)
+        available_ambush = [card for card in attacker_faction_board.cards_in_hand if
+                            card.name == PlayingCardName.AMBUSH and (
+                                    card.suit == clearing.suit or card.suit == Suit.BIRD)]
+        for ambush_card in available_ambush:
+            actions.append(
+                Action('Discard {}'.format(ambush_card.name),
+                       perform(self.ambush, attacker, clearing, defender, ambush_card, False)))
 
         if len(actions) == 0:
             self.ambush(attacker, clearing, defender, None, ambush_success)
         else:
             actions.append(Action('Next', perform(self.ambush, attacker, clearing, defender, None, ambush_success)))
             self.prompt = "{}: Do you want to discard AMBUSH card to cancel the effect of the defender?".format(
-                defender)
+                attacker)
             self.set_actions(actions)
 
     def ambush(self, attacker, clearing, defender, attacker_discarding_card: PlayingCard = None, ambush_success=False):
+        attacker_faction_board = self.faction_to_faction_board(attacker)
+
         if attacker_discarding_card is not None:
-            if attacker == Faction.MARQUISE:
-                self.discard_card(self.marquise.cards_in_hand, attacker_discarding_card)
-            elif attacker == Faction.EYRIE:
-                self.discard_card(self.eyrie.cards_in_hand, attacker_discarding_card)
             LOGGER.info(
                 "{}:{}:{}:battle:{} discard AMBUSH".format(self.turn_player, self.phase, self.sub_phase, attacker))
+            self.discard_card(attacker_faction_board.cards_in_hand, attacker_discarding_card)
 
         if not ambush_success:
             LOGGER.info(
@@ -1704,11 +1681,9 @@ class Game:
             LOGGER.info(
                 "{}:{}:{}:battle:{}'s Ambush Success".format(self.turn_player, self.phase, self.sub_phase, defender))
 
-            attacker_faction_board = self.faction_to_faction_board(attacker)
-
             # deal hits
             defender_remaining_hits = 2
-            # to defender
+            # to attacker
             removed_attacker_warriors = clearing.remove_warrior(faction_to_warrior(attacker), defender_remaining_hits)
             defender_remaining_hits -= removed_attacker_warriors
             attacker_faction_board.reserved_warriors += removed_attacker_warriors
@@ -1736,7 +1711,8 @@ class Game:
                                                                                            defender_remaining_hits)
             self.set_actions(actions)
 
-    def post_ambush_remove_piece(self, attacker, defender, attacker_remaining_hits, defender_remaining_hits, clearing,
+    def post_ambush_remove_piece(self, attacker: Faction, defender, attacker_remaining_hits, defender_remaining_hits,
+                                 clearing: Area,
                                  piece):
         LOGGER.info(
             "{}:{}:{}:battle:{} remove {}'s {}".format(self.turn_player, self.phase, self.sub_phase, defender, attacker,
@@ -1751,25 +1727,27 @@ class Game:
             self.set_actions([Action('Next', perform(self.battle, attacker, clearing, defender))])
 
     def battle(self, attacker: Faction, clearing: Area, defender: Faction):
-        # roll dice and add extra hits
-        dices: list[int] = [randint(0, 3), randint(0, 3)]
-        attacker_roll: int = max(dices)
-        defender_roll: int = min(dices)
+        if clearing.warrior_count[faction_to_warrior(attacker)] <= 0:
+            self.post_battle(attacker, defender, 0, 0, clearing)
+        else:
+            # roll dice and add extra hits
+            dices: list[int] = [randint(0, 3), randint(0, 3)]
+            attacker_roll: int = max(dices)
+            defender_roll: int = min(dices)
 
-        defender_defenseless_extra_hits: int = 1 if (
-                clearing.get_warrior_count(faction_to_warrior(defender)) == 0) else 0
+            defender_defenseless_extra_hits: int = 1 if (
+                    clearing.get_warrior_count(faction_to_warrior(defender)) == 0) else 0
 
-        attacker_extra_hits: int = 1 if (
-                attacker == Faction.EYRIE and self.eyrie.get_active_leader() == EyrieLeader.COMMANDER) else 0
-        defender_extra_hits: int = 0
+            attacker_extra_hits: int = 1 if (
+                    attacker == Faction.EYRIE and self.eyrie.get_active_leader() == EyrieLeader.COMMANDER) else 0
+            defender_extra_hits: int = 0
 
-        self.armorers_enable = dict.fromkeys(self.armorers_enable, False)
-        self.sappers_enable = dict.fromkeys(self.sappers_enable, False)
-        self.brutal_tactics_enable = dict.fromkeys(self.brutal_tactics_enable, False)
+            self.sappers_enable = dict.fromkeys(self.sappers_enable, False)
+            self.brutal_tactics_enable = dict.fromkeys(self.brutal_tactics_enable, False)
 
-        self.battle_armorers_attacker(attacker, defender, attacker_roll, defender_roll,
-                                      attacker_extra_hits + defender_defenseless_extra_hits, defender_extra_hits,
-                                      clearing)
+            self.battle_armorers_attacker(attacker, defender, attacker_roll, defender_roll,
+                                          attacker_extra_hits + defender_defenseless_extra_hits, defender_extra_hits,
+                                          clearing)
 
     def battle_armorers_attacker(self, attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
                                  defender_extra_hits, clearing):
