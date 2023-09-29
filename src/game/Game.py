@@ -1938,11 +1938,10 @@ class Game:
         # remove decree counter
         if self.turn_player == Faction.EYRIE:
             self.remove_decree_counter(DecreeAction.BATTLE, clearing.suit)
-            self.post_battle(attacker, defender, attacker_remaining_hits, defender_remaining_hits, clearing)
-        else:
-            self.post_battle_marquise_field_hospital(attacker, defender, removed_attacker_warriors,
-                                                     removed_defender_warriors,
-                                                     attacker_remaining_hits, defender_remaining_hits, clearing)
+
+        self.post_battle_marquise_field_hospital(attacker, defender, removed_attacker_warriors,
+                                                 removed_defender_warriors,
+                                                 attacker_remaining_hits, defender_remaining_hits, clearing)
 
     def post_battle_marquise_field_hospital(self, attacker, defender, removed_attacker_warriors,
                                             removed_defender_warriors,
@@ -1955,7 +1954,10 @@ class Game:
                 self.generate_actions_field_hospital_select_card_to_discard(removed_attacker_warriors, attacker,
                                                                             defender, attacker_remaining_hits,
                                                                             defender_remaining_hits,
-                                                                            clearing))
+                                                                            clearing)
+                + [Action('Next', perform(self.post_battle, attacker, defender, attacker_remaining_hits,
+                                          defender_remaining_hits, clearing))]
+            )
         elif defender == Faction.MARQUISE and removed_defender_warriors > 0 and self.marquise_field_hospital_check(
                 clearing):
             self.prompt = "MARQUISE: Discard a card matching warrior's clearing to bring {} warriors back to the keep.".format(
@@ -1964,7 +1966,9 @@ class Game:
                 self.generate_actions_field_hospital_select_card_to_discard(removed_defender_warriors, attacker,
                                                                             defender, attacker_remaining_hits,
                                                                             defender_remaining_hits,
-                                                                            clearing))
+                                                                            clearing)
+                + [Action('Next', perform(self.post_battle, attacker, defender, attacker_remaining_hits,
+                                          defender_remaining_hits, clearing))])
         else:
             self.post_battle(attacker, defender, attacker_remaining_hits, defender_remaining_hits, clearing)
 
