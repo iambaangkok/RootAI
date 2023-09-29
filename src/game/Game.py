@@ -1,4 +1,5 @@
 import logging
+import random
 from copy import copy, deepcopy
 from enum import StrEnum
 from random import shuffle, randint
@@ -224,10 +225,10 @@ class Game:
 
         # Actions
         self.marquise_base_actions: {Phase: [[Action]]} = {
-            Phase.BIRDSONG: [[Action('Next', perform(self.marquise_birdsong_next))]],
+            Phase.BIRDSONG: [[Action('Next', perform(self.marquise_birdsong_start))]],
             Phase.DAYLIGHT: [
                 [Action('Craft', perform(self.marquise_daylight_craft)),
-                 Action('Next', perform(self.marquise_daylight_1_next))],
+                 Action('Next', perform(self.marquise_daylight_2))],
                 [Action('Battle'), Action('March', perform(self.marquise_daylight_march_move_from)), Action('Recruit'),
                  Action('Build'),
                  Action('Overwork'),
@@ -425,8 +426,8 @@ class Game:
     def check_event_marquise(self, event: pygame.event.Event):
         self.current_action.function()
 
-    def marquise_birdsong_next(self):
-        LOGGER.info("{}:{}:{}:marquise turn begins".format(self.turn_player, self.phase, self.sub_phase))
+    def marquise_birdsong_start(self):
+        LOGGER.info("{}:{}:{}:MARQUISE's turn begins".format(self.turn_player, self.phase, self.sub_phase))
 
         self.check_win_condition(Faction.MARQUISE)
 
@@ -436,27 +437,116 @@ class Game:
         # Place one wood at each sawmill
         for area in self.board.areas:
             area.token_count[Token.WOOD] += area.buildings.count(Building.SAWMILL)
-        # Next phase
+
         self.marquise.crafting_pieces_count = self.get_workshop_count_by_suit()
 
+        cards_not_activated = self.generate_card_birdsong(Faction.MARQUISE)
+        self.birdsong_cards_actions(Faction.MARQUISE, cards_not_activated)
+
+    def birdsong_cards_actions(self, faction,
+                               cards_not_activated):  # TODO: when should eyrie use their birdsong crafted card effect?
+        actions = self.generate_actions_cards_birdsong(faction, cards_not_activated)
+        if len(actions) == 0:
+            if faction == Faction.MARQUISE:
+                self.marquise_daylight()
+            elif faction == Faction.EYRIE:
+                self.eyrie_birdsong_to_daylight()
+        else:
+            self.prompt = 'Do you want to use crafted card?'
+            if faction == Faction.MARQUISE:
+                self.set_actions(
+                    actions + [Action('Next', perform(self.marquise_daylight))])
+            elif faction == Faction.EYRIE:
+                self.set_actions(
+                    actions + [Action('Next', perform(self.eyrie_birdsong_to_daylight))])
+
+    def generate_card_birdsong(self, faction):
+        faction_board = self.faction_to_faction_board(faction)
+        royal_claim = [card for card in faction_board.crafted_cards if card.name == PlayingCardName.ROYAL_CLAIM]
+        stand_and_deliver = [card for card in faction_board.crafted_cards if
+                             card.name == PlayingCardName.STAND_AND_DELIVER]
+
+        return royal_claim + stand_and_deliver
+
+    def generate_actions_cards_birdsong(self, faction, cards_not_activated):
+        actions = []
+
+        for card in cards_not_activated:
+            if card.name == PlayingCardName.ROYAL_CLAIM:
+                actions.append(Action('Discard {}'.format(card.name),
+                                      perform(self.royal_claim, faction, card, cards_not_activated)))
+            if card.name == PlayingCardName.STAND_AND_DELIVER:
+                actions.append(
+                    Action('Use {} effect'.format(card.name),
+                           perform(self.stand_and_deliver_select_faction, faction, card, cards_not_activated)))
+
+        return actions
+
+    def royal_claim(self, faction, card, cards_not_activated):
+        faction_board = self.faction_to_faction_board(faction)
+
+        self.discard_card(faction_board.crafted_cards, card)
+        cards_not_activated.remove(card)
+
+        gained_vp = 0
+        for clearing in self.board.areas:
+            if clearing.ruler() == faction_to_warrior(faction):
+                gained_vp += 1
+        self.gain_vp(faction, gained_vp)
+
+        self.birdsong_cards_actions(faction, cards_not_activated)
+
+    def stand_and_deliver_select_faction(self, faction, card, cards_not_activated):
+        cards_not_activated.remove(card)
+        self.prompt = "Select Faction"
+        self.set_actions(self.generate_actions_stand_and_deliver_select_faction(faction, cards_not_activated))
+
+    def generate_actions_stand_and_deliver_select_faction(self, faction, cards_not_activated):
+        actions = []
+        available_faction = [Faction.MARQUISE, Faction.EYRIE]
+        available_faction.remove(faction)
+
+        for each_faction in available_faction:
+            print(each_faction)
+            if len(self.faction_to_faction_board(each_faction).cards_in_hand) > 0:
+                actions.append(
+                    Action('{}'.format(each_faction),
+                           perform(self.stand_and_deliver, faction, each_faction, cards_not_activated)))
+
+        return actions
+
+    def stand_and_deliver(self, faction, stolen_faction, cards_not_activated):
+        faction_board = self.faction_to_faction_board(faction)
+        stolen_faction_board = self.faction_to_faction_board(stolen_faction)
+
+        random_card = random.choice(stolen_faction_board.cards_in_hand)
+
+        self.discard_card(stolen_faction_board.cards_in_hand, random_card)
+        faction_board.cards_in_hand.append(random_card)
+
+        self.gain_vp(stolen_faction, 1)
+
+        self.birdsong_cards_actions(faction, cards_not_activated)
+
+    def marquise_daylight(self):
         self.phase = Phase.DAYLIGHT
-        self.prompt = "Want to craft something, squire?"
 
         craftable_cards = self.generate_actions_craft_cards(Faction.MARQUISE)
-
         if not craftable_cards:
-            self.set_actions([Action('Nope', perform(self.marquise_daylight_1_next))])
+            self.marquise_daylight_2()
         else:
-            self.set_actions()
+            self.prompt = "Want to craft something, squire?"
+            self.set_actions(self.generate_actions_craft_cards(Faction.MARQUISE) + [
+                Action('Next', perform(self.marquise_daylight_2))])
 
     def marquise_daylight_craft(self):
         self.prompt = "What cards do you want to craft?"
         self.set_actions(self.generate_actions_craft_cards(Faction.MARQUISE)
                          + self.generate_actions_activate_dominance_card(Faction.MARQUISE, self.marquise_daylight_craft)
                          + self.generate_actions_take_dominance_card(Faction.MARQUISE, self.marquise_daylight_craft)
-                         + [Action('Next', perform(self.marquise_daylight_1_next))])
+                         + [Action('Next', perform(self.marquise_daylight_2))])
 
-    def marquise_daylight_1_next(self):
+    def marquise_daylight_2(self):
         actions = []
         self.prompt = "Select Actions (Remaining Action: {})".format(self.marquise_action_count)
         self.sub_phase = 1
@@ -484,9 +574,9 @@ class Game:
         actions.append(Action('Next', perform(self.marquise_evening_draw_card)))
         self.set_actions(actions
                          + self.generate_actions_activate_dominance_card(Faction.MARQUISE,
-                                                                         self.marquise_daylight_1_next)
+                                                                         self.marquise_daylight_2)
                          + self.generate_actions_take_dominance_card(Faction.MARQUISE,
-                                                                     self.marquise_daylight_1_next)
+                                                                     self.marquise_daylight_2)
                          )
 
     def marquise_hawks_for_hire_check(self):
@@ -542,7 +632,7 @@ class Game:
 
         if self.marquise.reserved_warriors >= self.marquise.building_trackers[Building.RECRUITER]:
             self.recruit(Faction.MARQUISE)
-            self.marquise_daylight_1_next()
+            self.marquise_daylight_2()
         else:
             clearing_with_recruiter = [clearing for clearing in self.board.areas for _ in
                                        range(clearing.buildings.count(Building.RECRUITER))]
@@ -552,7 +642,7 @@ class Game:
 
     def marquise_daylight_recruit_some_clearings(self, clearing_with_recruiter):
         if clearing_with_recruiter is [] or self.marquise.reserved_warriors == 0:
-            self.marquise_daylight_1_next()
+            self.marquise_daylight_2()
         else:
             actions = self.generate_actions_select_recruiter(clearing_with_recruiter)
             self.set_actions(actions)
@@ -602,7 +692,7 @@ class Game:
 
         self.prompt = "Overwork complete"
         self.marquise_action_count -= 1
-        self.set_actions([Action('Next', self.marquise_daylight_1_next)])
+        self.set_actions([Action('Next', self.marquise_daylight_2)])
 
     def marquise_evening_draw_card(self):
         self.prompt = "Draw one card, plus one card per draw bonus"
@@ -727,7 +817,7 @@ class Game:
         self.marquise_action_count += 1
 
         self.prompt = "Gain 1 extra action."
-        self.set_actions([Action('Next', self.marquise_daylight_1_next)])
+        self.set_actions([Action('Next', self.marquise_daylight_2)])
 
     #####
     # Eyrie
@@ -839,7 +929,7 @@ class Game:
         self.eyrie.roost_tracker += 1
         area.buildings[area.buildings.index(Building.EMPTY)] = Building.ROOST
 
-    def eyrie_birdsong_to_daylight(self):
+    def eyrie_birdsong_to_daylight(self):  # TODO: Eyrie Royal Claim
         LOGGER.info("{}:{}:{}:eyrie_birdsong_to_daylight".format(self.turn_player, self.phase, self.sub_phase))
 
         self.phase = Phase.DAYLIGHT
@@ -1191,7 +1281,7 @@ class Game:
                 self.marquise.spend_crafting_piece(suit, card.craft_requirement[suit])
 
             self.prompt = "{} has been crafted.".format(card.name)
-            self.set_actions([Action("Next", self.marquise_daylight_craft)])
+            self.set_actions([Action("Next", self.marquise_daylight)])
 
         elif faction == Faction.EYRIE:
             if card.phase == PlayingCardPhase.IMMEDIATE:
@@ -1353,7 +1443,7 @@ class Game:
                 self.marquise_action_count -= 1
                 self.prompt = "The warriors has been moved. (Remaining march action: {})".format(
                     self.marquise_march_count)
-                self.set_actions([Action('Next', perform(self.marquise_daylight_1_next))])
+                self.set_actions([Action('Next', perform(self.marquise_daylight_2))])
         elif faction == Faction.EYRIE:
             src.remove_warrior(Warrior.EYRIE, num)
             dest.add_warrior(Warrior.EYRIE, num)
@@ -1480,7 +1570,7 @@ class Game:
                                                                      building, clearing.area_index))
             self.prompt = "The {} has been build at clearing #{}.".format(building, clearing.area_index)
             self.marquise_action_count -= 1
-            self.set_actions([Action('Next', perform(self.marquise_daylight_1_next))])
+            self.set_actions([Action('Next', perform(self.marquise_daylight_2))])
         elif faction == Faction.EYRIE:
             self.eyrie_build(clearing)
 
@@ -2017,7 +2107,7 @@ class Game:
 
             if self.turn_player == Faction.MARQUISE:
                 self.marquise_action_count -= 1
-                self.marquise_daylight_1_next()
+                self.marquise_daylight_2()
             elif self.turn_player == Faction.EYRIE:
                 self.eyrie_pre_battle()
         elif attacker_remaining_hits > 0:
