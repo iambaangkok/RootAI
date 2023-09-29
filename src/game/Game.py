@@ -268,6 +268,10 @@ class Game:
             Faction.MARQUISE: False,
             Faction.EYRIE: False
         }
+        self.brutal_tactics_enable = {
+            Faction.MARQUISE: False,
+            Faction.EYRIE: False
+        }
 
         # # Add Card To Decree variables
         self.selected_card: PlayingCard | None = None
@@ -1759,132 +1763,171 @@ class Game:
                 attacker == Faction.EYRIE and self.eyrie.get_active_leader() == EyrieLeader.COMMANDER) else 0
         defender_extra_hits: int = 0
 
-        attacker_total_hits: int = min(attacker_roll, clearing.get_warrior_count(
-            faction_to_warrior(attacker))) + attacker_extra_hits + defender_defenseless_extra_hits
-        defender_total_hits: int = min(defender_roll,
-                                       clearing.get_warrior_count(faction_to_warrior(defender))) + defender_extra_hits
-
         self.armorers_enable = dict.fromkeys(self.armorers_enable, False)
         self.sappers_enable = dict.fromkeys(self.sappers_enable, False)
+        self.brutal_tactics_enable = dict.fromkeys(self.brutal_tactics_enable, False)
 
-        self.battle_armorers(attacker, defender, attacker_total_hits, defender_total_hits, attacker_roll, defender_roll,
-                             clearing)
+        self.battle_armorers_attacker(attacker, defender, attacker_roll, defender_roll,
+                                      attacker_extra_hits + defender_defenseless_extra_hits, defender_extra_hits,
+                                      clearing)
 
-    def battle_armorers(self, attacker, defender, attacker_total_hits, defender_total_hits, attacker_roll,
-                        defender_roll, clearing):
-        attacker_armorers_actions = self.generate_actions_armorers(attacker, attacker, defender, attacker_total_hits,
-                                                                   defender_total_hits,
-                                                                   attacker_roll, defender_roll, clearing)
-        defender_armorers_actions = self.generate_actions_armorers(defender, attacker, defender, attacker_total_hits,
-                                                                   defender_total_hits,
-                                                                   attacker_roll, defender_roll, clearing)
-        if len(attacker_armorers_actions) > 0 and not self.armorers_enable[attacker]:
+    def battle_armorers_attacker(self, attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
+                                 defender_extra_hits, clearing):
+        attacker_armorers_actions = self.generate_actions_armorers(attacker, attacker, defender, attacker_roll,
+                                                                   defender_roll, attacker_extra_hits,
+                                                                   defender_extra_hits, clearing)
+
+        if len(attacker_armorers_actions) > 0 and attacker_roll != 0:
             self.prompt = "{}: Discard Armorers to ignored rolled hits.".format(attacker)
             self.set_actions(attacker_armorers_actions + [Action('Next',
-                                                                 perform(self.battle_deal_hits,
-                                                                         attacker, defender,
-                                                                         attacker_total_hits,
-                                                                         defender_total_hits,
-                                                                         clearing))])
-        elif len(defender_armorers_actions) > 0 and not self.armorers_enable[defender]:
+                                                                 perform(self.battle_armorers_defender,
+                                                                         attacker, defender, attacker_roll,
+                                                                         defender_roll, attacker_extra_hits,
+                                                                         defender_extra_hits, clearing))])
+        else:
+            self.battle_armorers_defender(attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
+                                          defender_extra_hits, clearing)
+
+    def battle_armorers_defender(self, attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
+                                 defender_extra_hits, clearing):
+        defender_armorers_actions = self.generate_actions_armorers(defender, attacker, defender, attacker_roll,
+                                                                   defender_roll, attacker_extra_hits,
+                                                                   defender_extra_hits, clearing)
+
+        if len(defender_armorers_actions) > 0 and defender_roll != 0:
             self.prompt = "{}: Discard Armorers to ignored rolled hits.".format(defender)
             self.set_actions(defender_armorers_actions + [Action('Next',
-                                                                 perform(self.battle_deal_hits,
-                                                                         attacker, defender,
-                                                                         attacker_total_hits,
-                                                                         defender_total_hits,
-                                                                         clearing))])
+                                                                 perform(self.battle_sappers,
+                                                                         attacker, defender, attacker_roll,
+                                                                         defender_roll, attacker_extra_hits,
+                                                                         defender_extra_hits, clearing))])
         else:
-            if self.armorers_enable[defender]:
-                attacker_total_hits = max(attacker_total_hits - attacker_roll, 0)
-                self.armorers_enable[attacker] = False
-            if self.armorers_enable[attacker]:
-                defender_total_hits = max(defender_total_hits - defender_roll, 0)
-                self.armorers_enable[defender] = False
-            self.battle_sappers(attacker, defender, attacker_total_hits, defender_total_hits, clearing)
+            self.battle_sappers(attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
+                                defender_extra_hits, clearing)
 
-    def generate_actions_armorers(self, faction, attacker, defender, attacker_total_hits, defender_total_hits,
-                                  attacker_roll, defender_roll, clearing):
-        actions = []
-        if faction == Faction.MARQUISE:
-            armorers = [card for card in self.marquise.crafted_cards if card.name == PlayingCardName.ARMORERS]
-            for card in armorers:
-                actions.append(Action('Discard {}'.format(card.name),
-                                      perform(self.armorers, faction, card, attacker, defender, attacker_total_hits,
-                                              defender_total_hits, attacker_roll, defender_roll, clearing)))
-        elif faction == Faction.EYRIE:
-            armorers = [card for card in self.eyrie.crafted_cards if card.name == PlayingCardName.ARMORERS]
-            for card in armorers:
-                actions.append(Action('Discard {}'.format(card.name),
-                                      perform(self.armorers, faction, card, attacker, defender, attacker_total_hits,
-                                              defender_total_hits, attacker_roll, defender_roll, clearing)))
-
-        return actions
-
-    def armorers(self, faction, card, attacker, defender, attacker_total_hits, defender_total_hits, attacker_roll,
-                 defender_roll, clearing):
+    def armorers(self, faction, card, attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
+                 defender_extra_hits, clearing):
         LOGGER.info(
             "{}:{}:{}:battle:{} discard Armorers (Rolled hits will be ignored)".format(self.turn_player, self.phase,
                                                                                        self.sub_phase, faction))
-        self.armorers_enable[faction] = True
+        faction_board = self.faction_to_faction_board(faction)
+        self.discard_card(faction_board.crafted_cards, card)
+        if faction == attacker:
+            self.battle_armorers_attacker(attacker, defender, 0, defender_roll, attacker_extra_hits,
+                                          defender_extra_hits, clearing)
+        elif faction == defender:
+            self.battle_armorers_defender(attacker, defender, attacker_roll, 0, attacker_extra_hits,
+                                          defender_extra_hits, clearing)
 
-        if faction == Faction.MARQUISE:
-            self.discard_card(self.marquise.crafted_cards, card)
-        elif faction == Faction.EYRIE:
-            self.discard_card(self.eyrie.crafted_cards, card)
-
-        self.battle_armorers(attacker, defender, attacker_total_hits, defender_total_hits, attacker_roll, defender_roll,
-                             clearing)
-
-    def battle_sappers(self, attacker, defender, attacker_total_hits, defender_total_hits, clearing):
-        defender_armorers_actions = self.generate_actions_sappers(attacker, defender, attacker_total_hits,
-                                                                  defender_total_hits, clearing)
-        if len(defender_armorers_actions) > 0 and not self.sappers_enable[defender]:
-            self.prompt = "{}: Discard Armorers to add extra hits.".format(defender)
-            self.set_actions(defender_armorers_actions + [Action('Next',
-                                                                 perform(self.battle_deal_hits,
-                                                                         attacker, defender,
-                                                                         attacker_total_hits,
-                                                                         defender_total_hits,
-                                                                         clearing))])
-        else:
-            if self.sappers_enable[defender]:
-                defender_total_hits += 1
-                self.armorers_enable[defender] = False
-            self.battle_deal_hits(attacker, defender, attacker_total_hits, defender_total_hits, clearing)
-
-    def generate_actions_sappers(self, attacker, defender, attacker_total_hits, defender_total_hits, clearing):
+    def generate_actions_armorers(self, faction, attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
+                                  defender_extra_hits, clearing):
         actions = []
-        if defender == Faction.MARQUISE:
-            sappers = [card for card in self.marquise.crafted_cards if card.name == PlayingCardName.SAPPERS]
-            for card in sappers:
-                actions.append(Action('Discard {}'.format(card.name),
-                                      perform(self.sappers, card, attacker, defender, attacker_total_hits,
-                                              defender_total_hits, clearing)))
-        elif defender == Faction.EYRIE:
-            sappers = [card for card in self.eyrie.crafted_cards if card.name == PlayingCardName.SAPPERS]
-            for card in sappers:
-                actions.append(Action('Discard {}'.format(card.name),
-                                      perform(self.sappers, card, attacker, defender, attacker_total_hits,
-                                              defender_total_hits, clearing)))
+
+        faction_board = self.faction_to_faction_board(faction)
+        armorers = [card for card in faction_board.crafted_cards if card.name == PlayingCardName.ARMORERS]
+
+        for card in armorers:
+            actions.append(Action('Discard {}'.format(card.name),
+                                  perform(self.armorers, faction, card, attacker, defender, attacker_roll,
+                                          defender_roll, attacker_extra_hits, defender_extra_hits, clearing)))
 
         return actions
 
-    def sappers(self, card, attacker, defender, attacker_total_hits, defender_total_hits, clearing):
+    def battle_sappers(self, attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
+                       defender_extra_hits, clearing):
+        defender_armorers_actions = self.generate_actions_battle_crafted_card_actions(attacker, defender, attacker_roll,
+                                                                                      defender_roll,
+                                                                                      attacker_extra_hits,
+                                                                                      defender_extra_hits, clearing,
+                                                                                      PlayingCardName.SAPPERS,
+                                                                                      self.sappers)
+        if len(defender_armorers_actions) > 0 and not self.sappers_enable[defender]:
+            self.prompt = "{}: Discard Sappers to add extra hits.".format(defender)
+            self.set_actions(defender_armorers_actions + [Action('Next',
+                                                                 perform(self.battle_brutal_tactics,
+                                                                         attacker, defender, attacker_roll,
+                                                                         defender_roll, attacker_extra_hits,
+                                                                         defender_extra_hits, clearing))])
+        else:
+            self.battle_brutal_tactics(attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
+                                       defender_extra_hits, clearing)
+
+    def sappers(self, card, attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
+                defender_extra_hits, clearing):
         LOGGER.info(
             "{}:{}:{}:battle:{} discard Sappers (Add extra hits)".format(self.turn_player, self.phase,
                                                                          self.sub_phase, defender))
         self.sappers_enable[defender] = True
-        if defender == Faction.MARQUISE:
-            self.discard_card(self.marquise.crafted_cards, card)
-        elif defender == Faction.EYRIE:
-            self.discard_card(self.eyrie.crafted_cards, card)
+        faction_board = self.faction_to_faction_board(defender)
+        self.discard_card(faction_board.crafted_cards, card)
+        self.battle_sappers(attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
+                            defender_extra_hits + 1, clearing)
 
-        self.battle_sappers(attacker, defender, attacker_total_hits, defender_total_hits, clearing)
+    def battle_brutal_tactics(self, attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
+                              defender_extra_hits, clearing):
+        attacker_brutal_tactics_actions = self.generate_actions_battle_crafted_card_actions(attacker, defender,
+                                                                                            attacker_roll,
+                                                                                            defender_roll,
+                                                                                            attacker_extra_hits,
+                                                                                            defender_extra_hits,
+                                                                                            clearing,
+                                                                                            PlayingCardName.BRUTAL_TACTICS,
+                                                                                            self.brutal_tactics)
+        if len(attacker_brutal_tactics_actions) > 0 and not self.brutal_tactics_enable[attacker]:
+            self.prompt = "{}: Use Brutal Tactics to add extra hits. (But defender scores one point.)".format(attacker)
+            self.set_actions(attacker_brutal_tactics_actions + [Action('Next',
+                                                                       perform(self.battle_deal_hits,
+                                                                               attacker, defender, attacker_roll,
+                                                                               defender_roll, attacker_extra_hits,
+                                                                               defender_extra_hits, clearing))])
+        else:
+            self.battle_deal_hits(attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
+                                  defender_extra_hits, clearing)
 
-    def battle_deal_hits(self, attacker, defender, attacker_total_hits, defender_total_hits, clearing):
+    def brutal_tactics(self, attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
+                       defender_extra_hits, clearing):
+        LOGGER.info(
+            "{}:{}:{}:battle:{} use Brutal Tactics effect (Add extra hits)".format(self.turn_player, self.phase,
+                                                                                   self.sub_phase, attacker))
+        self.brutal_tactics_enable[attacker] = True
+        self.gain_vp(defender, 1)
+        self.battle_brutal_tactics(attacker, defender, attacker_roll, defender_roll, attacker_extra_hits + 1,
+                                   defender_extra_hits, clearing)
+
+    def generate_actions_battle_crafted_card_actions(self, attacker, defender, attacker_roll, defender_roll,
+                                                     attacker_extra_hits,
+                                                     defender_extra_hits, clearing, crafted_card_name,
+                                                     continuation_func):
+        actions = []
+        if crafted_card_name == PlayingCardName.SAPPERS:
+            faction_board = self.faction_to_faction_board(defender)
+            cards = [card for card in faction_board.crafted_cards if card.name == crafted_card_name]
+            for card in cards:
+                actions.append(Action('Discard {}'.format(card.name),
+                                      perform(continuation_func, card, attacker, defender, attacker_roll, defender_roll,
+                                              attacker_extra_hits,
+                                              defender_extra_hits, clearing)))
+        elif crafted_card_name == PlayingCardName.BRUTAL_TACTICS:
+            faction_board = self.faction_to_faction_board(attacker)
+            cards = [card for card in faction_board.crafted_cards if card.name == crafted_card_name]
+            for card in cards:
+                actions.append(Action('Use {}'.format(card.name),
+                                      perform(continuation_func, attacker, defender, attacker_roll, defender_roll,
+                                              attacker_extra_hits,
+                                              defender_extra_hits, clearing)))
+
+        return actions
+
+    def battle_deal_hits(self, attacker, defender, attacker_roll, defender_roll,
+                         attacker_extra_hits,
+                         defender_extra_hits, clearing):
         attacker_faction_board = self.faction_to_faction_board(attacker)
         defender_faction_board = self.faction_to_faction_board(defender)
+
+        attacker_total_hits: int = min(attacker_roll, clearing.get_warrior_count(
+            faction_to_warrior(attacker))) + attacker_extra_hits
+        defender_total_hits: int = min(defender_roll,
+                                       clearing.get_warrior_count(faction_to_warrior(defender))) + defender_extra_hits
 
         # deal hits
         attacker_remaining_hits = attacker_total_hits
