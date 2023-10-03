@@ -1,11 +1,11 @@
 import pygame.font
+import yaml
 from pygame.font import Font
 
+config = yaml.safe_load(open("config/config.yml"))
 
-SCREEN_WIDTH = 1680
-SCREEN_HEIGHT = 960
-
-FRAME_RATE = 60
+SCREEN_WIDTH = config['screen']['width']  # 1680
+SCREEN_HEIGHT = config['screen']['height']
 
 pygame.font.init()
 FONT_1 = Font("../assets/fonts/UbuntuMono-Regular.ttf", 16)
