@@ -1,7 +1,10 @@
+screen:
+  width: 1680
+  height: 960
 simulation:
   f-key-action: random # current | random
   framerate: 60
 
 game:
   victory-point-limit: 30
-  allow-dominance-card: true # true | false
+  allow-dominance-card: false # true | false

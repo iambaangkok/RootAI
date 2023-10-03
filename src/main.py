@@ -1,9 +1,9 @@
 import logging
 
-from src.game.Game import Game
+from src.roottrainer.RootTrainer import RootTrainer
 
 logging.basicConfig(level=logging.NOTSET)
 LOGGER = logging.getLogger('LOGGER')
 
-game = Game()
-game.run()
+trainer = RootTrainer()
+trainer.run()
