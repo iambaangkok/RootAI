@@ -837,13 +837,14 @@ class Game:
 
         self.set_actions([Action('Next, to Daylight', perform(self.eyrie_birdsong_to_daylight))])
 
-    def build_roost(self, area: Area):
-        LOGGER.info("{}:{}:{}:{} built {} at area#{}".format(
-            self.turn_player, self.phase, self.sub_phase, Faction.EYRIE, Building.ROOST,
-            area.buildings.index(Building.EMPTY)))
-
+    def build_roost(self, clearing: Area):
+        building_slot_index = clearing.buildings.index(Building.EMPTY)
+        clearing.buildings[building_slot_index] = Building.ROOST
         self.eyrie.roost_tracker += 1
-        area.buildings[area.buildings.index(Building.EMPTY)] = Building.ROOST
+
+        LOGGER.info(
+            "{}:{}:{}:build_roost built {} in clearing #{}".format(self.turn_player, self.phase, self.sub_phase,
+                                                                   Building.ROOST, clearing.area_index))
 
     def eyrie_birdsong_to_daylight(self):  # TODO: Eyrie Royal Claim
         LOGGER.info("{}:{}:{}:eyrie_birdsong_to_daylight".format(self.turn_player, self.phase, self.sub_phase))
@@ -1092,16 +1093,8 @@ class Game:
         return actions
 
     def eyrie_build(self, clearing: Area):
-
-        building_slot_index = clearing.buildings.index(Building.EMPTY)
-        clearing.buildings[building_slot_index] = Building.ROOST
-        self.eyrie.roost_tracker += 1
-
+        self.build_roost(clearing)
         self.remove_decree_counter(DecreeAction.BUILD, clearing.suit)
-
-        LOGGER.info(
-            "{}:{}:{}:eyrie_build built {} in clearing #{}".format(self.turn_player, self.phase, self.sub_phase,
-                                                                   Building.ROOST, clearing.area_index))
 
         self.update_prompt_eyrie_decree(DecreeAction.BUILD)
         self.set_actions(self.generate_actions_eyrie_build())
@@ -1276,6 +1269,25 @@ class Game:
             self.draw_pile = self.draw_pile[amount:]
             LOGGER.info(
                 "{}:{}:{}:{} drawn {} card(s)".format(self.turn_player, self.phase, self.sub_phase, faction, amount))
+        else:
+            lesser_amount = min(len(self.draw_pile), amount)
+            faction_board.cards_in_hand.extend(self.draw_pile[0:lesser_amount])
+            self.draw_pile = self.draw_pile[lesser_amount:]
+            LOGGER.info(
+                "{}:{}:{}:{} drawn {} card(s)".format(self.turn_player, self.phase, self.sub_phase, faction, amount))
+
+            self.shuffle_discard_pile_into_draw_pile()
+
+            remaining_amount = amount - lesser_amount
+            faction_board.cards_in_hand.extend(self.draw_pile[0:remaining_amount])
+            self.draw_pile = self.draw_pile[remaining_amount:]
+            LOGGER.info(
+                "{}:{}:{}:{} drawn {} card(s)".format(self.turn_player, self.phase, self.sub_phase, faction, amount))
+
+    def shuffle_discard_pile_into_draw_pile(self):
+        self.draw_pile.extend(self.discard_pile)
+        self.discard_pile = []
+        self.shuffle_draw_pile()
 
     def discard_card(self, discard_from: list[PlayingCard], card: PlayingCard):
         discard_from.remove(card)
@@ -2171,16 +2183,17 @@ class Game:
         return actions
 
     def activate_dominance_card(self, faction: Faction, card: PlayingCard, continuation_func: any):
-        LOGGER.info(
-            "{}:{}:{}:{}:activate_dominance_card {} ".format(self.turn_player, self.phase, self.sub_phase, faction,
-                                                             card.name))
+        if config['game']['allow-dominance-card']:
+            LOGGER.info(
+                "{}:{}:{}:{}:activate_dominance_card {} ".format(self.turn_player, self.phase, self.sub_phase, faction,
+                                                                 card.name))
 
-        faction_board = self.faction_to_faction_board(faction)
+            faction_board = self.faction_to_faction_board(faction)
 
-        self.board.faction_points[faction] = 0
+            self.board.faction_points[faction] = 0
 
-        faction_board.dominance_card = card
-        faction_board.cards_in_hand.remove(card)
+            faction_board.dominance_card = card
+            faction_board.cards_in_hand.remove(card)
 
         continuation_func()
 
