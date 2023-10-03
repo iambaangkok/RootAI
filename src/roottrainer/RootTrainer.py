@@ -67,11 +67,13 @@ class RootTrainer:
             if keys[pygame.K_f]:
                 if config['simulation']['f-key-action'] == 'current':
                     self.current_action.function()
+                    self.actions = self.game.get_actions()
                     self.reset_arrow()
 
                 elif config['simulation']['f-key-action'] == 'random':
                     self.random_arrow()
                     self.current_action.function()
+                    self.actions = self.game.get_actions()
                     self.reset_arrow()
 
         for event in pygame.event.get():
@@ -88,6 +90,7 @@ class RootTrainer:
                     # Whose turn is this?
                     if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
                         self.current_action.function()
+                        self.actions = self.game.get_actions()
                         self.reset_arrow()
             elif not self.game.running:
                 if event.type == pygame.KEYDOWN:
