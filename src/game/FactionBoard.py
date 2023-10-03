@@ -45,6 +45,11 @@ class FactionBoard:
 
         self.dominance_card: PlayingCard | None = None
 
+        self.activated_card: list[PlayingCard] = []
+
+    def refresh_activated_cards(self):
+        activated_card = []
+
     def can_spend_crafting_piece(self, suit: Suit | str, amount: int) -> bool:
         if suit == Suit.BIRD:
             return sum([self.crafting_pieces_count[suit_] for suit_ in self.crafting_pieces_count.keys()]) >= amount

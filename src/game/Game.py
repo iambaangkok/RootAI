@@ -354,6 +354,7 @@ class Game:
         LOGGER.info("{}:{}:{}:MARQUISE's turn begins".format(self.turn_player, self.phase, self.sub_phase))
 
         self.check_win_condition(Faction.MARQUISE)
+        self.marquise.refresh_activated_cards()
         self.better_burrow_bank(Faction.MARQUISE)
 
         # set marquise action count to 3
@@ -365,16 +366,12 @@ class Game:
 
         self.marquise.crafting_pieces_count = self.get_workshop_count_by_suit()
 
-        cards_not_activated = self.generate_card_birdsong(Faction.MARQUISE)
-        self.marquise_birdsong_cards(cards_not_activated)
+        self.marquise_birdsong_cards()
 
-    def marquise_birdsong_cards(self, cards_not_activated):
-        self.prompt = "Use Birdsong effect"
-        if len(cards_not_activated) > 0:
-            self.set_actions(self.generate_actions_cards_birdsong(Faction.MARQUISE, cards_not_activated) + [
-                Action('Next', perform(self.marquise_daylight_2))])
-        else:
-            self.marquise_daylight_2()
+    def marquise_birdsong_cards(self):
+        self.prompt = "Do you want to use Birdsong card's action?"
+        self.set_actions(self.generate_actions_cards_birdsong(Faction.MARQUISE) + [
+            Action('Next', perform(self.marquise_daylight))])
 
     def marquise_daylight(self):
         self.phase = Phase.DAYLIGHT
@@ -2157,33 +2154,25 @@ class Game:
 
         continuation_func()
 
-    def generate_card_birdsong(self, faction):
-        faction_board = self.faction_to_faction_board(faction)
-        cards = [
-            card for card in faction_board.crafted_cards if card.phase == Phase.BIRDSONG
-            and card.name is not PlayingCardName.BETTER_BURROW_BANK
-        ]
-        return cards
-
-    def generate_actions_cards_birdsong(self, faction, cards_not_activated):
+    def generate_actions_cards_birdsong(self, faction):
         actions = []
-
-        for card in cards_not_activated:
+        faction_board = self.faction_to_faction_board(faction)
+        for card in faction_board.crafted_cards:
+            if faction_board.activated_card.count(card) > 0:
+                continue
             if card.name == PlayingCardName.ROYAL_CLAIM:
                 actions.append(Action('Discard {}'.format(card.name),
-                                      perform(self.royal_claim, faction, card, cards_not_activated)))
+                                      perform(self.royal_claim, faction, card)))
             if card.name == PlayingCardName.STAND_AND_DELIVER:
                 actions.append(
                     Action('Use {} effect'.format(card.name),
-                           perform(self.stand_and_deliver_select_faction, faction, card, cards_not_activated)))
-
+                           perform(self.stand_and_deliver_select_faction, faction, card)))
         return actions
 
-    def royal_claim(self, faction, card, cards_not_activated):
+    def royal_claim(self, faction, card):
         faction_board = self.faction_to_faction_board(faction)
 
         self.discard_card(faction_board.crafted_cards, card)
-        cards_not_activated.remove(card)
 
         gained_vp = 0
         for clearing in self.board.areas:
@@ -2192,29 +2181,29 @@ class Game:
         self.gain_vp(faction, gained_vp)
 
         if faction == Faction.MARQUISE:
-            self.marquise_birdsong_cards(cards_not_activated)
+            self.marquise_birdsong_cards()
         elif faction == Faction.EYRIE:  # TODO
             pass
 
-    def stand_and_deliver_select_faction(self, faction, card, cards_not_activated):
-        cards_not_activated.remove(card)
+    def stand_and_deliver_select_faction(self, faction, card):
+        faction_board = self.faction_to_faction_board(faction)
+        faction_board.activated_card.append(card)
         self.prompt = "Select Faction"
-        self.set_actions(self.generate_actions_stand_and_deliver_select_faction(faction, cards_not_activated))
+        self.set_actions(self.generate_actions_stand_and_deliver_select_faction(faction))
 
-    def generate_actions_stand_and_deliver_select_faction(self, faction, cards_not_activated):
+    def generate_actions_stand_and_deliver_select_faction(self, faction):
         actions = []
         available_faction = [Faction.MARQUISE, Faction.EYRIE]
         available_faction.remove(faction)
 
-        for each_faction in available_faction:
-            if len(self.faction_to_faction_board(each_faction).cards_in_hand) > 0:
+        for enemy_faction in available_faction:
+            if len(self.faction_to_faction_board(enemy_faction).cards_in_hand) > 0:
                 actions.append(
-                    Action('{}'.format(each_faction),
-                           perform(self.stand_and_deliver, faction, each_faction, cards_not_activated)))
-
+                    Action('{}'.format(enemy_faction),
+                           perform(self.stand_and_deliver, faction, enemy_faction)))
         return actions
 
-    def stand_and_deliver(self, faction, stolen_faction, cards_not_activated):
+    def stand_and_deliver(self, faction, stolen_faction):
         faction_board = self.faction_to_faction_board(faction)
         stolen_faction_board = self.faction_to_faction_board(stolen_faction)
 
@@ -2226,7 +2215,7 @@ class Game:
         self.gain_vp(stolen_faction, 1)
 
         if faction == Faction.MARQUISE:
-            self.marquise_birdsong_cards(cards_not_activated)
+            self.marquise_birdsong_cards()
         elif faction == Faction.EYRIE:  # TODO
             pass
 
