@@ -441,32 +441,16 @@ class Game:
         self.marquise.crafting_pieces_count = self.get_workshop_count_by_suit()
 
         cards_not_activated = self.generate_card_birdsong(Faction.MARQUISE)
-        self.birdsong_cards_actions(Faction.MARQUISE, cards_not_activated)
+        self.marquise_birdsong_cards(cards_not_activated)
 
-    def birdsong_cards_actions(self, faction,
-                               cards_not_activated):  # TODO: when should eyrie use their birdsong crafted card effect?
-        actions = self.generate_actions_cards_birdsong(faction, cards_not_activated)
-        if len(actions) == 0:
-            if faction == Faction.MARQUISE:
-                self.marquise_daylight()
-            elif faction == Faction.EYRIE:
-                self.eyrie_birdsong_to_daylight()
-        else:
-            self.prompt = 'Do you want to use crafted card?'
-            if faction == Faction.MARQUISE:
-                self.set_actions(
-                    actions + [Action('Next', perform(self.marquise_daylight))])
-            elif faction == Faction.EYRIE:
-                self.set_actions(
-                    actions + [Action('Next', perform(self.eyrie_birdsong_to_daylight))])
+    def marquise_birdsong_cards(self, cards_not_activated):
+        self.prompt = "Use Birdsong effect"
+        self.set_actions(self.generate_actions_cards_birdsong(Faction.MARQUISE, cards_not_activated) + [Action('Next', perform(self.marquise_daylight_2))])
 
     def generate_card_birdsong(self, faction):
         faction_board = self.faction_to_faction_board(faction)
-        royal_claim = [card for card in faction_board.crafted_cards if card.name == PlayingCardName.ROYAL_CLAIM]
-        stand_and_deliver = [card for card in faction_board.crafted_cards if
-                             card.name == PlayingCardName.STAND_AND_DELIVER]
-
-        return royal_claim + stand_and_deliver
+        cards = [card for card in faction_board.crafted_cards if card.phase == Phase.BIRDSONG]
+        return cards
 
     def generate_actions_cards_birdsong(self, faction, cards_not_activated):
         actions = []
@@ -494,7 +478,10 @@ class Game:
                 gained_vp += 1
         self.gain_vp(faction, gained_vp)
 
-        self.birdsong_cards_actions(faction, cards_not_activated)
+        if faction == Faction.MARQUISE:
+            self.marquise_birdsong_cards(cards_not_activated)
+        elif faction == Faction.EYRIE: # TODO
+            pass
 
     def stand_and_deliver_select_faction(self, faction, card, cards_not_activated):
         cards_not_activated.remove(card)
@@ -526,7 +513,10 @@ class Game:
 
         self.gain_vp(stolen_faction, 1)
 
-        self.birdsong_cards_actions(faction, cards_not_activated)
+        if faction == Faction.MARQUISE:
+            self.marquise_birdsong_cards(cards_not_activated)
+        elif faction == Faction.EYRIE: # TODO
+            pass
 
     def marquise_daylight(self):
         self.phase = Phase.DAYLIGHT
@@ -921,14 +911,13 @@ class Game:
 
         self.set_actions([Action('Next, to Daylight', perform(self.eyrie_birdsong_to_daylight))])
 
-    def build_roost(self, clearing: Area):
-        building_slot_index = clearing.buildings.index(Building.EMPTY)
-        clearing.buildings[building_slot_index] = Building.ROOST
-        self.eyrie.roost_tracker += 1
+    def build_roost(self, area: Area):
+        LOGGER.info("{}:{}:{}:{} built {} at area#{}".format(
+            self.turn_player, self.phase, self.sub_phase, Faction.EYRIE, Building.ROOST,
+            area.buildings.index(Building.EMPTY)))
 
-        LOGGER.info(
-            "{}:{}:{}:build_roost built {} in clearing #{}".format(self.turn_player, self.phase, self.sub_phase,
-                                                                   Building.ROOST, clearing.area_index))
+        self.eyrie.roost_tracker += 1
+        area.buildings[area.buildings.index(Building.EMPTY)] = Building.ROOST
 
     def eyrie_birdsong_to_daylight(self):  # TODO: Eyrie Royal Claim
         LOGGER.info("{}:{}:{}:eyrie_birdsong_to_daylight".format(self.turn_player, self.phase, self.sub_phase))
@@ -1177,9 +1166,16 @@ class Game:
         return actions
 
     def eyrie_build(self, clearing: Area):
-        self.build_roost(clearing)
+
+        building_slot_index = clearing.buildings.index(Building.EMPTY)
+        clearing.buildings[building_slot_index] = Building.ROOST
+        self.eyrie.roost_tracker += 1
 
         self.remove_decree_counter(DecreeAction.BUILD, clearing.suit)
+
+        LOGGER.info(
+            "{}:{}:{}:eyrie_build built {} in clearing #{}".format(self.turn_player, self.phase, self.sub_phase,
+                                                                   Building.ROOST, clearing.area_index))
 
         self.update_prompt_eyrie_decree(DecreeAction.BUILD)
         self.set_actions(self.generate_actions_eyrie_build())
@@ -1355,25 +1351,6 @@ class Game:
             self.draw_pile = self.draw_pile[amount:]
             LOGGER.info(
                 "{}:{}:{}:{} drawn {} card(s)".format(self.turn_player, self.phase, self.sub_phase, faction, amount))
-        else:
-            lesser_amount = min(len(self.draw_pile), amount)
-            faction_board.cards_in_hand.extend(self.draw_pile[0:lesser_amount])
-            self.draw_pile = self.draw_pile[lesser_amount:]
-            LOGGER.info(
-                "{}:{}:{}:{} drawn {} card(s)".format(self.turn_player, self.phase, self.sub_phase, faction, amount))
-
-            self.shuffle_discard_pile_into_draw_pile()
-
-            remaining_amount = amount - lesser_amount
-            faction_board.cards_in_hand.extend(self.draw_pile[0:remaining_amount])
-            self.draw_pile = self.draw_pile[remaining_amount:]
-            LOGGER.info(
-                "{}:{}:{}:{} drawn {} card(s)".format(self.turn_player, self.phase, self.sub_phase, faction, amount))
-
-    def shuffle_discard_pile_into_draw_pile(self):
-        self.draw_pile.extend(self.discard_pile)
-        self.discard_pile = []
-        self.shuffle_draw_pile()
 
     def discard_card(self, discard_from: list[PlayingCard], card: PlayingCard):
         discard_from.remove(card)
@@ -2269,17 +2246,16 @@ class Game:
         return actions
 
     def activate_dominance_card(self, faction: Faction, card: PlayingCard, continuation_func: any):
-        if config['game']['allow-dominance-card']:
-            LOGGER.info(
-                "{}:{}:{}:{}:activate_dominance_card {} ".format(self.turn_player, self.phase, self.sub_phase, faction,
-                                                                 card.name))
+        LOGGER.info(
+            "{}:{}:{}:{}:activate_dominance_card {} ".format(self.turn_player, self.phase, self.sub_phase, faction,
+                                                             card.name))
 
-            faction_board = self.faction_to_faction_board(faction)
+        faction_board = self.faction_to_faction_board(faction)
 
-            self.board.faction_points[faction] = 0
+        self.board.faction_points[faction] = 0
 
-            faction_board.dominance_card = card
-            faction_board.cards_in_hand.remove(card)
+        faction_board.dominance_card = card
+        faction_board.cards_in_hand.remove(card)
 
         continuation_func()
 
