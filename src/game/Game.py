@@ -1361,6 +1361,25 @@ class Game:
             self.draw_pile = self.draw_pile[amount:]
             LOGGER.info(
                 "{}:{}:{}:{} drawn {} card(s)".format(self.turn_player, self.phase, self.sub_phase, faction, amount))
+        else:
+            lesser_amount = min(len(self.draw_pile), amount)
+            faction_board.cards_in_hand.extend(self.draw_pile[0:lesser_amount])
+            self.draw_pile = self.draw_pile[lesser_amount:]
+            LOGGER.info(
+                "{}:{}:{}:{} drawn {} card(s)".format(self.turn_player, self.phase, self.sub_phase, faction, amount))
+
+            self.shuffle_discard_pile_into_draw_pile()
+
+            remaining_amount = amount - lesser_amount
+            faction_board.cards_in_hand.extend(self.draw_pile[0:remaining_amount])
+            self.draw_pile = self.draw_pile[remaining_amount:]
+            LOGGER.info(
+                "{}:{}:{}:{} drawn {} card(s)".format(self.turn_player, self.phase, self.sub_phase, faction, amount))
+
+    def shuffle_discard_pile_into_draw_pile(self):
+        self.draw_pile.extend(self.discard_pile)
+        self.discard_pile = []
+        shuffle(self.draw_pile)
 
     def discard_card(self, discard_from: list[PlayingCard], card: PlayingCard):
         discard_from.remove(card)
