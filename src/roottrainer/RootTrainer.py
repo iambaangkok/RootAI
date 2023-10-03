@@ -9,6 +9,8 @@ from pygame.time import Clock
 from src.config import Config, Colors
 from src.game.Faction import Faction
 from src.game.Game import Action, Game
+from src.roottrainer.Agent import Agent
+from src.roottrainer.RandomDecisionAgent import RandomDecisionAgent
 from src.utils.draw_utils import draw_text_in_rect
 
 config = yaml.safe_load(open("config/config.yml"))
@@ -39,6 +41,15 @@ class RootTrainer:
         self.actions: list[Action] = self.game.get_actions()
         self.reset_arrow()
 
+        # Agent
+        self.marquise_agent = self.init_agent(Faction.MARQUISE)
+        self.eyrie_agent = self.init_agent(Faction.EYRIE)
+
+    def init_agent(self, faction: Faction) -> Agent:
+        match config['agent'][faction.lower()]['agent-type']:
+            case "random":
+                return RandomDecisionAgent(faction)
+
     def run(self):
         while self.running:
             self.init()
@@ -64,17 +75,23 @@ class RootTrainer:
         keys = pygame.key.get_pressed()  # Checking pressed (hold) keys
 
         if self.game.running:
-            if keys[pygame.K_f]:
-                if config['simulation']['f-key-action'] == 'current':
-                    self.current_action.function()
-                    self.actions = self.game.get_actions()
-                    self.reset_arrow()
+            if keys[pygame.K_a] or (not config['agent']['require-key-hold']):
+                if self.game.turn_player == Faction.MARQUISE and config['agent']['marquise']['use-agent']:
+                    self.execute_agent_action(Faction.MARQUISE)
+                elif self.game.turn_player == Faction.EYRIE and config['agent']['eyrie']['use-agent']:
+                    self.execute_agent_action(Faction.EYRIE)
 
-                elif config['simulation']['f-key-action'] == 'random':
-                    self.random_arrow()
-                    self.current_action.function()
-                    self.actions = self.game.get_actions()
-                    self.reset_arrow()
+            # elif keys[pygame.K_f]:
+            #     if config['simulation']['f-key-action'] == 'current':
+            #         self.current_action.function()
+            #         self.actions = self.game.get_actions()
+            #         self.reset_arrow()
+            #
+            #     elif config['simulation']['f-key-action'] == 'random':
+            #         self.random_arrow()
+            #         self.current_action.function()
+            #         self.actions = self.game.get_actions()
+            #         self.reset_arrow()
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -102,6 +119,15 @@ class RootTrainer:
 
         self.fps = self.calculate_fps()
 
+    def execute_agent_action(self, faction: Faction):
+        agent = self.faction_to_agent(faction)
+        action = agent.choose_action(self.game)
+        action_index = self.actions.index(action)
+        self.set_arrow(action_index)
+        self.current_action.function()
+        self.actions = self.game.get_actions()
+        self.reset_arrow()
+
     def random_arrow(self):
         self.reset_arrow()
 
@@ -109,6 +135,12 @@ class RootTrainer:
         rand = randint(0, row - 1)
 
         self.action_arrow_pos += Vector2(0, rand)
+        self.current_action = self.actions[int(self.action_arrow_pos.y)]
+
+    def set_arrow(self, index: int):
+        self.reset_arrow()
+
+        self.action_arrow_pos += Vector2(0, index)
         self.current_action = self.actions[int(self.action_arrow_pos.y)]
 
     def move_arrow(self, direction):
@@ -132,6 +164,12 @@ class RootTrainer:
     def reset_arrow(self):
         self.action_arrow_pos.y = 0
         self.current_action = self.actions[int(self.action_arrow_pos.y)]
+
+    def faction_to_agent(self, faction: Faction):
+        if faction == Faction.MARQUISE:
+            return self.marquise_agent
+        elif faction == Faction.EYRIE:
+            return self.eyrie_agent
 
     def calculate_fps(self):
         if self.delta_time != 0:
@@ -224,7 +262,7 @@ class RootTrainer:
             ind = ind + 1
 
     def draw_game_ended(self, screen: Surface):
-        position = Vector2(Config.SCREEN_WIDTH/2, Config.SCREEN_HEIGHT/2)
+        position = Vector2(Config.SCREEN_WIDTH / 2, Config.SCREEN_HEIGHT / 2)
         shift = Vector2(0, -0.05 * Config.SCREEN_HEIGHT)
 
         text = Config.FONT_XL.render("Game Ended", True, Colors.WHITE)
