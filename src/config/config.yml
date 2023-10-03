@@ -4,3 +4,4 @@ simulation:
 
 game:
   victory-point-limit: 30
+  allow-dominance-card: true # true | false
