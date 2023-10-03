@@ -3,6 +3,8 @@ from pygame import Color
 GREEN = Color(0, 255, 0, 255)
 WHITE = Color(255, 255, 255, 255)
 BLACK = Color(0, 0, 0, 255)
+BLACK_A_128 = Color(0, 0, 0, 128)
+
 
 ORANGE = Color(255, 100, 0, 255)
 BLUE = Color(30, 144, 255, 255)

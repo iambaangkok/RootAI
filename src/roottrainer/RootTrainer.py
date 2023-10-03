@@ -262,17 +262,78 @@ class RootTrainer:
             ind = ind + 1
 
     def draw_game_ended(self, screen: Surface):
-        position = Vector2(Config.SCREEN_WIDTH / 2, Config.SCREEN_HEIGHT / 2)
-        shift = Vector2(0, -0.05 * Config.SCREEN_HEIGHT)
+        winning_faction, winning_condition, turns_played, turn_player, vp_marquise, vp_eyrie, winning_dominance = self.game.get_end_game_data()
 
+        position = Vector2(Config.SCREEN_WIDTH / 2, Config.SCREEN_HEIGHT / 2)
+
+        rect = Rect(0, 0, 0, 0)
+        rect.width = 0.2 * Config.SCREEN_WIDTH
+        rect.height = 0.35 * Config.SCREEN_HEIGHT
+        rect.midtop = position + Vector2(0, -0.1 * Config.SCREEN_HEIGHT)
+        surface = Surface(rect.size)
+        surface.set_alpha(128)
+        pygame.draw.rect(surface, Colors.BLACK, rect)
+        screen.blit(surface, rect.topleft)
+        # pygame.draw.rect(screen, Colors.BLACK_A_128, rect)
+
+        ###
+        shift = Vector2(0, -0.05 * Config.SCREEN_HEIGHT)
         text = Config.FONT_XL.render("Game Ended", True, Colors.WHITE)
         rect = text.get_rect()
         rect.center = position + shift
         screen.blit(text, rect)
-
+        ###
         shift = Vector2(0, 0)
-
         text = Config.FONT_MD.render("[N]ew game / [Q]uit", True, Colors.WHITE)
         rect = text.get_rect()
         rect.center = position + shift
+        screen.blit(text, rect)
+        ###
+        offset_x = 0.05 * Config.SCREEN_WIDTH
+        gap_y = 0.03
+        ###
+        shift = Vector2(-offset_x, 1 * gap_y * Config.SCREEN_HEIGHT)
+        text = Config.FONT_SM.render("winner: {}".format(winning_faction), True, Colors.WHITE)
+        rect = text.get_rect()
+        rect.midleft = position + shift
+        screen.blit(text, rect)
+        ###
+        gap_y = 0.03
+        offset_y = 0.05
+        shift = Vector2(-offset_x, offset_y + 2 * gap_y * Config.SCREEN_HEIGHT)
+        text = Config.FONT_SM.render("condition: {}".format(winning_condition), True, Colors.WHITE)
+        rect = text.get_rect()
+        rect.midleft = position + shift
+        screen.blit(text, rect)
+        ###
+        shift = Vector2(-offset_x, offset_y + 3 * gap_y * Config.SCREEN_HEIGHT)
+        text = Config.FONT_SM.render("turn count: {}".format(turns_played), True, Colors.WHITE)
+        rect = text.get_rect()
+        rect.midleft = position + shift
+        screen.blit(text, rect)
+        ###
+        shift = Vector2(-offset_x, offset_y + 4 * gap_y * Config.SCREEN_HEIGHT)
+        text = Config.FONT_SM.render("current player: {}".format(turn_player), True, Colors.WHITE)
+        rect = text.get_rect()
+        rect.midleft = position + shift
+        screen.blit(text, rect)
+        ###
+        shift = Vector2(-offset_x, offset_y + 5 * gap_y * Config.SCREEN_HEIGHT)
+        text = Config.FONT_SM.render("marquise vp: {}".format(vp_marquise), True, Colors.WHITE)
+        rect = text.get_rect()
+        rect.midleft = position + shift
+        screen.blit(text, rect)
+        ###
+        shift = Vector2(-offset_x, offset_y + 6 * gap_y * Config.SCREEN_HEIGHT)
+        text = Config.FONT_SM.render("eyrie vp: {}".format(vp_eyrie), True, Colors.WHITE)
+        rect = text.get_rect()
+        rect.midleft = position + shift
+        screen.blit(text, rect)
+        ###
+        shift = Vector2(-offset_x, offset_y + 7 * gap_y * Config.SCREEN_HEIGHT)
+        text = Config.FONT_SM.render("winning dominance: {}".format(winning_dominance.suit.tolower() if winning_dominance is not None else "none"),
+                                     True,
+                                     Colors.WHITE)
+        rect = text.get_rect()
+        rect.midleft = position + shift
         screen.blit(text, rect)

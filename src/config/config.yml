@@ -8,7 +8,7 @@ simulation:
 agent:
   require-key-hold: false # true | false
   marquise:
-    use-agent: false # true | false
+    use-agent: true # true | false
     agent-type: random # random | mcts | rnn
   eyrie:
     use-agent: true
