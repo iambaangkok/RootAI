@@ -2028,9 +2028,9 @@ class Game:
                      continuation_func, redirect_func):
 
         if isinstance(piece, Building):
-            if defender == Faction.MARQUISE:
+            if selecting_faction == Faction.MARQUISE:
                 self.marquise.building_trackers[piece] -= 1
-            elif defender == Faction.EYRIE:
+            elif selecting_faction == Faction.EYRIE:
                 self.eyrie.roost_tracker -= 1
             clearing.remove_building(piece)
         elif isinstance(piece, Token):
