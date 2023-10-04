@@ -47,8 +47,8 @@ class FactionBoard:
 
         self.activated_card: list[PlayingCard] = []
 
-    def refresh_activated_cards(self):
-        activated_card = []
+    def clear_activated_cards(self):
+        self.activated_card = []
 
     def can_spend_crafting_piece(self, suit: Suit | str, amount: int) -> bool:
         if suit == Suit.BIRD:

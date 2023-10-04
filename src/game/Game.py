@@ -380,7 +380,7 @@ class Game:
         self.turn_count += 1
 
         self.check_win_condition(Faction.MARQUISE)
-        self.marquise.refresh_activated_cards()
+        self.marquise.clear_activated_cards()
         self.better_burrow_bank(Faction.MARQUISE)
 
         self.marquise_action_count = 3
@@ -706,6 +706,7 @@ class Game:
         self.turn_count += 1
 
         self.check_win_condition(Faction.EYRIE)
+        self.eyrie.clear_activated_cards()
         self.better_burrow_bank(Faction.EYRIE)
 
         if len(self.eyrie.cards_in_hand) == 0:
@@ -2234,9 +2235,9 @@ class Game:
             if card.name == PlayingCardName.TAX_COLLECTOR:
                 actions.append(Action('Use {} effect'.format(card.name),
                                       perform(self.tax_collector_select_clearing, faction, continuation_func)))
-            if card.name == PlayingCardName.COMMAND_WARREN:
-                actions.append(Action('Use {} effect'.format(card.name),
-                                      perform(self.command_warren, faction, continuation_func)))
+            # if card.name == PlayingCardName.COMMAND_WARREN:
+            #     actions.append(Action('Use {} effect'.format(card.name),
+            #                           perform(self.command_warren, faction, continuation_func)))
 
         return actions
 
