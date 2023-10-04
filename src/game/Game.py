@@ -277,8 +277,7 @@ class Game:
         self.board.areas[-1].add_token(Token.CASTLE)
 
         for i in range(1, len(self.board.areas)):
-            self.board.areas[i].add_warrior(Warrior.MARQUISE, 2)
-            self.board.areas[i].add_warrior(Warrior.EYRIE, 2)
+            self.board.areas[i].add_warrior(Warrior.MARQUISE, 1)
 
         for i in range(0, len(self.board.areas)):
             self.distance_from_the_keep[self.board.areas[i]] = self.distance_from_the_keep_list[i]
@@ -292,17 +291,6 @@ class Game:
         starting_card_amount: int = 5
         self.take_card_from_draw_pile(Faction.MARQUISE, starting_card_amount)
         self.take_card_from_draw_pile(Faction.EYRIE, starting_card_amount)
-
-        self.marquise.cards_in_hand.append(PlayingCard(0, PlayingCardName.AMBUSH, Suit.BIRD, PlayingCardPhase.BATTLE))
-        self.eyrie.cards_in_hand.append(PlayingCard(0, PlayingCardName.AMBUSH, Suit.BIRD, PlayingCardPhase.BATTLE))
-        self.marquise.crafted_cards.append(
-            PlayingCard(3, PlayingCardName.ARMORERS, Suit.BIRD, PlayingCardPhase.BATTLE, {Suit.FOX: 1}))
-        self.eyrie.crafted_cards.append(
-            PlayingCard(3, PlayingCardName.ARMORERS, Suit.BIRD, PlayingCardPhase.BATTLE, {Suit.FOX: 1}))
-        self.marquise.crafted_cards.append(
-            PlayingCard(8, PlayingCardName.BRUTAL_TACTICS, Suit.BIRD, PlayingCardPhase.BATTLE, {Suit.MOUSE: 1}))
-        self.eyrie.crafted_cards.append(
-            PlayingCard(10, PlayingCardName.SAPPERS, Suit.BIRD, PlayingCardPhase.BATTLE, {Suit.FOX: 2}))
 
     def shuffle_draw_pile(self):
         shuffle(self.draw_pile)
