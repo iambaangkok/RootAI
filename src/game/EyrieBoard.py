@@ -41,8 +41,8 @@ def count_decree_action_static(decree: {DecreeAction: list[PlayingCard]}, decree
 
 
 class EyrieBoard(FactionBoard):
-    ROOST_REWARD_VP: list[int] = [0, 1, 2, 3, 4, 4, 5]
-    ROOST_REWARD_CARD: list[int] = [0, 0, 1, 1, 1, 2, 2]
+    ROOST_REWARD_VP: list[int] = [0, 0, 1, 2, 3, 4, 4, 5]
+    ROOST_REWARD_CARD: list[int] = [0, 0, 0, 1, 1, 1, 2, 2]
 
     def __init__(self, name: str, color: Color, reserved_warriors: int, starting_point: Vector2):
         super().__init__(name, color, reserved_warriors, starting_point)
