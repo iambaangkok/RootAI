@@ -1024,6 +1024,7 @@ class Game:
         LOGGER.info("{}:{}:{}:eyrie_pre_battle".format(self.turn_player, self.phase, self.sub_phase))
         self.update_prompt_eyrie_decree(DecreeAction.BUILD)
 
+        self.turn_player = Faction.EYRIE
         self.prompt += " Choose area to build roost in."
         self.set_actions(self.generate_actions_eyrie_build()
                          + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_build)
