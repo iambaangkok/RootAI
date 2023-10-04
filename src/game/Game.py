@@ -277,7 +277,8 @@ class Game:
         self.board.areas[-1].add_token(Token.CASTLE)
 
         for i in range(1, len(self.board.areas)):
-            self.board.areas[i].add_warrior(Warrior.MARQUISE, 1)
+            self.board.areas[i].add_warrior(Warrior.MARQUISE, 2)
+            self.board.areas[i].add_warrior(Warrior.EYRIE, 2)
 
         for i in range(0, len(self.board.areas)):
             self.distance_from_the_keep[self.board.areas[i]] = self.distance_from_the_keep_list[i]
@@ -292,6 +293,17 @@ class Game:
         self.take_card_from_draw_pile(Faction.MARQUISE, starting_card_amount)
         self.take_card_from_draw_pile(Faction.EYRIE, starting_card_amount)
 
+        self.marquise.cards_in_hand.append(PlayingCard(0, PlayingCardName.AMBUSH, Suit.BIRD, PlayingCardPhase.BATTLE))
+        self.eyrie.cards_in_hand.append(PlayingCard(0, PlayingCardName.AMBUSH, Suit.BIRD, PlayingCardPhase.BATTLE))
+        self.marquise.crafted_cards.append(
+            PlayingCard(3, PlayingCardName.ARMORERS, Suit.BIRD, PlayingCardPhase.BATTLE, {Suit.FOX: 1}))
+        self.eyrie.crafted_cards.append(
+            PlayingCard(3, PlayingCardName.ARMORERS, Suit.BIRD, PlayingCardPhase.BATTLE, {Suit.FOX: 1}))
+        self.marquise.crafted_cards.append(
+            PlayingCard(8, PlayingCardName.BRUTAL_TACTICS, Suit.BIRD, PlayingCardPhase.BATTLE, {Suit.MOUSE: 1}))
+        self.eyrie.crafted_cards.append(
+            PlayingCard(10, PlayingCardName.SAPPERS, Suit.BIRD, PlayingCardPhase.BATTLE, {Suit.FOX: 2}))
+
     def shuffle_draw_pile(self):
         shuffle(self.draw_pile)
 
@@ -304,7 +316,8 @@ class Game:
         self.board.gain_vp(faction, vp)
         self.check_win_condition(faction)
 
-    def check_win_condition(self, faction: Faction, no_end_action: bool = False) -> tuple[int, int] | PlayingCard | None:
+    def check_win_condition(self, faction: Faction, no_end_action: bool = False) -> tuple[
+                                                                                        int, int] | PlayingCard | None:
         faction_board = self.faction_to_faction_board(faction)
         if faction_board.dominance_card is None:
             return self.check_win_condition_vp(faction, no_end_action)
@@ -363,7 +376,8 @@ class Game:
         turn_player: Faction = self.turn_player
         vp_marquise: int = self.board.faction_points[Faction.MARQUISE]
         vp_eyrie: int = self.board.faction_points[Faction.EYRIE]
-        winning_dominance: None | PlayingCard = self.check_win_condition_dominance(winning_faction, True) if self.faction_to_faction_board(
+        winning_dominance: None | PlayingCard = self.check_win_condition_dominance(winning_faction,
+                                                                                   True) if self.faction_to_faction_board(
             winning_faction).dominance_card is not None else None
         winning_condition: str = "vp" if winning_dominance is None else "dominance"
 
@@ -392,7 +406,7 @@ class Game:
 
     def marquise_birdsong_cards(self):
         self.prompt = "Do you want to use Birdsong card's action?"
-        self.set_actions(self.generate_actions_cards_birdsong(Faction.MARQUISE) + [
+        self.set_actions(self.generate_actions_cards_birdsong(Faction.MARQUISE, self.marquise_birdsong_cards) + [
             Action('Next', perform(self.marquise_daylight))])
 
     def marquise_daylight(self):
@@ -533,12 +547,15 @@ class Game:
         self.marquise_daylight_recruit_some_clearings(remaining_clearing_with_recruiter)
 
     def marquise_daylight_battle_select_clearing(self):
+        self.marquise_action_count -= 1
         self.prompt = "Select Clearing"
-        self.set_actions(self.generate_actions_select_clearing_battle(Faction.MARQUISE))
+        self.set_actions(self.generate_actions_select_clearing_battle(Faction.MARQUISE,
+                                                                      self.marquise_daylight_battle_select_faction))
 
     def marquise_daylight_battle_select_faction(self, clearing):
         self.prompt = "Select Faction"
-        self.set_actions(self.generate_actions_select_faction_battle(Faction.MARQUISE, clearing))
+        self.set_actions(
+            self.generate_actions_select_faction_battle(Faction.MARQUISE, clearing, self.marquise_daylight_2))
 
     def marquise_daylight_overwork_select_clearing(self):
         self.prompt = "Select Clearing"
@@ -1027,7 +1044,7 @@ class Game:
 
         self.update_prompt_eyrie_decree(DecreeAction.BATTLE)
         self.prompt += " Choose enemy faction to battle."
-        self.set_actions(self.generate_actions_select_faction_battle(Faction.EYRIE, clearing))
+        self.set_actions(self.generate_actions_select_faction_battle(Faction.EYRIE, clearing, self.eyrie_pre_battle))
 
     def generate_actions_eyrie_build(self):
         actions: list[Action] = self.generate_actions_select_buildable_clearing(Faction.EYRIE)
@@ -1124,7 +1141,7 @@ class Game:
 
         return actions
 
-    def craft_card(self, faction: Faction, card: PlayingCard):
+    def craft_card(self, faction: Faction, card: PlayingCard):  # TODO: no such duplicate cards can be crafted
         LOGGER.info("{}:{}:{}:Crafted {} card".format(self.turn_player, self.phase, self.sub_phase, card.name))
         if faction == Faction.MARQUISE:
             if card.phase == PlayingCardPhase.IMMEDIATE:
@@ -1502,37 +1519,26 @@ class Game:
             total += area.buildings.count(building)
         return total
 
-    def generate_actions_select_clearing_battle(self, faction) -> list[Action]:
+    def generate_actions_select_clearing_battle(self, faction, continuation_func) -> list[Action]:
         clearings = self.get_battlable_clearing(faction)
         actions = []
 
-        if faction == Faction.MARQUISE:
-            for clearing in clearings:
-                actions.append(
-                    Action("{}".format(clearing),
-                           perform(self.marquise_daylight_battle_select_faction, clearing)))
-        elif faction == Faction.EYRIE:
-            for clearing in clearings:
-                actions.append(
-                    Action("{}".format(clearing),
-                           perform(self.eyrie_choose_battle_in, clearing)))
+        for clearing in clearings:
+            actions.append(
+                Action("{}".format(clearing),
+                       perform(continuation_func, clearing)))
+
         return actions
 
-    def generate_actions_select_faction_battle(self, faction: Faction, clearing: Area) -> list[Action]:
+    def generate_actions_select_faction_battle(self, faction: Faction, clearing: Area, continuation_func) -> list[
+        Action]:
         enemy_factions: list[Faction] = self.get_available_enemy_tokens_from_clearing(faction, clearing)
         actions: list[Action] = []
 
-        if faction == Faction.MARQUISE:
-            for enemy_faction in enemy_factions:
-                actions.append(
-                    Action("{}".format(enemy_faction),
-                           perform(self.pre_battle, faction, clearing, enemy_faction)))
-
-        elif faction == Faction.EYRIE:
-            for enemy_faction in enemy_factions:
-                actions.append(
-                    Action("{}".format(enemy_faction),
-                           perform(self.pre_battle, faction, clearing, enemy_faction)))
+        for enemy_faction in enemy_factions:
+            actions.append(
+                Action("{}".format(enemy_faction),
+                       perform(self.initiate_battle, faction, enemy_faction, clearing, continuation_func)))
 
         return actions
 
@@ -1587,117 +1593,79 @@ class Game:
 
         return factions
 
-    def pre_battle(self, attacker, clearing, defender: Faction):
-        actions = []
-
-        defender_faction_board = self.faction_to_faction_board(defender)
-        available_ambush = [card for card in defender_faction_board.cards_in_hand if
-                            card.name == PlayingCardName.AMBUSH]
-
-        for card in available_ambush:
-            actions.append(Action('Discard {}'.format(card.name),
-                                  perform(self.pre_ambush, attacker, clearing, defender, card, True)))
-
-        if len(actions) == 0:
-            self.battle(attacker, clearing, defender)
-        else:
-            actions.append(Action('Next', perform(self.battle, attacker, clearing, defender)))
-            self.prompt = "{}: Do you want to discard AMBUSH card?".format(defender)
-            self.set_actions(actions)
-
-    def pre_ambush(self, attacker, clearing, defender, defender_discarding_card, ambush_success):
+    def initiate_battle(self, attacker, defender, clearing: Area, continuation_func):
         LOGGER.info(
-            "{}:{}:{}:battle:{} discard AMBUSH".format(self.turn_player, self.phase, self.sub_phase, defender))
+            "{}:{}:{}:{} initiate battle on {} in clearing #{}".format(self.turn_player, self.phase, self.sub_phase,
+                                                                       attacker, defender, clearing.area_index))
+        attacker_board = self.faction_to_faction_board(attacker)
+        defender_board = self.faction_to_faction_board(defender)
+        atk_scouting_party = [card for card in attacker_board.crafted_cards if
+                              card.name == PlayingCardName.SCOUTING_PARTY]
+        def_ambush = [card for card in defender_board.cards_in_hand if
+                      card.name == PlayingCardName.AMBUSH and (card.suit == Suit.BIRD or card.suit == clearing.suit)]
 
-        defender_faction_board = self.faction_to_faction_board(defender)
-        self.discard_card(defender_faction_board.cards_in_hand, defender_discarding_card)
-
-        actions = []
-
-        attacker_faction_board = self.faction_to_faction_board(attacker)
-        available_ambush = [card for card in attacker_faction_board.cards_in_hand if
-                            card.name == PlayingCardName.AMBUSH and (
-                                    card.suit == clearing.suit or card.suit == Suit.BIRD)]
-        for ambush_card in available_ambush:
-            actions.append(
-                Action('Discard {}'.format(ambush_card.name),
-                       perform(self.ambush, attacker, clearing, defender, ambush_card, False)))
-
-        if len(actions) == 0:
-            self.ambush(attacker, clearing, defender, None, ambush_success)
+        if len(atk_scouting_party) > 0 or len(def_ambush) == 0:
+            self.roll_dice(attacker, defender, clearing, continuation_func)
         else:
-            actions.append(Action('Next', perform(self.ambush, attacker, clearing, defender, None, ambush_success)))
-            self.prompt = "{}: Do you want to discard AMBUSH card to cancel the effect of the defender?".format(
-                attacker)
-            self.set_actions(actions)
+            self.defender_use_ambush(attacker, defender, clearing, continuation_func)
 
-    def ambush(self, attacker, clearing, defender, attacker_discarding_card: PlayingCard = None, ambush_success=False):
-        attacker_faction_board = self.faction_to_faction_board(attacker)
+    def defender_use_ambush(self, attacker, defender, clearing, continuation_func):
+        self.turn_player = defender
+        self.prompt = "{}: Use Ambush Card?".format(defender)
 
-        if attacker_discarding_card is not None:
-            LOGGER.info(
-                "{}:{}:{}:battle:{} discard AMBUSH".format(self.turn_player, self.phase, self.sub_phase, attacker))
-            self.discard_card(attacker_faction_board.cards_in_hand, attacker_discarding_card)
+        defender_board = self.faction_to_faction_board(defender)
+        def_ambush_actions = []
+        def_ambush = [card for card in defender_board.cards_in_hand if
+                      card.name == PlayingCardName.AMBUSH and (card.suit == Suit.BIRD or card.suit == clearing.suit)]
+        for card in def_ambush:
+            def_ambush_actions.append(Action('Discard {} ({})'.format(card.name, card.suit),
+                                             perform(self.attacker_use_ambush, card, attacker, defender, clearing,
+                                                     continuation_func)))
 
-        if not ambush_success:
-            LOGGER.info(
-                "{}:{}:{}:battle:Foil Ambush ({}'s AMBUSH will be canceled)".format(self.turn_player, self.phase,
-                                                                                    self.sub_phase, defender))
-            self.battle(attacker, clearing, defender)
-        else:
-            LOGGER.info(
-                "{}:{}:{}:battle:{}'s Ambush Success".format(self.turn_player, self.phase, self.sub_phase, defender))
+        self.set_actions(
+            def_ambush_actions + [
+                Action('Skip', perform(self.roll_dice, attacker, defender, clearing, continuation_func))])
 
-            # deal hits
-            defender_remaining_hits = 2
-            # to attacker
-            removed_attacker_warriors = clearing.remove_warrior(faction_to_warrior(attacker), defender_remaining_hits)
-            defender_remaining_hits -= removed_attacker_warriors
-            attacker_faction_board.reserved_warriors += removed_attacker_warriors
-
-            # score
-            defender_total_vp = removed_attacker_warriors
-            self.gain_vp(defender, defender_total_vp)
-
-            if defender_remaining_hits > 0:
-                self.post_ambush(attacker, clearing, defender, defender_remaining_hits)
-            else:
-                self.battle(attacker, clearing, defender)
-
-    def post_ambush(self, attacker, clearing, defender, defender_remaining_hits):
-        actions = self.generate_actions_select_piece_to_remove(attacker, defender,
-                                                               0,
-                                                               defender_remaining_hits,
-                                                               clearing, self.post_ambush_remove_piece)
-        if len(actions) == 0:
-            self.prompt = "{}: No Token/Building can be removed.".format(attacker)
-            self.set_actions([Action('Next',
-                                     perform(self.battle, attacker, clearing, defender))])
-        else:
-            self.prompt = "{}: Select Token/Building to be removed (Remaining: {})".format(attacker,
-                                                                                           defender_remaining_hits)
-            self.set_actions(actions)
-
-    def post_ambush_remove_piece(self, attacker: Faction, defender, attacker_remaining_hits, defender_remaining_hits,
-                                 clearing: Area,
-                                 piece):
+    def attacker_use_ambush(self, ambush_discarded, attacker, defender, clearing, continuation_func):
         LOGGER.info(
-            "{}:{}:{}:battle:{} remove {}'s {}".format(self.turn_player, self.phase, self.sub_phase, defender, attacker,
-                                                       piece))
+            "{}:{}:{}:{} discard AMBUSH".format(self.turn_player, self.phase, self.sub_phase, defender))
+        defender_board = self.faction_to_faction_board(defender)
+        self.discard_card(defender_board.cards_in_hand, ambush_discarded)
 
-        self.remove_piece(attacker, clearing, defender, piece)
-        self.prompt = "Remove {} successfully.".format(piece.name)
-        if defender_remaining_hits > 0:
+        self.turn_player = attacker
+        self.prompt = "{}: Use Ambush Card?".format(attacker)
+
+        attacker_board = self.faction_to_faction_board(attacker)
+        atk_ambush = [card for card in attacker_board.cards_in_hand if card.name == PlayingCardName.AMBUSH]
+
+        if len(atk_ambush) == 0:
+            self.resolve_hits(attacker, defender, 0, 0, 0, 2, clearing, continuation_func, self.roll_dice)
+        else:
+            atk_ambush_actions = []
+            for card in atk_ambush:
+                atk_ambush_actions.append(Action('Discard {} ({})'.format(card.name, card.suit),
+                                                 perform(self.foil_ambush, card, attacker, defender, clearing,
+                                                         continuation_func)))
             self.set_actions(
-                [Action('Next', perform(self.post_ambush, attacker, clearing, defender, defender_remaining_hits - 1))])
-        else:
-            self.set_actions([Action('Next', perform(self.battle, attacker, clearing, defender))])
+                atk_ambush_actions
+                + [Action('Skip',
+                          perform(self.resolve_hits, attacker, defender, 0, 0, 0, 2, clearing, continuation_func,
+                                  self.roll_dice))]
+            )
 
-    def battle(self, attacker: Faction, clearing: Area, defender: Faction):
-        if clearing.warrior_count[faction_to_warrior(attacker)] <= 0:
-            self.post_battle(attacker, defender, 0, 0, clearing)
+    def foil_ambush(self, ambush_discarded, attacker, defender, clearing, continuation_func):
+        LOGGER.info(
+            "{}:{}:{}:{} discard AMBUSH".format(self.turn_player, self.phase, self.sub_phase, attacker))
+        attacker_board = self.faction_to_faction_board(attacker)
+        self.discard_card(attacker_board.cards_in_hand, ambush_discarded)
+        self.roll_dice(attacker, defender, clearing, continuation_func)
+
+    def roll_dice(self, attacker, defender, clearing, continuation_func):
+
+        # After ambush, check if there are remaining attacker's warrior.
+        if clearing.warrior_count[faction_to_warrior(attacker)] == 0:
+            continuation_func()
         else:
-            # roll dice and add extra hits
             dices: list[int] = [randint(0, 3), randint(0, 3)]
             attacker_roll: int = max(dices)
             defender_roll: int = min(dices)
@@ -1709,169 +1677,134 @@ class Game:
                     attacker == Faction.EYRIE and self.eyrie.get_active_leader() == EyrieLeader.COMMANDER) else 0
             defender_extra_hits: int = 0
 
-            self.sappers_enable = dict.fromkeys(self.sappers_enable, False)
-            self.brutal_tactics_enable = dict.fromkeys(self.brutal_tactics_enable, False)
+            self.attacker_activate_battle_ability_card(attacker, defender, attacker_roll, defender_roll,
+                                                       attacker_extra_hits + defender_defenseless_extra_hits,
+                                                       defender_extra_hits, clearing,
+                                                       continuation_func)
 
-            self.battle_armorers_attacker(attacker, defender, attacker_roll, defender_roll,
-                                          attacker_extra_hits + defender_defenseless_extra_hits, defender_extra_hits,
-                                          clearing)
+    def attacker_activate_battle_ability_card(self, attacker, defender, attacker_rolled_hits, defender_rolled_hits,
+                                              attacker_extra_hits,
+                                              defender_extra_hits, clearing, continuation_func):
+        attacker_faction_board = self.faction_to_faction_board(attacker)
 
-    def battle_armorers_attacker(self, attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
-                                 defender_extra_hits, clearing):
-        attacker_armorers_actions = self.generate_actions_armorers(attacker, attacker, defender, attacker_roll,
-                                                                   defender_roll, attacker_extra_hits,
-                                                                   defender_extra_hits, clearing)
+        atk_brutal_tactics = [card for card in attacker_faction_board.crafted_cards if
+                              card.name == PlayingCardName.BRUTAL_TACTICS]
+        atk_armorers = [card for card in attacker_faction_board.crafted_cards if card.name == PlayingCardName.ARMORERS]
 
-        if len(attacker_armorers_actions) > 0 and attacker_roll != 0:
-            self.prompt = "{}: Discard Armorers to ignored rolled hits.".format(attacker)
-            self.set_actions(attacker_armorers_actions + [Action('Next',
-                                                                 perform(self.battle_armorers_defender,
-                                                                         attacker, defender, attacker_roll,
-                                                                         defender_roll, attacker_extra_hits,
-                                                                         defender_extra_hits, clearing))])
+        atk_actions = []
+
+        if len(atk_brutal_tactics) > 0 and attacker_faction_board.activated_card.count(atk_brutal_tactics[0]) < 1:
+            brutal_tactics_card = atk_brutal_tactics[0]
+            atk_actions.append(Action('Use {} ({})'.format(brutal_tactics_card.name, brutal_tactics_card.suit),
+                                      perform(self.brutal_tactics, brutal_tactics_card, attacker, defender,
+                                              attacker_rolled_hits, defender_rolled_hits, attacker_extra_hits,
+                                              defender_extra_hits, clearing, continuation_func)))
+
+        if len(atk_armorers) > 0 and attacker_faction_board.activated_card.count(atk_armorers[0]) < 1:
+            armorers_card = atk_armorers[0]
+            atk_actions.append(Action('Use {} ({})'.format(armorers_card.name, armorers_card.suit),
+                                      perform(self.armorers, attacker, armorers_card, attacker, defender,
+                                              attacker_rolled_hits, defender_rolled_hits, attacker_extra_hits,
+                                              defender_extra_hits, clearing, continuation_func,
+                                              self.attacker_activate_battle_ability_card)))
+
+        if len(atk_actions) > 0:
+            self.turn_player = attacker
+            self.prompt = "{}: Activate Battle Ability Card?".format(attacker)
+            self.set_actions(atk_actions + [Action('Skip',
+                                                   perform(self.defender_activate_battle_ability_card, attacker,
+                                                           defender,
+                                                           attacker_rolled_hits, defender_rolled_hits,
+                                                           attacker_extra_hits,
+                                                           defender_extra_hits, clearing, continuation_func))])
         else:
-            self.battle_armorers_defender(attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
-                                          defender_extra_hits, clearing)
+            self.defender_activate_battle_ability_card(attacker, defender, attacker_rolled_hits, defender_rolled_hits,
+                                                       attacker_extra_hits,
+                                                       defender_extra_hits, clearing, continuation_func)
 
-    def battle_armorers_defender(self, attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
-                                 defender_extra_hits, clearing):
-        defender_armorers_actions = self.generate_actions_armorers(defender, attacker, defender, attacker_roll,
-                                                                   defender_roll, attacker_extra_hits,
-                                                                   defender_extra_hits, clearing)
+    def defender_activate_battle_ability_card(self, attacker, defender, attacker_rolled_hits, defender_rolled_hits,
+                                              attacker_extra_hits,
+                                              defender_extra_hits, clearing, continuation_func):
+        defender_faction_board = self.faction_to_faction_board(defender)
 
-        if len(defender_armorers_actions) > 0 and defender_roll != 0:
-            self.prompt = "{}: Discard Armorers to ignored rolled hits.".format(defender)
-            self.set_actions(defender_armorers_actions + [Action('Next',
-                                                                 perform(self.battle_sappers,
-                                                                         attacker, defender, attacker_roll,
-                                                                         defender_roll, attacker_extra_hits,
-                                                                         defender_extra_hits, clearing))])
+        def_sappers = [card for card in defender_faction_board.crafted_cards if card.name == PlayingCardName.SAPPERS]
+        def_armorers = [card for card in defender_faction_board.crafted_cards if card.name == PlayingCardName.ARMORERS]
+
+        def_actions = []
+
+        if len(def_sappers) > 0 and defender_faction_board.activated_card.count(def_sappers[0]) < 1:
+            sappers_card = def_sappers[0]
+            def_actions.append(Action('Use {} ({})'.format(sappers_card.name, sappers_card.suit),
+                                      perform(self.sappers, sappers_card, attacker, defender,
+                                              attacker_rolled_hits, defender_rolled_hits, attacker_extra_hits,
+                                              defender_extra_hits, clearing, continuation_func)))
+
+        if len(def_armorers) > 0 and defender_faction_board.activated_card.count(def_armorers[0]) < 1:
+            armorers_card = def_armorers[0]
+            def_actions.append(Action('Use {} ({})'.format(armorers_card.name, armorers_card.suit),
+                                      perform(self.armorers, defender, armorers_card, attacker, defender,
+                                              attacker_rolled_hits, defender_rolled_hits, attacker_extra_hits,
+                                              defender_extra_hits, clearing, continuation_func,
+                                              self.defender_activate_battle_ability_card)))
+
+        if len(def_actions) > 0:
+            self.turn_player = defender
+            self.prompt = "{}: Activate Battle Ability Card?".format(defender)
+            self.set_actions(def_actions + [Action('Skip',
+                                                   perform(self.resolve_hits, attacker, defender,
+                                                           attacker_rolled_hits, defender_rolled_hits,
+                                                           attacker_extra_hits,
+                                                           defender_extra_hits, clearing, continuation_func))])
         else:
-            self.battle_sappers(attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
-                                defender_extra_hits, clearing)
+            self.resolve_hits(attacker, defender, attacker_rolled_hits, defender_rolled_hits,
+                              attacker_extra_hits,
+                              defender_extra_hits, clearing, continuation_func)
 
-    def armorers(self, faction, card, attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
-                 defender_extra_hits, clearing):
-        LOGGER.info(
-            "{}:{}:{}:battle:{} discard Armorers (Rolled hits will be ignored)".format(self.turn_player, self.phase,
-                                                                                       self.sub_phase, faction))
-        faction_board = self.faction_to_faction_board(faction)
-        self.discard_card(faction_board.crafted_cards, card)
-        if faction == attacker:
-            self.battle_armorers_attacker(attacker, defender, 0, defender_roll, attacker_extra_hits,
-                                          defender_extra_hits, clearing)
-        elif faction == defender:
-            self.battle_armorers_defender(attacker, defender, attacker_roll, 0, attacker_extra_hits,
-                                          defender_extra_hits, clearing)
-
-    def generate_actions_armorers(self, faction, attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
-                                  defender_extra_hits, clearing):
-        actions = []
-
-        faction_board = self.faction_to_faction_board(faction)
-        armorers = [card for card in faction_board.crafted_cards if card.name == PlayingCardName.ARMORERS]
-
-        for card in armorers:
-            actions.append(Action('Discard {}'.format(card.name),
-                                  perform(self.armorers, faction, card, attacker, defender, attacker_roll,
-                                          defender_roll, attacker_extra_hits, defender_extra_hits, clearing)))
-
-        return actions
-
-    def battle_sappers(self, attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
-                       defender_extra_hits, clearing):
-        defender_armorers_actions = self.generate_actions_battle_crafted_card_actions(attacker, defender, attacker_roll,
-                                                                                      defender_roll,
-                                                                                      attacker_extra_hits,
-                                                                                      defender_extra_hits, clearing,
-                                                                                      PlayingCardName.SAPPERS,
-                                                                                      self.sappers)
-        if len(defender_armorers_actions) > 0 and not self.sappers_enable[defender]:
-            self.prompt = "{}: Discard Sappers to add extra hits.".format(defender)
-            self.set_actions(defender_armorers_actions + [Action('Next',
-                                                                 perform(self.battle_brutal_tactics,
-                                                                         attacker, defender, attacker_roll,
-                                                                         defender_roll, attacker_extra_hits,
-                                                                         defender_extra_hits, clearing))])
-        else:
-            self.battle_brutal_tactics(attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
-                                       defender_extra_hits, clearing)
-
-    def sappers(self, card, attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
-                defender_extra_hits, clearing):
-        LOGGER.info(
-            "{}:{}:{}:battle:{} discard Sappers (Add extra hits)".format(self.turn_player, self.phase,
-                                                                         self.sub_phase, defender))
-        self.sappers_enable[defender] = True
-        faction_board = self.faction_to_faction_board(defender)
-        self.discard_card(faction_board.crafted_cards, card)
-        self.battle_sappers(attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
-                            defender_extra_hits + 1, clearing)
-
-    def battle_brutal_tactics(self, attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
-                              defender_extra_hits, clearing):
-        attacker_brutal_tactics_actions = self.generate_actions_battle_crafted_card_actions(attacker, defender,
-                                                                                            attacker_roll,
-                                                                                            defender_roll,
-                                                                                            attacker_extra_hits,
-                                                                                            defender_extra_hits,
-                                                                                            clearing,
-                                                                                            PlayingCardName.BRUTAL_TACTICS,
-                                                                                            self.brutal_tactics)
-        if len(attacker_brutal_tactics_actions) > 0 and not self.brutal_tactics_enable[attacker]:
-            self.prompt = "{}: Use Brutal Tactics to add extra hits. (But defender scores one point.)".format(attacker)
-            self.set_actions(attacker_brutal_tactics_actions + [Action('Next',
-                                                                       perform(self.battle_deal_hits,
-                                                                               attacker, defender, attacker_roll,
-                                                                               defender_roll, attacker_extra_hits,
-                                                                               defender_extra_hits, clearing))])
-        else:
-            self.battle_deal_hits(attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
-                                  defender_extra_hits, clearing)
-
-    def brutal_tactics(self, attacker, defender, attacker_roll, defender_roll, attacker_extra_hits,
-                       defender_extra_hits, clearing):
-        LOGGER.info(
-            "{}:{}:{}:battle:{} use Brutal Tactics effect (Add extra hits)".format(self.turn_player, self.phase,
-                                                                                   self.sub_phase, attacker))
-        self.brutal_tactics_enable[attacker] = True
+    def brutal_tactics(self, brutal_tactics_card, attacker, defender, attacker_rolled_hits, defender_rolled_hits,
+                       attacker_extra_hits,
+                       defender_extra_hits, clearing, continuation_func):
+        attacker_faction_board = self.faction_to_faction_board(attacker)
+        attacker_faction_board.activated_card.append(brutal_tactics_card)
         self.gain_vp(defender, 1)
-        self.battle_brutal_tactics(attacker, defender, attacker_roll, defender_roll, attacker_extra_hits + 1,
-                                   defender_extra_hits, clearing)
+        self.attacker_activate_battle_ability_card(attacker, defender, attacker_rolled_hits, defender_rolled_hits,
+                                                   attacker_extra_hits + 1,
+                                                   defender_extra_hits, clearing, continuation_func)
 
-    def generate_actions_battle_crafted_card_actions(self, attacker, defender, attacker_roll, defender_roll,
-                                                     attacker_extra_hits,
-                                                     defender_extra_hits, clearing, crafted_card_name,
-                                                     continuation_func):
-        actions = []
-        if crafted_card_name == PlayingCardName.SAPPERS:
-            faction_board = self.faction_to_faction_board(defender)
-            cards = [card for card in faction_board.crafted_cards if card.name == crafted_card_name]
-            for card in cards:
-                actions.append(Action('Discard {}'.format(card.name),
-                                      perform(continuation_func, card, attacker, defender, attacker_roll, defender_roll,
-                                              attacker_extra_hits,
-                                              defender_extra_hits, clearing)))
-        elif crafted_card_name == PlayingCardName.BRUTAL_TACTICS:
-            faction_board = self.faction_to_faction_board(attacker)
-            cards = [card for card in faction_board.crafted_cards if card.name == crafted_card_name]
-            for card in cards:
-                actions.append(Action('Use {}'.format(card.name),
-                                      perform(continuation_func, attacker, defender, attacker_roll, defender_roll,
-                                              attacker_extra_hits,
-                                              defender_extra_hits, clearing)))
+    def armorers(self, faction, armorers_card, attacker, defender,
+                 attacker_rolled_hits, defender_rolled_hits, attacker_extra_hits,
+                 defender_extra_hits, clearing, continuation_func, redirect_func):
+        faction_board = self.faction_to_faction_board(faction)
+        faction_board.activated_card.append(armorers_card)
+        self.discard_card(faction_board.crafted_cards, armorers_card)
 
-        return actions
+        if faction == attacker:
+            redirect_func(attacker, defender,
+                          attacker_rolled_hits, 0, attacker_extra_hits,
+                          defender_extra_hits, clearing, continuation_func)
+        elif faction == defender:
+            redirect_func(attacker, defender,
+                          0, defender_rolled_hits, attacker_extra_hits,
+                          defender_extra_hits, clearing, continuation_func)
 
-    def battle_deal_hits(self, attacker, defender, attacker_roll, defender_roll,
-                         attacker_extra_hits,
-                         defender_extra_hits, clearing):
+    def sappers(self, sappers_card, attacker, defender, attacker_rolled_hits, defender_rolled_hits, attacker_extra_hits,
+                defender_extra_hits, clearing, continuation_func):
+        defender_faction_board = self.faction_to_faction_board(defender)
+        defender_faction_board.activated_card.append(sappers_card)
+        self.discard_card(defender_faction_board.crafted_cards, sappers_card)
+        self.defender_activate_battle_ability_card(attacker, defender, attacker_rolled_hits, defender_rolled_hits,
+                                                   attacker_extra_hits,
+                                                   defender_extra_hits + 1, clearing, continuation_func)
+
+    def resolve_hits(self, attacker, defender, attacker_rolled_hits, defender_rolled_hits, attacker_extra_hits,
+                     defender_extra_hits, clearing, continuation_func,
+                     redirect_func=None):
+
         attacker_faction_board = self.faction_to_faction_board(attacker)
         defender_faction_board = self.faction_to_faction_board(defender)
 
-        attacker_total_hits: int = min(attacker_roll, clearing.get_warrior_count(
+        attacker_total_hits: int = min(attacker_rolled_hits, clearing.get_warrior_count(
             faction_to_warrior(attacker))) + attacker_extra_hits
-        defender_total_hits: int = min(defender_roll,
+        defender_total_hits: int = min(defender_rolled_hits,
                                        clearing.get_warrior_count(faction_to_warrior(defender))) + defender_extra_hits
 
         # deal hits
@@ -1902,42 +1835,31 @@ class Game:
                                                                                    attacker_total_vp, defender_total_vp)
         )
 
-        # remove decree counter
-        if self.turn_player == Faction.EYRIE:
-            self.remove_decree_counter(DecreeAction.BATTLE, clearing.suit)
-
-        self.post_battle_marquise_field_hospital(attacker, defender, removed_attacker_warriors,
-                                                 removed_defender_warriors,
-                                                 attacker_remaining_hits, defender_remaining_hits, clearing)
-
-    def post_battle_marquise_field_hospital(self, attacker, defender, removed_attacker_warriors,
-                                            removed_defender_warriors,
-                                            attacker_remaining_hits, defender_remaining_hits, clearing):
         if attacker == Faction.MARQUISE and removed_attacker_warriors > 0 and self.marquise_field_hospital_check(
                 clearing):
-            self.prompt = "MARQUISE: Discard a card matching warrior's clearing to bring {} warriors back to the keep.".format(
-                removed_attacker_warriors)
-            self.set_actions(
-                self.generate_actions_field_hospital_select_card_to_discard(removed_attacker_warriors, attacker,
-                                                                            defender, attacker_remaining_hits,
-                                                                            defender_remaining_hits,
-                                                                            clearing)
-                + [Action('Next', perform(self.post_battle, attacker, defender, attacker_remaining_hits,
-                                          defender_remaining_hits, clearing))]
-            )
+            self.resolve_marquise_field_hospital(attacker, defender, attacker_remaining_hits, defender_remaining_hits,
+                                                 removed_attacker_warriors, clearing, continuation_func, redirect_func)
         elif defender == Faction.MARQUISE and removed_defender_warriors > 0 and self.marquise_field_hospital_check(
                 clearing):
-            self.prompt = "MARQUISE: Discard a card matching warrior's clearing to bring {} warriors back to the keep.".format(
-                removed_defender_warriors)
-            self.set_actions(
-                self.generate_actions_field_hospital_select_card_to_discard(removed_defender_warriors, attacker,
-                                                                            defender, attacker_remaining_hits,
-                                                                            defender_remaining_hits,
-                                                                            clearing)
-                + [Action('Next', perform(self.post_battle, attacker, defender, attacker_remaining_hits,
-                                          defender_remaining_hits, clearing))])
+            self.resolve_marquise_field_hospital(attacker, defender, attacker_remaining_hits, defender_remaining_hits,
+                                                 removed_defender_warriors, clearing, continuation_func, redirect_func)
         else:
-            self.post_battle(attacker, defender, attacker_remaining_hits, defender_remaining_hits, clearing)
+            self.resolve_remaining_hits(attacker, defender, attacker_remaining_hits, defender_remaining_hits, clearing,
+                                        continuation_func, redirect_func)
+
+    def resolve_marquise_field_hospital(self, attacker, defender, attacker_remaining_hits, defender_remaining_hits,
+                                        removed_warriors, clearing, continuation_func,
+                                        redirect_func):  # TODO: if attacker == marquise, marquise field hospital trigger immediately , otherwise , trigger at the birdsong
+        self.prompt = "MARQUISE: Discard a card matching warrior's clearing to bring {} warriors back to the keep.".format(
+            removed_warriors)
+        self.set_actions(
+            self.generate_actions_field_hospital_select_card_to_discard(removed_warriors, attacker,
+                                                                        defender, attacker_remaining_hits,
+                                                                        defender_remaining_hits,
+                                                                        clearing, continuation_func, redirect_func)
+            + [Action('Next', perform(self.resolve_remaining_hits, attacker, defender, attacker_remaining_hits,
+                                      defender_remaining_hits, clearing, continuation_func, redirect_func))]
+        )
 
     def marquise_field_hospital_check(self, clearing: Area):
         return len(self.marquise_field_hospital_get_cards(clearing)) > 0
@@ -1945,23 +1867,23 @@ class Game:
     def marquise_field_hospital_get_cards(self, clearing):
         return [card for card in self.marquise.cards_in_hand if card.suit == clearing.suit]
 
-    def generate_actions_field_hospital_select_card_to_discard(self, num_warriors, attacker, defender,
+    def generate_actions_field_hospital_select_card_to_discard(self, removed_warriors, attacker, defender,
                                                                attacker_remaining_hits, defender_remaining_hits,
-                                                               clearing):
-        discarable_cards = self.marquise_field_hospital_get_cards(clearing)
+                                                               clearing, continuation_func, redirect_func):
+        discardable_cards = self.marquise_field_hospital_get_cards(clearing)
         actions = []
 
-        for card in discarable_cards:
+        for card in discardable_cards:
             actions.append(
                 Action("{} ({})".format(card.name, card.suit),
-                       perform(self.marquise_field_hospital, card, num_warriors, attacker, defender,
+                       perform(self.marquise_field_hospital, card, removed_warriors, attacker, defender,
                                attacker_remaining_hits,
-                               defender_remaining_hits, clearing)))
+                               defender_remaining_hits, clearing, continuation_func, redirect_func)))
 
         return actions
 
-    def marquise_field_hospital(self, card, num_warriors, attacker, defender, attacker_remaining_hits,
-                                defender_remaining_hits, target_clearing):
+    def marquise_field_hospital(self, card, removed_warriors, attacker, defender, attacker_remaining_hits,
+                                defender_remaining_hits, battle_clearing, continuation_func, redirect_func):
         LOGGER.info(
             "{}:{}:{}:{}:discard_card {} ({}) discarded".format(self.turn_player, self.phase, self.sub_phase,
                                                                 Faction.MARQUISE,
@@ -1970,117 +1892,134 @@ class Game:
         self.discard_card(self.marquise.cards_in_hand, card)
         for clearing in self.board.areas:
             if clearing.token_count[Token.CASTLE] > 0:
-                clearing.add_warrior(Warrior.MARQUISE, num_warriors)
+                clearing.add_warrior(Warrior.MARQUISE, removed_warriors)
                 break
 
-        self.post_battle(attacker, defender, attacker_remaining_hits, defender_remaining_hits, target_clearing)
+        self.resolve_remaining_hits(attacker, defender, attacker_remaining_hits, defender_remaining_hits,
+                                    battle_clearing,
+                                    continuation_func, redirect_func)
 
-    def post_battle(self, attacker: Faction, defender: Faction, attacker_remaining_hits, defender_remaining_hits,
-                    clearing: Area):
-        if attacker_remaining_hits == defender_remaining_hits == 0:
-            LOGGER.info(
-                "{}:{}:{}:battle:Battle end".format(self.turn_player, self.phase,
-                                                    self.sub_phase))
-
-            if self.turn_player == Faction.MARQUISE:
-                self.marquise_action_count -= 1
-                self.marquise_daylight_2()
-            elif self.turn_player == Faction.EYRIE:
-                self.eyrie_pre_battle()
-        elif attacker_remaining_hits > 0:
-            actions = self.generate_actions_select_piece_to_remove(attacker, defender,
-                                                                   attacker_remaining_hits,
-                                                                   defender_remaining_hits,
-                                                                   clearing, self.post_battle_remove_piece)
-            if len(actions) == 0:
-                self.prompt = "{}: No Token/Building can be removed.".format(defender)
-                self.set_actions([Action('Next',
-                                         perform(self.post_battle, defender, attacker, defender_remaining_hits, 0,
-                                                 clearing))])
+    def resolve_remaining_hits(self, attacker, defender, attacker_remaining_hits, defender_remaining_hits, clearing,
+                               continuation_func, redirect_func):
+        if attacker_remaining_hits == 0 and defender_remaining_hits == 0:
+            if redirect_func is not None:
+                redirect_func(attacker, defender, clearing, continuation_func)
             else:
-                if attacker == Faction.EYRIE:
-                    if self.eyrie.get_active_leader() == EyrieLeader.DESPOT:
-                        LOGGER.info(
-                            "{}:{}:{}:post_battle: despot, gain 1 additional vp".format(self.turn_player, self.phase,
-                                                                                        self.sub_phase))
-                        self.gain_vp(Faction.EYRIE, 1)
+                continuation_func()
+        else:
+            if redirect_func is not None:
+                redirect_func(attacker, defender, clearing, continuation_func)
+            else:
+                continuation_func()
 
-                self.prompt = "{}: Select Token/Building to be removed (Remaining: {})".format(defender,
-                                                                                               attacker_remaining_hits)
-                self.set_actions(actions)
+    # LOGGER.info(
+    #     "{}:{}:{}:battle:{} discard AMBUSH".format(self.turn_player, self.phase, self.sub_phase, attacker))
 
-        elif attacker_remaining_hits == 0:
-            self.post_battle(defender, attacker, defender_remaining_hits, attacker_remaining_hits, clearing)
-
-    def generate_actions_select_piece_to_remove(self, attacker: Faction, defender: Faction,
-                                                attacker_remaining_hits, defender_remaining_hits,
-                                                clearing: Area, func: any):
-        actions = []
-        buildings = faction_to_buildings(defender)
-        tokens = faction_to_tokens(defender)
-
-        if defender == Faction.MARQUISE:
-            for token in tokens:
-                if token == Token.WOOD and clearing.token_count[token] > 0:
-                    actions.append(
-                        Action("Wood",
-                               perform(func, attacker, defender, attacker_remaining_hits,
-                                       defender_remaining_hits, clearing,
-                                       Token.WOOD))
-                    )
-            for building in buildings:
-                if clearing.buildings.count(building) > 0:
-                    actions.append(
-                        Action(building.name,
-                               perform(func, attacker, defender, attacker_remaining_hits,
-                                       defender_remaining_hits, clearing,
-                                       building))
-                    )
-
-        elif defender == Faction.EYRIE:
-            for building in buildings:
-                if clearing.buildings.count(building) > 0:
-                    actions.append(
-                        Action(building.name,
-                               perform(func, attacker, defender, attacker_remaining_hits,
-                                       defender_remaining_hits, clearing,
-                                       building))
-                    )
-
-        return actions
-
-    def post_battle_remove_piece(self, attacker, defender, attacker_remaining_hits, defender_remaining_hits, clearing,
-                                 piece):
-        LOGGER.info(
-            "{}:{}:{}:battle:{} remove {}'s {}".format(self.turn_player, self.phase, self.sub_phase, attacker, defender,
-                                                       piece))
-
-        self.remove_piece(attacker, clearing, defender, piece)
-        self.post_battle(attacker, defender, attacker_remaining_hits - 1, defender_remaining_hits, clearing)
-
-    def remove_piece(self, attacker: Faction, clearing: Area, defender: Faction, piece):
-
-        if isinstance(piece, Building):
-            if defender == Faction.MARQUISE:
-                self.marquise.building_trackers[piece] -= 1
-            elif defender == Faction.EYRIE:
-                self.eyrie.roost_tracker -= 1
-            clearing.remove_building(piece)
-        elif isinstance(piece, Token):
-            clearing.remove_token(piece)
-
-        self.gain_vp(attacker, 1)
-
-    def generate_actions_select_card_to_discard(self, faction: Faction) -> list[Action]:
-        actions: list[Action] = []
-
-        faction_board = self.faction_to_faction_board(faction)
-
-        for card in faction_board.cards_in_hand:
-            actions.append(Action("Card {} ({})".format(card.name, card.suit),
-                                  perform(self.select_card_to_discard, faction, card)))
-
-        return actions
+    # def post_battle(self, attacker: Faction, defender: Faction, attacker_remaining_hits, defender_remaining_hits,
+    #                 clearing: Area, continuation_func):
+    #     if attacker_remaining_hits == defender_remaining_hits == 0:
+    #         LOGGER.info(
+    #             "{}:{}:{}:battle:Battle end".format(self.turn_player, self.phase,
+    #                                                 self.sub_phase))
+    #
+    #         continuation_func()
+    #     elif attacker_remaining_hits > 0:
+    #         actions = self.generate_actions_select_piece_to_remove(attacker, defender,
+    #                                                                attacker_remaining_hits,
+    #                                                                defender_remaining_hits,
+    #                                                                clearing, self.post_battle_remove_piece,
+    #                                                                continuation_func)
+    #         if len(actions) == 0:
+    #             self.prompt = "{}: No Token/Building can be removed.".format(defender)
+    #             self.set_actions([Action('Next',
+    #                                      perform(self.post_battle, defender, attacker, defender_remaining_hits, 0,
+    #                                              clearing, continuation_func))])
+    #         else:
+    #             if attacker == Faction.EYRIE:
+    #                 if self.eyrie.get_active_leader() == EyrieLeader.DESPOT:
+    #                     LOGGER.info(
+    #                         "{}:{}:{}:post_battle: despot, gain 1 additional vp".format(self.turn_player, self.phase,
+    #                                                                                     self.sub_phase))
+    #                     self.gain_vp(Faction.EYRIE, 1)
+    #
+    #             self.prompt = "{}: Select Token/Building to be removed (Remaining: {})".format(defender,
+    #                                                                                            attacker_remaining_hits)
+    #             self.set_actions(actions)
+    #
+    #     elif attacker_remaining_hits == 0:
+    #         self.post_battle(defender, attacker, defender_remaining_hits, attacker_remaining_hits, clearing,
+    #                          continuation_func)
+    #
+    # def generate_actions_select_piece_to_remove(self, attacker: Faction, defender: Faction,
+    #                                             attacker_remaining_hits, defender_remaining_hits,
+    #                                             clearing: Area, func: any, continuation_func):
+    #     actions = []
+    #     buildings = faction_to_buildings(defender)
+    #     tokens = faction_to_tokens(defender)
+    #
+    #     if defender == Faction.MARQUISE:
+    #         for token in tokens:
+    #             if token == Token.WOOD and clearing.token_count[token] > 0:
+    #                 actions.append(
+    #                     Action("Wood",
+    #                            perform(func, attacker, defender, attacker_remaining_hits,
+    #                                    defender_remaining_hits, clearing,
+    #                                    Token.WOOD, continuation_func))
+    #                 )
+    #         for building in buildings:
+    #             if clearing.buildings.count(building) > 0:
+    #                 actions.append(
+    #                     Action(building.name,
+    #                            perform(func, attacker, defender, attacker_remaining_hits,
+    #                                    defender_remaining_hits, clearing,
+    #                                    building, continuation_func))
+    #                 )
+    #
+    #     elif defender == Faction.EYRIE:
+    #         for building in buildings:
+    #             if clearing.buildings.count(building) > 0:
+    #                 actions.append(
+    #                     Action(building.name,
+    #                            perform(func, attacker, defender, attacker_remaining_hits,
+    #                                    defender_remaining_hits, clearing,
+    #                                    building, continuation_func))
+    #                 )
+    #
+    #     return actions
+    #
+    # def post_battle_remove_piece(self, attacker, defender, attacker_remaining_hits, defender_remaining_hits, clearing,
+    #                              piece, continuation_func):
+    #     LOGGER.info(
+    #         "{}:{}:{}:battle:{} remove {}'s {}".format(self.turn_player, self.phase, self.sub_phase, attacker, defender,
+    #                                                    piece))
+    #
+    #     self.remove_piece(attacker, clearing, defender, piece)
+    #     self.post_battle(attacker, defender, attacker_remaining_hits - 1, defender_remaining_hits, clearing,
+    #                      continuation_func)
+    #
+    # def remove_piece(self, attacker: Faction, clearing: Area, defender: Faction, piece):
+    #
+    #     if isinstance(piece, Building):
+    #         if defender == Faction.MARQUISE:
+    #             self.marquise.building_trackers[piece] -= 1
+    #         elif defender == Faction.EYRIE:
+    #             self.eyrie.roost_tracker -= 1
+    #         clearing.remove_building(piece)
+    #     elif isinstance(piece, Token):
+    #         clearing.remove_token(piece)
+    #
+    #     self.gain_vp(attacker, 1)
+    #
+    # def generate_actions_select_card_to_discard(self, faction: Faction) -> list[Action]:
+    #     actions: list[Action] = []
+    #
+    #     faction_board = self.faction_to_faction_board(faction)
+    #
+    #     for card in faction_board.cards_in_hand:
+    #         actions.append(Action("Card {} ({})".format(card.name, card.suit),
+    #                               perform(self.select_card_to_discard, faction, card)))
+    #
+    #     return actions
 
     def get_building_count_by_suit(self, building: Building | str) -> {Suit: int}:
         building_count: {Suit: int} = {
@@ -2177,8 +2116,7 @@ class Game:
 
         continuation_func()
 
-    def generate_actions_cards_birdsong(self, faction):
-
+    def generate_actions_cards_birdsong(self, faction, continuation_func):
         actions = []
         faction_board = self.faction_to_faction_board(faction)
         for card in faction_board.crafted_cards:
@@ -2186,14 +2124,14 @@ class Game:
                 continue
             if card.name == PlayingCardName.ROYAL_CLAIM:
                 actions.append(Action('Discard {}'.format(card.name),
-                                      perform(self.royal_claim, faction, card)))
+                                      perform(self.royal_claim, faction, card, continuation_func)))
             if card.name == PlayingCardName.STAND_AND_DELIVER:
                 actions.append(
                     Action('Use {} effect'.format(card.name),
-                           perform(self.stand_and_deliver_select_faction, faction, card)))
+                           perform(self.stand_and_deliver_select_faction, faction, card, continuation_func)))
         return actions
 
-    def royal_claim(self, faction, card):
+    def royal_claim(self, faction, card, continuation_func):
         faction_board = self.faction_to_faction_board(faction)
 
         self.discard_card(faction_board.crafted_cards, card)
@@ -2204,18 +2142,15 @@ class Game:
                 gained_vp += 1
         self.gain_vp(faction, gained_vp)
 
-        if faction == Faction.MARQUISE:
-            self.marquise_birdsong_cards()
-        elif faction == Faction.EYRIE:  # TODO
-            pass
+        continuation_func()
 
-    def stand_and_deliver_select_faction(self, faction, card):
+    def stand_and_deliver_select_faction(self, faction, card, continuation_func):
         faction_board = self.faction_to_faction_board(faction)
         faction_board.activated_card.append(card)
         self.prompt = "Select Faction"
-        self.set_actions(self.generate_actions_stand_and_deliver_select_faction(faction))
+        self.set_actions(self.generate_actions_stand_and_deliver_select_faction(faction, continuation_func))
 
-    def generate_actions_stand_and_deliver_select_faction(self, faction):
+    def generate_actions_stand_and_deliver_select_faction(self, faction, continuation_func):
         actions = []
         available_faction = [Faction.MARQUISE, Faction.EYRIE]
         available_faction.remove(faction)
@@ -2224,10 +2159,10 @@ class Game:
             if len(self.faction_to_faction_board(enemy_faction).cards_in_hand) > 0:
                 actions.append(
                     Action('{}'.format(enemy_faction),
-                           perform(self.stand_and_deliver, faction, enemy_faction)))
+                           perform(self.stand_and_deliver, faction, enemy_faction, continuation_func)))
         return actions
 
-    def stand_and_deliver(self, faction, stolen_faction):
+    def stand_and_deliver(self, faction, stolen_faction, continuation_func):
         faction_board = self.faction_to_faction_board(faction)
         stolen_faction_board = self.faction_to_faction_board(stolen_faction)
 
@@ -2238,10 +2173,7 @@ class Game:
 
         self.gain_vp(stolen_faction, 1)
 
-        if faction == Faction.MARQUISE:
-            self.marquise_birdsong_cards()
-        elif faction == Faction.EYRIE:  # TODO
-            pass
+        continuation_func()
 
     def better_burrow_bank(self,
                            faction):  # There is only 2 faction. So when this effect activate, both faction draws a card.
@@ -2250,6 +2182,45 @@ class Game:
         if len(cards) > 0:
             for faction in [Faction.MARQUISE, Faction.EYRIE]:
                 self.take_card_from_draw_pile(faction)
+
+    def generate_actions_cards_daylight(self, faction, continuation_func):
+        actions = []
+        faction_board = self.faction_to_faction_board(faction)
+        for card in faction_board.crafted_cards:
+            if faction_board.activated_card.count(card) > 0:
+                continue
+            if card.name == PlayingCardName.TAX_COLLECTOR:
+                actions.append(Action('Use {} effect'.format(card.name),
+                                      perform(self.tax_collector_select_clearing, faction, continuation_func)))
+            if card.name == PlayingCardName.COMMAND_WARREN:
+                actions.append(Action('Use {} effect'.format(card.name),
+                                      perform(self.command_warren, faction, continuation_func)))
+
+        return actions
+
+    def command_warren(self, faction, continuation_func):
+        self.set_actions(self.generate_actions_select_clearing_battle(faction))
+
+    def tax_collector_select_clearing(self, faction, continuation_func):
+        self.prompt = "Select Clearing"
+        self.set_actions(self.generate_actions_tax_collector_select_clearing(faction, continuation_func))
+
+    def generate_actions_tax_collector_select_clearing(self, faction, continuation_func):
+        actions = []
+
+        for clearing in self.board.areas:
+            if clearing.warrior_count[faction_to_warrior(faction)] > 0:
+                actions.append(Action('{}'.format(clearing.area_index),
+                                      perform(self.tax_collector, faction, clearing, continuation_func)))
+
+        return actions
+
+    def tax_collector(self, faction, clearing, continuation_func):
+        warrior = faction_to_warrior(faction)
+        clearing.remove_warrior(warrior, 1)
+        self.take_card_from_draw_pile(faction, 1)
+
+        continuation_func()
 
     def faction_to_faction_board(self, faction: Faction) -> FactionBoard:
         if faction == Faction.MARQUISE:
