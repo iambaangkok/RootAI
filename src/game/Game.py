@@ -1475,7 +1475,7 @@ class Game:
                 decree_can_build_in[suit] = count_decree_action_static(self.decree_counter, DecreeAction.BUILD, suit)
 
             for clearing in self.board.areas:
-                if self.eyrie.roost_tracker > len(EyrieBoard.ROOST_REWARD_VP):  # roost tracker in range [0, 7]
+                if self.eyrie.roost_tracker > 7:  # roost tracker in range [0, 7]
                     break
                 if clearing.ruler() != Warrior.EYRIE:
                     continue
