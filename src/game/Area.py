@@ -294,8 +294,8 @@ class Area:
     def add_building(self, building: Building):
         self.buildings.append(building)
 
-    def remove_building(self, building):
-        self.buildings.remove(building)
+    def remove_building(self, building: Building):
+        self.buildings[self.buildings.index(building)] = Building.EMPTY
 
     def sum_all_pieces(self) -> int:
         sum_of_pieces = 0
