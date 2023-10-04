@@ -624,9 +624,8 @@ class Game:
         min_cost = float('inf')
 
         for building, tracker in building_tracker.items():
-            if tracker >= 6:
-                continue
-            min_cost = min(cost[tracker], min_cost)
+            if tracker < 6:
+                min_cost = min(cost[tracker], min_cost)
 
         return min_cost
 
@@ -1495,7 +1494,7 @@ class Game:
             building_tracker = self.marquise.building_trackers
 
             for building, tracker in building_tracker.items():
-                if woods >= cost[tracker]:
+                if tracker < 6 and woods >= cost[tracker]:
                     buildings.append(building)
         elif faction == Faction.EYRIE:
             buildings.append(Building.ROOST)
