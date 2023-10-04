@@ -1140,14 +1140,16 @@ class Game:
                 self.gain_vp(faction, card.reward_vp)
                 if card.reward_item is not None:
                     self.marquise.items[card.reward_item] += 1
+                    self.board.remove_item_from_board(card.reward_item)
                 self.discard_card(self.marquise.cards_in_hand, card)
             else:
-                self.discard_card(self.marquise.cards_in_hand, card)
+                self.marquise.cards_in_hand.remove(card)
                 self.marquise.crafted_cards.append(card)
 
             for suit in card.craft_requirement.keys():
                 self.marquise.spend_crafting_piece(suit, card.craft_requirement[suit])
 
+            print("MARQUISE",[card.name for card in self.marquise.cards_in_hand],[card.name for card in self.marquise.crafted_cards])
             self.prompt = "{} has been crafted.".format(card.name)
             self.set_actions([Action("Next", self.marquise_daylight)])
 
@@ -1163,6 +1165,7 @@ class Game:
                 # Gain Item
                 if card.reward_item is not None:
                     self.eyrie.items[card.reward_item] += 1
+                    self.board.remove_item_from_board(card.reward_item)
 
                 self.discard_card(self.eyrie.cards_in_hand, card)
             else:
@@ -1177,22 +1180,18 @@ class Game:
         craftable_cards: list[PlayingCard] = []
 
         cards_in_hand: list[PlayingCard] = []
-        crafting_station: {Suit: int} = {}
         faction_board = self.faction_to_faction_board(faction)
         if faction == Faction.MARQUISE:
             cards_in_hand = self.marquise.cards_in_hand
-            crafting_station = self.marquise.crafting_pieces_count
         elif faction == Faction.EYRIE:
             cards_in_hand = self.eyrie.cards_in_hand
-            crafting_station = self.get_roost_count_by_suit()
 
         for card in cards_in_hand:
-            can_craft = True
             if card.craft_requirement is None:
                 continue
+
+            can_craft = True
             for suit in card.craft_requirement.keys():
-                if card.craft_requirement[suit] > crafting_station[suit]:
-                    can_craft = False
                 if not faction_board.can_spend_crafting_piece(suit, card.craft_requirement[suit]):
                     can_craft = False
                 elif (card.reward_item is not None) and (not self.board.item_available(card.reward_item)):
