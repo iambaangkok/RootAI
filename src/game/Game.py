@@ -365,7 +365,7 @@ class Game:
         vp_eyrie: int = self.board.faction_points[Faction.EYRIE]
         winning_dominance: None | PlayingCard = self.check_win_condition_dominance(winning_faction, True) if self.faction_to_faction_board(
             winning_faction).dominance_card is not None else None
-        winning_condition: str = "dominance" if winning_dominance is None else "vp"
+        winning_condition: str = "vp" if winning_dominance is None else "dominance"
 
         return winning_faction, winning_condition, turns_played, turn_player, vp_marquise, vp_eyrie, winning_dominance
 

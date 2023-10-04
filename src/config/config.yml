@@ -1,19 +1,27 @@
 screen:
   width: 1680
   height: 960
+
 simulation:
   f-key-action: random # current | random
-  framerate: 60
+  framerate: 600
+  auto-next-round: true # true | false
+  round: 5
+  output:
+    enable: true # true | false
+    dir: output # str
 
 agent:
   require-key-hold: false # true | false
   marquise:
-    use-agent: true # true | false
-    agent-type: random # random | mcts | rnn
+    enable: true # true | false
+    type: random # random | mcts | rnn
   eyrie:
-    use-agent: true
-    agent-type: random
+    enable: true
+    type: random
 
 game:
+  rendering:
+    enable: true # true | false
   victory-point-limit: 30
   allow-dominance-card: false # true | false

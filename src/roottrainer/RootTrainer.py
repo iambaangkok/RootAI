@@ -10,6 +10,7 @@ from src.config import Config, Colors
 from src.game.Faction import Faction
 from src.game.Game import Action, Game
 from src.roottrainer.Agent import Agent
+from src.roottrainer.CSVOutputWriter import CSVOutputWriter
 from src.roottrainer.RandomDecisionAgent import RandomDecisionAgent
 from src.utils.draw_utils import draw_text_in_rect
 
@@ -45,8 +46,27 @@ class RootTrainer:
         self.marquise_agent = self.init_agent(Faction.MARQUISE)
         self.eyrie_agent = self.init_agent(Faction.EYRIE)
 
+        self.round_limit = config['simulation']['round']
+        self.round = 1
+
+        # Output
+        self.collected_end_game_data = False
+
+        self.winning_faction = ""
+        self.winning_condition = ""
+        self.turns_played = 0
+        self.turn_player = ""
+        self.vp_marquise = 0
+        self.vp_eyrie = 0
+        self.winning_dominance = ""
+
+        self.output_writer = CSVOutputWriter(config['simulation']['output']['dir'])
+        if config['simulation']['output']['enable']:
+            self.output_writer.open()
+            self.output_writer.write(['winner', 'condition', 'turn', 'current_player', 'vp_marquise', 'vp_eyrie', 'winning_dominance'])
+
     def init_agent(self, faction: Faction) -> Agent:
-        match config['agent'][faction.lower()]['agent-type']:
+        match config['agent'][faction.lower()]['type']:
             case "random":
                 return RandomDecisionAgent(faction)
 
@@ -74,11 +94,54 @@ class RootTrainer:
     def update(self):
         keys = pygame.key.get_pressed()  # Checking pressed (hold) keys
 
+        if not self.game.running and not self.collected_end_game_data:
+            self.winning_faction, \
+                self.winning_condition, \
+                self.turns_played, \
+                self.turn_player, \
+                self.vp_marquise, \
+                self.vp_eyrie, \
+                self.winning_dominance = self.game.get_end_game_data()
+
+            if self.winning_dominance is None:
+                self.winning_dominance = "none"
+            else:
+                self.winning_dominance = self.winning_dominance.suit.lower()
+
+            self.collected_end_game_data = True
+            if config['simulation']['output']['enable']:
+                self.output_writer.write([
+                    self.winning_faction, self.winning_condition, self.turns_played, self.turn_player,
+                    self.vp_marquise, self.vp_eyrie, self.winning_dominance])
+
+        if not self.game.running:
+            if self.round + 1 <= self.round_limit:
+                if config['simulation']['auto-next-round']:
+                    self.game = Game()
+                    self.collected_end_game_data = False
+                    self.round += 1
+                    self.actions = self.game.get_actions()
+                    self.reset_arrow()
+                else:
+                    for event in pygame.event.get():
+                        if event.type == pygame.KEYDOWN:
+                            match event.key:
+                                case pygame.K_n:
+                                    self.game = Game()
+                                    self.collected_end_game_data = False
+                                    self.round += 1
+                                    self.actions = self.game.get_actions()
+                                    self.reset_arrow()
+                                case pygame.K_q:
+                                    self.running = False
+            else:
+                self.running = False
+
         if self.game.running:
             if keys[pygame.K_a] or (not config['agent']['require-key-hold']):
-                if self.game.turn_player == Faction.MARQUISE and config['agent']['marquise']['use-agent']:
+                if self.game.turn_player == Faction.MARQUISE and config['agent']['marquise']['enable']:
                     self.execute_agent_action(Faction.MARQUISE)
-                elif self.game.turn_player == Faction.EYRIE and config['agent']['eyrie']['use-agent']:
+                elif self.game.turn_player == Faction.EYRIE and config['agent']['eyrie']['enable']:
                     self.execute_agent_action(Faction.EYRIE)
 
             # elif keys[pygame.K_f]:
@@ -96,7 +159,6 @@ class RootTrainer:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
-
             if self.game.running:
                 if event.type == pygame.KEYDOWN:
                     self.move_arrow(event.key)
@@ -104,18 +166,10 @@ class RootTrainer:
                     if event.key == pygame.K_r:
                         self.random_arrow()
 
-                    # Whose turn is this?
                     if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
                         self.current_action.function()
                         self.actions = self.game.get_actions()
                         self.reset_arrow()
-            elif not self.game.running:
-                if event.type == pygame.KEYDOWN:
-                    match event.key:
-                        case pygame.K_n:
-                            self.game = Game()
-                        case pygame.K_q:
-                            self.running = False
 
         self.fps = self.calculate_fps()
 
@@ -183,10 +237,12 @@ class RootTrainer:
         # Fill Black
         self.screen.fill("black")
 
-        self.game.draw(self.screen)
+        if config['game']['rendering']['enable']:
+            self.game.draw(self.screen)
 
         self.draw_fps_text()
         self.draw_delta_time_text()
+        self.draw_round_text()
         self.draw_action(self.screen)
 
         if not self.game.running:
@@ -213,6 +269,20 @@ class RootTrainer:
         surface_rect = surface.get_rect()
         surface_rect.right = Config.SCREEN_WIDTH - margin_right
         surface_rect.top = margin_top
+
+        self.screen.blit(surface, surface_rect)
+
+    def draw_round_text(self):
+        margin_right = 120
+        margin_top = 20
+
+        text = "round: {}".format(self.round)
+        surface = Config.FONT_1.render(text, True, Colors.WHITE)
+        surface_rect = surface.get_rect()
+        surface_rect.right = Config.SCREEN_WIDTH - margin_right
+        surface_rect.top = margin_top
+        # surface_rect.centerx = Config.SCREEN_WIDTH / 2
+        # surface_rect.centery = Config.SCREEN_HEIGHT - margin_bottom
 
         self.screen.blit(surface, surface_rect)
 
@@ -262,7 +332,6 @@ class RootTrainer:
             ind = ind + 1
 
     def draw_game_ended(self, screen: Surface):
-        winning_faction, winning_condition, turns_played, turn_player, vp_marquise, vp_eyrie, winning_dominance = self.game.get_end_game_data()
 
         position = Vector2(Config.SCREEN_WIDTH / 2, Config.SCREEN_HEIGHT / 2)
 
@@ -278,7 +347,7 @@ class RootTrainer:
 
         ###
         shift = Vector2(0, -0.05 * Config.SCREEN_HEIGHT)
-        text = Config.FONT_XL.render("Game Ended", True, Colors.WHITE)
+        text = Config.FONT_XL.render("Round {}/{} Ended".format(self.round, self.round_limit), True, Colors.WHITE)
         rect = text.get_rect()
         rect.center = position + shift
         screen.blit(text, rect)
@@ -293,7 +362,7 @@ class RootTrainer:
         gap_y = 0.03
         ###
         shift = Vector2(-offset_x, 1 * gap_y * Config.SCREEN_HEIGHT)
-        text = Config.FONT_SM.render("winner: {}".format(winning_faction), True, Colors.WHITE)
+        text = Config.FONT_SM.render("winner: {}".format(self.winning_faction), True, Colors.WHITE)
         rect = text.get_rect()
         rect.midleft = position + shift
         screen.blit(text, rect)
@@ -301,39 +370,40 @@ class RootTrainer:
         gap_y = 0.03
         offset_y = 0.05
         shift = Vector2(-offset_x, offset_y + 2 * gap_y * Config.SCREEN_HEIGHT)
-        text = Config.FONT_SM.render("condition: {}".format(winning_condition), True, Colors.WHITE)
+        text = Config.FONT_SM.render("condition: {}".format(self.winning_condition), True, Colors.WHITE)
         rect = text.get_rect()
         rect.midleft = position + shift
         screen.blit(text, rect)
         ###
         shift = Vector2(-offset_x, offset_y + 3 * gap_y * Config.SCREEN_HEIGHT)
-        text = Config.FONT_SM.render("turn count: {}".format(turns_played), True, Colors.WHITE)
+        text = Config.FONT_SM.render("turn count: {}".format(self.turns_played), True, Colors.WHITE)
         rect = text.get_rect()
         rect.midleft = position + shift
         screen.blit(text, rect)
         ###
         shift = Vector2(-offset_x, offset_y + 4 * gap_y * Config.SCREEN_HEIGHT)
-        text = Config.FONT_SM.render("current player: {}".format(turn_player), True, Colors.WHITE)
+        text = Config.FONT_SM.render("current player: {}".format(self.turn_player), True, Colors.WHITE)
         rect = text.get_rect()
         rect.midleft = position + shift
         screen.blit(text, rect)
         ###
         shift = Vector2(-offset_x, offset_y + 5 * gap_y * Config.SCREEN_HEIGHT)
-        text = Config.FONT_SM.render("marquise vp: {}".format(vp_marquise), True, Colors.WHITE)
+        text = Config.FONT_SM.render("marquise vp: {}".format(self.vp_marquise), True, Colors.WHITE)
         rect = text.get_rect()
         rect.midleft = position + shift
         screen.blit(text, rect)
         ###
         shift = Vector2(-offset_x, offset_y + 6 * gap_y * Config.SCREEN_HEIGHT)
-        text = Config.FONT_SM.render("eyrie vp: {}".format(vp_eyrie), True, Colors.WHITE)
+        text = Config.FONT_SM.render("eyrie vp: {}".format(self.vp_eyrie), True, Colors.WHITE)
         rect = text.get_rect()
         rect.midleft = position + shift
         screen.blit(text, rect)
         ###
         shift = Vector2(-offset_x, offset_y + 7 * gap_y * Config.SCREEN_HEIGHT)
-        text = Config.FONT_SM.render("winning dominance: {}".format(winning_dominance.suit.tolower() if winning_dominance is not None else "none"),
-                                     True,
-                                     Colors.WHITE)
+        text = Config.FONT_SM.render(
+            "winning dominance: {}".format(self.winning_dominance.lower()),
+            True,
+            Colors.WHITE)
         rect = text.get_rect()
         rect.midleft = position + shift
         screen.blit(text, rect)
