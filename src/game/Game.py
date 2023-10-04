@@ -55,6 +55,7 @@ class Game:
 
         # Game Data
         self.turn_count: int = 0  # TODO: increase this on birdsong of both faction
+        self.ui_turn_player: Faction = Faction.MARQUISE
         self.turn_player: Faction = Faction.MARQUISE
         self.phase: Phase = Phase.BIRDSONG
         self.sub_phase = 0
@@ -361,7 +362,7 @@ class Game:
             winning_faction = Faction.EYRIE
 
         turns_played: int = self.turn_count
-        turn_player: Faction = self.turn_player
+        turn_player: Faction = self.ui_turn_player
         vp_marquise: int = self.board.faction_points[Faction.MARQUISE]
         vp_eyrie: int = self.board.faction_points[Faction.EYRIE]
         winning_dominance: None | PlayingCard = self.check_win_condition_dominance(winning_faction,
@@ -375,7 +376,7 @@ class Game:
     # MARQUISE
 
     def marquise_birdsong_start(self):
-        LOGGER.info("{}:{}:{}:MARQUISE's turn begins".format(self.turn_player, self.phase, self.sub_phase))
+        LOGGER.info("{}:{}:{}:MARQUISE's turn begins".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.turn_count += 1
 
         self.check_win_condition(Faction.MARQUISE)
@@ -421,7 +422,7 @@ class Game:
     def marquise_daylight_2(self):
         actions = []
         self.prompt = "Select Actions (Remaining Action: {})".format(self.marquise_action_count)
-        self.turn_player = Faction.MARQUISE
+        self.ui_turn_player = Faction.MARQUISE
         self.phase = Phase.DAYLIGHT
         self.sub_phase = 1
 
@@ -501,7 +502,7 @@ class Game:
     def marquise_daylight_recruit(self):
         self.marquise_recruit_count -= 1
         self.marquise_action_count -= 1
-        LOGGER.info("{}:{}:{}:MARQUISE recruit.".format(self.turn_player, self.phase, self.sub_phase))
+        LOGGER.info("{}:{}:{}:MARQUISE recruit.".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.prompt = "Recruit warrior"
 
         if self.marquise.reserved_warriors >= self.marquise.building_trackers[Building.RECRUITER]:
@@ -534,7 +535,7 @@ class Game:
     def recruit_single_clearing(self, clearing, remaining_clearing_with_recruiter):
         self.add_warrior(Faction.MARQUISE, clearing, 1)
         LOGGER.info(
-            "{}:{}:{}:MARQUISE adds warrior in clearing #{}".format(self.turn_player, self.phase,
+            "{}:{}:{}:MARQUISE adds warrior in clearing #{}".format(self.ui_turn_player, self.phase,
                                                                     self.sub_phase,
                                                                     clearing.area_index))
         self.marquise_daylight_recruit_some_clearings(remaining_clearing_with_recruiter)
@@ -559,7 +560,7 @@ class Game:
         self.set_actions(self.generate_actions_overwork_select_card(clearing))
 
     def marquise_overwork(self, clearing: Area, card):
-        LOGGER.info("{}:{}:{}:MARQUISE overwork on clearing #{}".format(self.turn_player, self.phase, self.sub_phase,
+        LOGGER.info("{}:{}:{}:MARQUISE overwork on clearing #{}".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                                         clearing.area_index))
         self.discard_card(self.marquise.cards_in_hand, card)
         clearing.token_count[Token.WOOD] += 1
@@ -586,7 +587,11 @@ class Game:
                 card_in_hand_count)
             self.set_actions(self.generate_actions_select_card_to_discard(Faction.MARQUISE))
         else:
-            self.prompt = "MARQUISE's turn ends"
+            self.ui_turn_player = Faction.EYRIE
+            self.turn_player = Faction.EYRIE
+            self.phase = Phase.BIRDSONG
+            self.sub_phase = 0
+            self.prompt = "Eyrie's Turn"
             self.set_actions()
 
     def get_workshop_count_by_suit(self) -> {Suit: int}:
@@ -697,16 +702,17 @@ class Game:
     #####
     # Eyrie
     def eyrie_start(self):
-        LOGGER.info("{}:{}:{}:eyrie turn begins".format(self.turn_player, self.phase, self.sub_phase))
+        LOGGER.info("{}:{}:{}:eyrie turn begins".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.turn_count += 1
 
         self.check_win_condition(Faction.EYRIE)
         self.better_burrow_bank(Faction.EYRIE)
 
         if len(self.eyrie.cards_in_hand) == 0:
-            LOGGER.info("{}:{}:{}:eyrie_emergency_orders".format(self.turn_player, self.phase, self.sub_phase))
+            LOGGER.info("{}:{}:{}:eyrie_emergency_orders".format(self.ui_turn_player, self.phase, self.sub_phase))
             self.take_card_from_draw_pile(Faction.EYRIE)
 
+        self.ui_turn_player = Faction.EYRIE
         self.turn_player = Faction.EYRIE
         self.phase = Phase.BIRDSONG
         self.sub_phase = 1
@@ -726,7 +732,7 @@ class Game:
                 actions.append(Action('{} ({})'.format(card.name, card.suit),
                                       perform(self.select_card_to_add_to_the_decree, card)))
         LOGGER.info(
-            "{}:{}:{}:generate_actions_add_to_the_decree_first {}".format(self.turn_player, self.phase, self.sub_phase,
+            "{}:{}:{}:generate_actions_add_to_the_decree_first {}".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                                           len(actions)))
         return actions
 
@@ -753,7 +759,7 @@ class Game:
             self.added_bird_card = True
 
         LOGGER.info(
-            "{}:{}:{}:Added card '{}' to {} decree".format(self.turn_player, self.phase, self.sub_phase,
+            "{}:{}:{}:Added card '{}' to {} decree".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                            self.selected_card.name, decree_action))
 
         if self.addable_count != 0:
@@ -766,7 +772,7 @@ class Game:
 
     def eyrie_add_to_the_decree_additional_skip(self):
         LOGGER.info(
-            "{}:{}:{}:eyrie_add_to_the_decree_additional_skip".format(self.turn_player, self.phase, self.sub_phase))
+            "{}:{}:{}:eyrie_add_to_the_decree_additional_skip".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.eyrie_a_new_roost()
 
     def eyrie_a_new_roost(self):
@@ -788,7 +794,7 @@ class Game:
 
     def place_roost_and_3_warriors(self, area: Area):
         LOGGER.info(
-            "{}:{}:{}:place_roost_and_3_warriors at area#{}".format(self.turn_player, self.phase, self.sub_phase,
+            "{}:{}:{}:place_roost_and_3_warriors at area#{}".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                                     area.area_index))
         self.add_warrior(Faction.EYRIE, area, 3)
         self.build_roost(area)
@@ -801,11 +807,11 @@ class Game:
         self.eyrie.roost_tracker += 1
 
         LOGGER.info(
-            "{}:{}:{}:build_roost built {} in clearing #{}".format(self.turn_player, self.phase, self.sub_phase,
+            "{}:{}:{}:build_roost built {} in clearing #{}".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                                    Building.ROOST, clearing.area_index))
 
     def eyrie_birdsong_to_daylight(self):  # TODO: Eyrie Royal Claim
-        LOGGER.info("{}:{}:{}:eyrie_birdsong_to_daylight".format(self.turn_player, self.phase, self.sub_phase))
+        LOGGER.info("{}:{}:{}:eyrie_birdsong_to_daylight".format(self.ui_turn_player, self.phase, self.sub_phase))
 
         self.phase = Phase.DAYLIGHT
         self.sub_phase = 0
@@ -837,7 +843,7 @@ class Game:
 
     def eyrie_daylight_craft_to_resolve_the_decree(self):
         LOGGER.info(
-            "{}:{}:{}:eyrie_daylight_craft_to_resolve_the_decree".format(self.turn_player, self.phase, self.sub_phase))
+            "{}:{}:{}:eyrie_daylight_craft_to_resolve_the_decree".format(self.ui_turn_player, self.phase, self.sub_phase))
 
         self.sub_phase = 1
 
@@ -845,7 +851,7 @@ class Game:
         self.eyrie_pre_recruit()
 
     def eyrie_pre_recruit(self):
-        LOGGER.info("{}:{}:{}:eyrie_pre_recruit".format(self.turn_player, self.phase, self.sub_phase))
+        LOGGER.info("{}:{}:{}:eyrie_pre_recruit".format(self.ui_turn_player, self.phase, self.sub_phase))
 
         self.update_prompt_eyrie_decree(DecreeAction.RECRUIT)
         self.prompt += " Recruit in Area:"
@@ -866,7 +872,7 @@ class Game:
         vp_lost = min(self.board.faction_points[Faction.EYRIE],
                       bird_card_in_decree_count)
         self.board.lose_vp(Faction.EYRIE, vp_lost)
-        LOGGER.info("{}:{}:{}:turmoil:humiliate: {} bird cards in the decree, lost {} vp(s)".format(self.turn_player,
+        LOGGER.info("{}:{}:{}:turmoil:humiliate: {} bird cards in the decree, lost {} vp(s)".format(self.ui_turn_player,
                                                                                                     self.phase,
                                                                                                     self.sub_phase,
                                                                                                     bird_card_in_decree_count,
@@ -879,7 +885,7 @@ class Game:
                     self.discard_card(self.eyrie.decree[decree], card)
 
         self.eyrie.reset_decree()
-        LOGGER.info("{}:{}:{}:turmoil:purge: discarded all decree cards except loyal viziers".format(self.turn_player,
+        LOGGER.info("{}:{}:{}:turmoil:purge: discarded all decree cards except loyal viziers".format(self.ui_turn_player,
                                                                                                      self.phase,
                                                                                                      self.sub_phase))
 
@@ -894,7 +900,7 @@ class Game:
             inactive_leaders = self.eyrie.get_inactive_leader()
 
         LOGGER.info(
-            "{}:{}:{}:turmoil:depose: {} deposed".format(self.turn_player, self.phase, self.sub_phase, current_leader))
+            "{}:{}:{}:turmoil:depose: {} deposed".format(self.ui_turn_player, self.phase, self.sub_phase, current_leader))
         self.prompt = "Select New Eyrie Leader:"
         self.set_actions(self.generate_actions_eyrie_select_new_leader(inactive_leaders))
 
@@ -910,12 +916,12 @@ class Game:
     def eyrie_select_new_leader(self, leader: EyrieLeader):
         self.eyrie.activate_leader(leader)
         LOGGER.info(
-            "{}:{}:{}:turmoil:depose: {} selected as new leader".format(self.turn_player, self.phase, self.sub_phase,
+            "{}:{}:{}:turmoil:depose: {} selected as new leader".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                                         leader))
         self.eyrie_turmoil_rest()
 
     def eyrie_turmoil_rest(self):
-        LOGGER.info("{}:{}:{}:turmoil:rest".format(self.turn_player, self.phase, self.sub_phase))
+        LOGGER.info("{}:{}:{}:turmoil:rest".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.phase = Phase.EVENING
         self.sub_phase = 1
         self.eyrie_evening()
@@ -957,13 +963,13 @@ class Game:
         self.remove_decree_counter(decree_action, area.suit)
 
         LOGGER.info(
-            "{}:{}:{}:{} recruited in area {}".format(self.turn_player, self.phase, self.sub_phase, Faction.EYRIE,
+            "{}:{}:{}:{} recruited in area {}".format(self.ui_turn_player, self.phase, self.sub_phase, Faction.EYRIE,
                                                       area.area_index))
 
         self.eyrie_pre_recruit()
 
     def eyrie_pre_move(self):
-        LOGGER.info("{}:{}:{}:eyrie_pre_move".format(self.turn_player, self.phase, self.sub_phase))
+        LOGGER.info("{}:{}:{}:eyrie_pre_move".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.update_prompt_eyrie_decree(DecreeAction.MOVE)
         self.prompt += " Choose area to move from."
         self.set_actions(self.generate_actions_eyrie_move()
@@ -984,7 +990,7 @@ class Game:
         return actions
 
     def eyrie_choose_move_from(self, faction, src):
-        LOGGER.info("{}:{}:{}:eyrie_choose_move_from area {}".format(self.turn_player, self.phase, self.sub_phase, src))
+        LOGGER.info("{}:{}:{}:eyrie_choose_move_from area {}".format(self.ui_turn_player, self.phase, self.sub_phase, src))
 
         self.update_prompt_eyrie_decree(DecreeAction.MOVE)
         self.prompt += " Choose area to move to."
@@ -992,14 +998,14 @@ class Game:
 
     def eyrie_choose_move_to(self, faction, src, dest):
         LOGGER.info(
-            "{}:{}:{}:eyrie_choose_move_to area {}".format(self.turn_player, self.phase, self.sub_phase, src, dest))
+            "{}:{}:{}:eyrie_choose_move_to area {}".format(self.ui_turn_player, self.phase, self.sub_phase, src, dest))
 
         self.update_prompt_eyrie_decree(DecreeAction.MOVE)
         self.prompt += " Choose number of warriors to move."
         self.set_actions(self.generate_actions_select_warriors(faction, src, dest))
 
     def eyrie_pre_battle(self):
-        LOGGER.info("{}:{}:{}:eyrie_pre_battle".format(self.turn_player, self.phase, self.sub_phase))
+        LOGGER.info("{}:{}:{}:eyrie_pre_battle".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.update_prompt_eyrie_decree(DecreeAction.BATTLE)
         self.prompt += " Choose area to battle in."
 
@@ -1021,22 +1027,14 @@ class Game:
         return actions
 
     def eyrie_pre_build(self):
-        LOGGER.info("{}:{}:{}:eyrie_pre_battle".format(self.turn_player, self.phase, self.sub_phase))
+        LOGGER.info("{}:{}:{}:eyrie_pre_battle".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.update_prompt_eyrie_decree(DecreeAction.BUILD)
 
-        self.turn_player = Faction.EYRIE
+        self.ui_turn_player = Faction.EYRIE
         self.prompt += " Choose area to build roost in."
         self.set_actions(self.generate_actions_eyrie_build()
                          + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_build)
                          + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_build))
-
-    def eyrie_choose_battle_in(self, clearing: Area):
-        LOGGER.info(
-            "{}:{}:{}:eyrie_choose_battle_in area {}".format(self.turn_player, self.phase, self.sub_phase, clearing))
-
-        self.update_prompt_eyrie_decree(DecreeAction.BATTLE)
-        self.prompt += " Choose enemy faction to battle."
-        self.set_actions(self.generate_actions_select_faction_battle(Faction.EYRIE, clearing, self.eyrie_pre_battle))
 
     def generate_actions_eyrie_build(self):
         actions: list[Action] = self.generate_actions_select_buildable_clearing(Faction.EYRIE)
@@ -1068,7 +1066,7 @@ class Game:
         card_to_draw = 1 + EyrieBoard.ROOST_REWARD_CARD[roost_tracker]
         self.gain_vp(Faction.EYRIE, vp)
         LOGGER.info(
-            "{}:{}:{}:eyrie_evening: roost tracker {}, scored {} vps".format(self.turn_player, self.phase,
+            "{}:{}:{}:eyrie_evening: roost tracker {}, scored {} vps".format(self.ui_turn_player, self.phase,
                                                                              self.sub_phase, self.eyrie.roost_tracker,
                                                                              vp))
         # draw and discard
@@ -1082,7 +1080,8 @@ class Game:
             self.eyrie_evening_to_marquise()
 
     def eyrie_evening_to_marquise(self):
-        LOGGER.info("{}:{}:{}:eyrie_evening_to_marquise".format(self.turn_player, self.phase, self.sub_phase))
+        LOGGER.info("{}:{}:{}:eyrie_evening_to_marquise".format(self.ui_turn_player, self.phase, self.sub_phase))
+        self.ui_turn_player = Faction.MARQUISE
         self.turn_player = Faction.MARQUISE
         self.phase = Phase.BIRDSONG
         self.sub_phase = 0
@@ -1100,7 +1099,7 @@ class Game:
     def activate_leader(self, leader: EyrieLeader):
         if self.eyrie.activate_leader(leader):
             LOGGER.info(
-                "{}:{}:{}:{} selected as new leader".format(self.turn_player, self.phase, self.sub_phase, leader))
+                "{}:{}:{}:{} selected as new leader".format(self.ui_turn_player, self.phase, self.sub_phase, leader))
 
     def remove_decree_counter(self, decree_action: DecreeAction | str, suit: Suit | str):
         self.decree_counter[decree_action].remove(
@@ -1134,7 +1133,7 @@ class Game:
         return actions
 
     def craft_card(self, faction: Faction, card: PlayingCard):  # TODO: no such duplicate cards can be crafted
-        LOGGER.info("{}:{}:{}:Crafted {} card".format(self.turn_player, self.phase, self.sub_phase, card.name))
+        LOGGER.info("{}:{}:{}:Crafted {} card".format(self.ui_turn_player, self.phase, self.sub_phase, card.name))
         if faction == Faction.MARQUISE:
             if card.phase == PlayingCardPhase.IMMEDIATE:
                 self.gain_vp(faction, card.reward_vp)
@@ -1209,9 +1208,9 @@ class Game:
         if actions is not None:
             self.actions = actions
         else:
-            if self.turn_player == Faction.MARQUISE:
+            if self.ui_turn_player == Faction.MARQUISE:
                 self.actions = self.marquise_base_actions[self.phase][self.sub_phase]
-            elif self.turn_player == Faction.EYRIE:
+            elif self.ui_turn_player == Faction.EYRIE:
                 self.actions = self.eyrie_base_actions[self.phase][self.sub_phase]
 
     def can_take_card_from_draw_pile(self, amount: int = 1) -> bool:
@@ -1227,13 +1226,13 @@ class Game:
             faction_board.cards_in_hand.extend(self.draw_pile[0:amount])
             self.draw_pile = self.draw_pile[amount:]
             LOGGER.info(
-                "{}:{}:{}:{} drawn {} card(s)".format(self.turn_player, self.phase, self.sub_phase, faction, amount))
+                "{}:{}:{}:{} drawn {} card(s)".format(self.ui_turn_player, self.phase, self.sub_phase, faction, amount))
         else:
             lesser_amount = min(len(self.draw_pile), amount)
             faction_board.cards_in_hand.extend(self.draw_pile[0:lesser_amount])
             self.draw_pile = self.draw_pile[lesser_amount:]
             LOGGER.info(
-                "{}:{}:{}:{} drawn {} card(s)".format(self.turn_player, self.phase, self.sub_phase, faction, amount))
+                "{}:{}:{}:{} drawn {} card(s)".format(self.ui_turn_player, self.phase, self.sub_phase, faction, amount))
 
             self.shuffle_discard_pile_into_draw_pile()
 
@@ -1241,7 +1240,7 @@ class Game:
             faction_board.cards_in_hand.extend(self.draw_pile[0:remaining_amount])
             self.draw_pile = self.draw_pile[remaining_amount:]
             LOGGER.info(
-                "{}:{}:{}:{} drawn {} card(s)".format(self.turn_player, self.phase, self.sub_phase, faction, amount))
+                "{}:{}:{}:{} drawn {} card(s)".format(self.ui_turn_player, self.phase, self.sub_phase, faction, amount))
 
     def shuffle_discard_pile_into_draw_pile(self):
         self.draw_pile.extend(self.discard_pile)
@@ -1308,7 +1307,7 @@ class Game:
 
     def move_warriors(self, faction, src: Area, dest: Area, num):
         LOGGER.info(
-            "{}:{}:{}:{} move {} warrior(s) from Clearing #{} to Clearing #{}".format(self.turn_player, self.phase,
+            "{}:{}:{}:{} move {} warrior(s) from Clearing #{} to Clearing #{}".format(self.ui_turn_player, self.phase,
                                                                                       self.sub_phase, faction,
                                                                                       num, src,
                                                                                       dest))
@@ -1319,7 +1318,7 @@ class Game:
 
             self.marquise_march_count -= 1
             LOGGER.info(
-                "{}:{}:{}:MARQUISE's remaining march action: {}".format(self.turn_player, self.phase,
+                "{}:{}:{}:MARQUISE's remaining march action: {}".format(self.ui_turn_player, self.phase,
                                                                         self.sub_phase, self.marquise_march_count))
             if self.marquise_march_count > 0:
                 self.prompt = "The warriors has been moved. (Remaining march action: {})".format(
@@ -1399,7 +1398,7 @@ class Game:
                 if total_recruiters > 0:
                     self.add_warrior(faction, area, min(total_recruiters, self.marquise.reserved_warriors))
                     LOGGER.info(
-                        "{}:{}:{}:MARQUISE adds warrior in clearing #{}".format(self.turn_player, self.phase,
+                        "{}:{}:{}:MARQUISE adds warrior in clearing #{}".format(self.ui_turn_player, self.phase,
                                                                                 self.sub_phase,
                                                                                 area.area_index))
         elif faction == Faction.EYRIE:
@@ -1452,7 +1451,7 @@ class Game:
             self.remove_wood(wood_cost, self.count_woods_from_clearing(clearing)[0])
 
             LOGGER.info(
-                "{}:{}:{}:MARQUISE builds {} in clearing #{}".format(self.turn_player, self.phase, self.sub_phase,
+                "{}:{}:{}:MARQUISE builds {} in clearing #{}".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                                      building, clearing.area_index))
             self.prompt = "The {} has been build at clearing #{}.".format(building, clearing.area_index)
             self.marquise_action_count -= 1
@@ -1597,8 +1596,9 @@ class Game:
 
     def initiate_battle(self, attacker, defender, clearing: Area, continuation_func):
         LOGGER.info(
-            "{}:{}:{}:{} initiate battle on {} in clearing #{}".format(self.turn_player, self.phase, self.sub_phase,
-                                                                       attacker, defender, clearing.area_index))
+            "{}:{}:{}:battle:{} initiate battle on {} in clearing #{}".format(self.ui_turn_player, self.phase,
+                                                                              self.sub_phase,
+                                                                              attacker, defender, clearing.area_index))
         attacker_board = self.faction_to_faction_board(attacker)
         defender_board = self.faction_to_faction_board(defender)
         atk_scouting_party = [card for card in attacker_board.crafted_cards if
@@ -1612,7 +1612,7 @@ class Game:
             self.defender_use_ambush(attacker, defender, clearing, continuation_func)
 
     def defender_use_ambush(self, attacker, defender, clearing, continuation_func):
-        self.turn_player = defender
+        self.ui_turn_player = defender
         self.prompt = "{}: Use Ambush Card?".format(defender)
 
         defender_board = self.faction_to_faction_board(defender)
@@ -1630,11 +1630,11 @@ class Game:
 
     def attacker_use_ambush(self, ambush_discarded, attacker, defender, clearing, continuation_func):
         LOGGER.info(
-            "{}:{}:{}:{} discard AMBUSH".format(self.turn_player, self.phase, self.sub_phase, defender))
+            "{}:{}:{}:battle:{} discard AMBUSH".format(self.ui_turn_player, self.phase, self.sub_phase, defender))
         defender_board = self.faction_to_faction_board(defender)
         self.discard_card(defender_board.cards_in_hand, ambush_discarded)
 
-        self.turn_player = attacker
+        self.ui_turn_player = attacker
         self.prompt = "{}: Use Ambush Card?".format(attacker)
 
         attacker_board = self.faction_to_faction_board(attacker)
@@ -1657,7 +1657,7 @@ class Game:
 
     def foil_ambush(self, ambush_discarded, attacker, defender, clearing, continuation_func):
         LOGGER.info(
-            "{}:{}:{}:{} discard AMBUSH".format(self.turn_player, self.phase, self.sub_phase, attacker))
+            "{}:{}:{}:battle:{} discard AMBUSH".format(self.ui_turn_player, self.phase, self.sub_phase, attacker))
         attacker_board = self.faction_to_faction_board(attacker)
         self.discard_card(attacker_board.cards_in_hand, ambush_discarded)
         self.roll_dice(attacker, defender, clearing, continuation_func)
@@ -1679,6 +1679,10 @@ class Game:
                     attacker == Faction.EYRIE and self.eyrie.get_active_leader() == EyrieLeader.COMMANDER) else 0
             defender_extra_hits: int = 0
 
+            LOGGER.info(
+                "{}:{}:{}:battle:{} rolls {}, {} rolls {}".format(self.ui_turn_player, self.phase, self.sub_phase,
+                                                                  attacker, attacker_roll, defender, defender_roll))
+
             self.attacker_activate_battle_ability_card(attacker, defender, attacker_roll, defender_roll,
                                                        attacker_extra_hits + defender_defenseless_extra_hits,
                                                        defender_extra_hits, clearing,
@@ -1687,6 +1691,18 @@ class Game:
     def attacker_activate_battle_ability_card(self, attacker, defender, attacker_rolled_hits, defender_rolled_hits,
                                               attacker_extra_hits,
                                               defender_extra_hits, clearing, continuation_func):
+        LOGGER.info(
+            "{}:{}:{}:battle: Total hits: {}: ({}+{}) hits, {}: ({}+{}) hits".format(self.ui_turn_player, self.phase,
+                                                                                     self.sub_phase,
+                                                                                     attacker,
+                                                                                     attacker_rolled_hits + attacker_extra_hits,
+                                                                                     attacker_rolled_hits,
+                                                                                     attacker_extra_hits,
+                                                                                     defender,
+                                                                                     defender_rolled_hits + defender_extra_hits,
+                                                                                     defender_rolled_hits,
+                                                                                     defender_extra_hits))
+
         attacker_faction_board = self.faction_to_faction_board(attacker)
 
         atk_brutal_tactics = [card for card in attacker_faction_board.crafted_cards if
@@ -1711,7 +1727,7 @@ class Game:
                                               self.attacker_activate_battle_ability_card)))
 
         if len(atk_actions) > 0:
-            self.turn_player = attacker
+            self.ui_turn_player = attacker
             self.prompt = "{}: Activate Battle Ability Card?".format(attacker)
             self.set_actions(atk_actions + [Action('Skip',
                                                    perform(self.defender_activate_battle_ability_card, attacker,
@@ -1727,6 +1743,18 @@ class Game:
     def defender_activate_battle_ability_card(self, attacker, defender, attacker_rolled_hits, defender_rolled_hits,
                                               attacker_extra_hits,
                                               defender_extra_hits, clearing, continuation_func):
+        LOGGER.info(
+            "{}:{}:{}:battle: Total hits: {}: ({}+{}) hits, {}: ({}+{}) hits".format(self.ui_turn_player, self.phase,
+                                                                                     self.sub_phase,
+                                                                                     attacker,
+                                                                                     attacker_rolled_hits + attacker_extra_hits,
+                                                                                     attacker_rolled_hits,
+                                                                                     attacker_extra_hits,
+                                                                                     defender,
+                                                                                     defender_rolled_hits + defender_extra_hits,
+                                                                                     defender_rolled_hits,
+                                                                                     defender_extra_hits))
+
         defender_faction_board = self.faction_to_faction_board(defender)
 
         def_sappers = [card for card in defender_faction_board.crafted_cards if card.name == PlayingCardName.SAPPERS]
@@ -1750,7 +1778,7 @@ class Game:
                                               self.defender_activate_battle_ability_card)))
 
         if len(def_actions) > 0:
-            self.turn_player = defender
+            self.ui_turn_player = defender
             self.prompt = "{}: Activate Battle Ability Card?".format(defender)
             self.set_actions(def_actions + [Action('Skip',
                                                    perform(self.resolve_hits, attacker, defender,
@@ -1765,6 +1793,9 @@ class Game:
     def brutal_tactics(self, brutal_tactics_card, attacker, defender, attacker_rolled_hits, defender_rolled_hits,
                        attacker_extra_hits,
                        defender_extra_hits, clearing, continuation_func):
+        LOGGER.info(
+            "{}:{}:{}:battle:{} use BRUTAL TACTICS".format(self.ui_turn_player, self.phase, self.sub_phase,
+                                                           attacker))
         attacker_faction_board = self.faction_to_faction_board(attacker)
         attacker_faction_board.activated_card.append(brutal_tactics_card)
         self.gain_vp(defender, 1)
@@ -1775,6 +1806,10 @@ class Game:
     def armorers(self, faction, armorers_card, attacker, defender,
                  attacker_rolled_hits, defender_rolled_hits, attacker_extra_hits,
                  defender_extra_hits, clearing, continuation_func, redirect_func):
+        LOGGER.info(
+            "{}:{}:{}:battle:{} discard ARMORERS".format(self.ui_turn_player, self.phase, self.sub_phase,
+                                                         faction))
+
         faction_board = self.faction_to_faction_board(faction)
         faction_board.activated_card.append(armorers_card)
         self.discard_card(faction_board.crafted_cards, armorers_card)
@@ -1790,6 +1825,10 @@ class Game:
 
     def sappers(self, sappers_card, attacker, defender, attacker_rolled_hits, defender_rolled_hits, attacker_extra_hits,
                 defender_extra_hits, clearing, continuation_func):
+        LOGGER.info(
+            "{}:{}:{}:battle:{} discard BRUTAL TACTICS".format(self.ui_turn_player, self.phase, self.sub_phase,
+                                                               defender))
+
         defender_faction_board = self.faction_to_faction_board(defender)
         defender_faction_board.activated_card.append(sappers_card)
         self.discard_card(defender_faction_board.crafted_cards, sappers_card)
@@ -1829,7 +1868,7 @@ class Game:
         self.gain_vp(defender, defender_total_vp)
 
         LOGGER.info(
-            "{}:{}:{}:battle: {} vs {}, total hits {}:{}, vps gained {}:{}".format(self.turn_player, self.phase,
+            "{}:{}:{}:battle: {} vs {}, total hits {}:{}, vps gained {}:{}".format(self.ui_turn_player, self.phase,
                                                                                    self.sub_phase,
                                                                                    attacker, defender,
                                                                                    attacker_total_hits,
@@ -1852,6 +1891,7 @@ class Game:
     def resolve_marquise_field_hospital(self, attacker, defender, attacker_remaining_hits, defender_remaining_hits,
                                         removed_warriors, clearing, continuation_func,
                                         redirect_func):  # TODO: if attacker == marquise, marquise field hospital trigger immediately , otherwise , trigger at the birdsong
+        self.ui_turn_player = Faction.MARQUISE
         self.prompt = "MARQUISE: Discard a card matching warrior's clearing to bring {} warriors back to the keep.".format(
             removed_warriors)
         self.set_actions(
@@ -1887,9 +1927,10 @@ class Game:
     def marquise_field_hospital(self, card, removed_warriors, attacker, defender, attacker_remaining_hits,
                                 defender_remaining_hits, battle_clearing, continuation_func, redirect_func):
         LOGGER.info(
-            "{}:{}:{}:{}:discard_card {} ({}) discarded".format(self.turn_player, self.phase, self.sub_phase,
-                                                                Faction.MARQUISE,
-                                                                card.name, card.suit))
+            "{}:{}:{}:battle:{} use field hospital, discarding {} ({})".format(self.ui_turn_player, self.phase,
+                                                                               self.sub_phase,
+                                                                               Faction.MARQUISE,
+                                                                               card.name, card.suit))
 
         self.discard_card(self.marquise.cards_in_hand, card)
         for clearing in self.board.areas:
@@ -1903,125 +1944,114 @@ class Game:
 
     def resolve_remaining_hits(self, attacker, defender, attacker_remaining_hits, defender_remaining_hits, clearing,
                                continuation_func, redirect_func):
+        LOGGER.info(
+            "{}:{}:{}:battle: {} vs {}, remaining hits {}:{}".format(self.ui_turn_player, self.phase,
+                                                                     self.sub_phase,
+                                                                     attacker, defender,
+                                                                     attacker_remaining_hits,
+                                                                     defender_remaining_hits)
+        )
         if attacker_remaining_hits == 0 and defender_remaining_hits == 0:
             if redirect_func is not None:
                 redirect_func(attacker, defender, clearing, continuation_func)
             else:
                 continuation_func()
+        elif defender_remaining_hits > 0:
+            self.select_piece_to_remove(attacker, attacker, defender,
+                                        attacker_remaining_hits,
+                                        defender_remaining_hits,
+                                        clearing, continuation_func, redirect_func)
+        elif attacker_remaining_hits > 0:
+            self.select_piece_to_remove(defender, attacker, defender,
+                                        attacker_remaining_hits,
+                                        defender_remaining_hits,
+                                        clearing, continuation_func, redirect_func)
+
+    def select_piece_to_remove(self, selecting_faction, attacker, defender, attacker_remaining_hits,
+                               defender_remaining_hits, clearing,
+                               continuation_func, redirect_func):
+        self.ui_turn_player = selecting_faction
+        self.prompt = "{}: Select Piece to Remove".format(selecting_faction)
+        actions = self.generate_actions_select_piece_to_remove(selecting_faction, attacker, defender,
+                                                               attacker_remaining_hits,
+                                                               defender_remaining_hits,
+                                                               clearing, continuation_func, redirect_func)
+        if len(actions) == 0:
+            if selecting_faction == attacker:
+                self.resolve_remaining_hits(attacker, defender, attacker_remaining_hits, 0, clearing,
+                                            continuation_func, redirect_func)
+            elif selecting_faction == defender:
+                self.resolve_remaining_hits(attacker, defender, 0, defender_remaining_hits, clearing,
+                                            continuation_func, redirect_func)
         else:
-            if redirect_func is not None:
-                redirect_func(attacker, defender, clearing, continuation_func)
-            else:
-                continuation_func()
+            self.set_actions(actions)
 
-    # LOGGER.info(
-    #     "{}:{}:{}:battle:{} discard AMBUSH".format(self.turn_player, self.phase, self.sub_phase, attacker))
+    def generate_actions_select_piece_to_remove(self, selecting_faction, attacker, defender, attacker_remaining_hits,
+                                                defender_remaining_hits, clearing,
+                                                continuation_func, redirect_func):
+        actions = []
+        buildings = faction_to_buildings(selecting_faction)
+        tokens = faction_to_tokens(selecting_faction)
 
-    # def post_battle(self, attacker: Faction, defender: Faction, attacker_remaining_hits, defender_remaining_hits,
-    #                 clearing: Area, continuation_func):
-    #     if attacker_remaining_hits == defender_remaining_hits == 0:
-    #         LOGGER.info(
-    #             "{}:{}:{}:battle:Battle end".format(self.turn_player, self.phase,
-    #                                                 self.sub_phase))
-    #
-    #         continuation_func()
-    #     elif attacker_remaining_hits > 0:
-    #         actions = self.generate_actions_select_piece_to_remove(attacker, defender,
-    #                                                                attacker_remaining_hits,
-    #                                                                defender_remaining_hits,
-    #                                                                clearing, self.post_battle_remove_piece,
-    #                                                                continuation_func)
-    #         if len(actions) == 0:
-    #             self.prompt = "{}: No Token/Building can be removed.".format(defender)
-    #             self.set_actions([Action('Next',
-    #                                      perform(self.post_battle, defender, attacker, defender_remaining_hits, 0,
-    #                                              clearing, continuation_func))])
-    #         else:
-    #             if attacker == Faction.EYRIE:
-    #                 if self.eyrie.get_active_leader() == EyrieLeader.DESPOT:
-    #                     LOGGER.info(
-    #                         "{}:{}:{}:post_battle: despot, gain 1 additional vp".format(self.turn_player, self.phase,
-    #                                                                                     self.sub_phase))
-    #                     self.gain_vp(Faction.EYRIE, 1)
-    #
-    #             self.prompt = "{}: Select Token/Building to be removed (Remaining: {})".format(defender,
-    #                                                                                            attacker_remaining_hits)
-    #             self.set_actions(actions)
-    #
-    #     elif attacker_remaining_hits == 0:
-    #         self.post_battle(defender, attacker, defender_remaining_hits, attacker_remaining_hits, clearing,
-    #                          continuation_func)
-    #
-    # def generate_actions_select_piece_to_remove(self, attacker: Faction, defender: Faction,
-    #                                             attacker_remaining_hits, defender_remaining_hits,
-    #                                             clearing: Area, func: any, continuation_func):
-    #     actions = []
-    #     buildings = faction_to_buildings(defender)
-    #     tokens = faction_to_tokens(defender)
-    #
-    #     if defender == Faction.MARQUISE:
-    #         for token in tokens:
-    #             if token == Token.WOOD and clearing.token_count[token] > 0:
-    #                 actions.append(
-    #                     Action("Wood",
-    #                            perform(func, attacker, defender, attacker_remaining_hits,
-    #                                    defender_remaining_hits, clearing,
-    #                                    Token.WOOD, continuation_func))
-    #                 )
-    #         for building in buildings:
-    #             if clearing.buildings.count(building) > 0:
-    #                 actions.append(
-    #                     Action(building.name,
-    #                            perform(func, attacker, defender, attacker_remaining_hits,
-    #                                    defender_remaining_hits, clearing,
-    #                                    building, continuation_func))
-    #                 )
-    #
-    #     elif defender == Faction.EYRIE:
-    #         for building in buildings:
-    #             if clearing.buildings.count(building) > 0:
-    #                 actions.append(
-    #                     Action(building.name,
-    #                            perform(func, attacker, defender, attacker_remaining_hits,
-    #                                    defender_remaining_hits, clearing,
-    #                                    building, continuation_func))
-    #                 )
-    #
-    #     return actions
-    #
-    # def post_battle_remove_piece(self, attacker, defender, attacker_remaining_hits, defender_remaining_hits, clearing,
-    #                              piece, continuation_func):
-    #     LOGGER.info(
-    #         "{}:{}:{}:battle:{} remove {}'s {}".format(self.turn_player, self.phase, self.sub_phase, attacker, defender,
-    #                                                    piece))
-    #
-    #     self.remove_piece(attacker, clearing, defender, piece)
-    #     self.post_battle(attacker, defender, attacker_remaining_hits - 1, defender_remaining_hits, clearing,
-    #                      continuation_func)
-    #
-    # def remove_piece(self, attacker: Faction, clearing: Area, defender: Faction, piece):
-    #
-    #     if isinstance(piece, Building):
-    #         if defender == Faction.MARQUISE:
-    #             self.marquise.building_trackers[piece] -= 1
-    #         elif defender == Faction.EYRIE:
-    #             self.eyrie.roost_tracker -= 1
-    #         clearing.remove_building(piece)
-    #     elif isinstance(piece, Token):
-    #         clearing.remove_token(piece)
-    #
-    #     self.gain_vp(attacker, 1)
-    #
-    # def generate_actions_select_card_to_discard(self, faction: Faction) -> list[Action]:
-    #     actions: list[Action] = []
-    #
-    #     faction_board = self.faction_to_faction_board(faction)
-    #
-    #     for card in faction_board.cards_in_hand:
-    #         actions.append(Action("Card {} ({})".format(card.name, card.suit),
-    #                               perform(self.select_card_to_discard, faction, card)))
-    #
-    #     return actions
+        if selecting_faction == Faction.MARQUISE:
+            for token in tokens:
+                if token == Token.WOOD and clearing.token_count[token] > 0:
+                    actions.append(
+                        Action("Wood",
+                               perform(self.remove_piece, selecting_faction, Token.WOOD, attacker, defender,
+                                       attacker_remaining_hits, defender_remaining_hits, clearing,
+                                       continuation_func, redirect_func))
+                    )
+            for building in buildings:
+                if clearing.buildings.count(building) > 0:
+                    actions.append(
+                        Action(building.name,
+                               perform(self.remove_piece, selecting_faction, building, attacker, defender,
+                                       attacker_remaining_hits, defender_remaining_hits, clearing,
+                                       continuation_func, redirect_func))
+                    )
+
+        elif selecting_faction == Faction.EYRIE:
+            for building in buildings:
+                if clearing.buildings.count(building) > 0:
+                    actions.append(
+                        Action(building.name,
+                               perform(self.remove_piece, selecting_faction, building, attacker, defender,
+                                       attacker_remaining_hits, defender_remaining_hits, clearing,
+                                       continuation_func, redirect_func))
+                    )
+
+        return actions
+
+    def remove_piece(self, selecting_faction, piece, attacker, defender,
+                     attacker_remaining_hits, defender_remaining_hits, clearing,
+                     continuation_func, redirect_func):
+
+        if isinstance(piece, Building):
+            if defender == Faction.MARQUISE:
+                self.marquise.building_trackers[piece] -= 1
+            elif defender == Faction.EYRIE:
+                self.eyrie.roost_tracker -= 1
+            clearing.remove_building(piece)
+        elif isinstance(piece, Token):
+            clearing.remove_token(piece)
+
+        if selecting_faction == attacker:
+            LOGGER.info(
+                "{}:{}:{}:battle:{} remove {}'s {}".format(self.ui_turn_player, self.phase, self.sub_phase,
+                                                           defender, attacker, piece))
+            self.gain_vp(defender, 1)
+            self.resolve_remaining_hits(attacker, defender, attacker_remaining_hits, defender_remaining_hits - 1,
+                                        clearing,
+                                        continuation_func, redirect_func)
+        else:
+            LOGGER.info(
+                "{}:{}:{}:battle:{} remove {}'s {}".format(self.ui_turn_player, self.phase, self.sub_phase,
+                                                           attacker, defender, piece))
+            self.gain_vp(attacker, 1)
+            self.resolve_remaining_hits(attacker, defender, attacker_remaining_hits - 1, defender_remaining_hits,
+                                        clearing,
+                                        continuation_func, redirect_func)
 
     def get_building_count_by_suit(self, building: Building | str) -> {Suit: int}:
         building_count: {Suit: int} = {
@@ -2050,8 +2080,8 @@ class Game:
     def select_card_to_discard(self, faction: Faction, card: PlayingCard):
         faction_board = self.faction_to_faction_board(faction)
         LOGGER.info(
-            "{}:{}:{}:{}:{} ({}) discarded".format(self.turn_player, self.phase, self.sub_phase, faction,
-                                                                card.name, card.suit))
+            "{}:{}:{}:{}:{} ({}) discarded".format(self.ui_turn_player, self.phase, self.sub_phase, faction,
+                                                   card.name, card.suit))
         self.discard_card(faction_board.cards_in_hand, card)
         card_in_hand_count = len(faction_board.cards_in_hand)
         if card_in_hand_count > 5:
@@ -2086,7 +2116,7 @@ class Game:
     def activate_dominance_card(self, faction: Faction, card: PlayingCard, continuation_func: any):
         if config['game']['allow-dominance-card']:
             LOGGER.info(
-                "{}:{}:{}:{}:activate_dominance_card {} ".format(self.turn_player, self.phase, self.sub_phase, faction,
+                "{}:{}:{}:{}:activate_dominance_card {} ".format(self.ui_turn_player, self.phase, self.sub_phase, faction,
                                                                  card.name))
 
             faction_board = self.faction_to_faction_board(faction)
@@ -2115,7 +2145,7 @@ class Game:
     def take_dominance_card(self, faction: Faction, dominance_card: PlayingCard, card_to_spend: PlayingCard,
                             continuation_func: any):
         LOGGER.info(
-            "{}:{}:{}:{}:take_dominance_card {} by spending {}".format(self.turn_player, self.phase, self.sub_phase,
+            "{}:{}:{}:{}:take_dominance_card {} by spending {}".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                                        faction,
                                                                        dominance_card.name, card_to_spend.name))
 
@@ -2246,7 +2276,7 @@ class Game:
         # Fill Black
         screen.fill("black")
 
-        self.board.turn_player = self.turn_player
+        self.board.turn_player = self.ui_turn_player
         self.board.turn_count = self.turn_count
 
         self.board.draw(screen)
