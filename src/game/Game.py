@@ -393,9 +393,12 @@ class Game:
         self.marquise_birdsong_cards()
 
     def marquise_birdsong_cards(self):
-        self.prompt = "Do you want to use Birdsong card's action?"
-        self.set_actions(self.generate_actions_cards_birdsong(Faction.MARQUISE, self.marquise_birdsong_cards) + [
-            Action('Next', perform(self.marquise_daylight))])
+        if len(self.generate_actions_cards_birdsong(Faction.MARQUISE, self.marquise_birdsong_cards)) == 0:
+            self.marquise_daylight()
+        else:
+            self.prompt = "Do you want to use Birdsong card's action?"
+            self.set_actions(self.generate_actions_cards_birdsong(Faction.MARQUISE, self.marquise_birdsong_cards) + [
+                Action('Next', perform(self.marquise_daylight))])
 
     def marquise_daylight(self):
         self.phase = Phase.DAYLIGHT
@@ -418,6 +421,8 @@ class Game:
     def marquise_daylight_2(self):
         actions = []
         self.prompt = "Select Actions (Remaining Action: {})".format(self.marquise_action_count)
+        self.turn_player = Faction.MARQUISE
+        self.phase = Phase.DAYLIGHT
         self.sub_phase = 1
 
         if self.marquise_action_count == 0:
@@ -438,7 +443,7 @@ class Game:
             if self.marquise_overwork_check():
                 actions.append(Action('Overwork', perform(self.marquise_daylight_overwork_select_clearing)))
             if self.marquise_battle_check():
-                actions.append(Action('Battle', perform(self.marquise_daylight_battle_select_clearing)))
+                actions.append(Action('Battle', perform(self.marquise_daylight_battle)))
 
         actions.append(Action('Next', perform(self.marquise_evening_draw_card)))
         self.set_actions(actions
@@ -534,16 +539,16 @@ class Game:
                                                                     clearing.area_index))
         self.marquise_daylight_recruit_some_clearings(remaining_clearing_with_recruiter)
 
-    def marquise_daylight_battle_select_clearing(self):
+    def marquise_daylight_battle(self):
         self.marquise_action_count -= 1
         self.prompt = "Select Clearing"
         self.set_actions(self.generate_actions_select_clearing_battle(Faction.MARQUISE,
-                                                                      self.marquise_daylight_battle_select_faction))
+                                                                      self.marquise_daylight_2))
 
-    def marquise_daylight_battle_select_faction(self, clearing):
-        self.prompt = "Select Faction"
-        self.set_actions(
-            self.generate_actions_select_faction_battle(Faction.MARQUISE, clearing, self.marquise_daylight_2))
+    # def marquise_daylight_battle_select_faction(self, clearing):
+    #     self.prompt = "Select Faction"
+    #     self.set_actions(
+    #         self.generate_actions_select_faction_battle(Faction.MARQUISE, clearing, self.marquise_daylight_2))
 
     def marquise_daylight_overwork_select_clearing(self):
         self.prompt = "Select Clearing"
@@ -556,7 +561,6 @@ class Game:
     def marquise_overwork(self, clearing: Area, card):
         LOGGER.info("{}:{}:{}:MARQUISE overwork on clearing #{}".format(self.turn_player, self.phase, self.sub_phase,
                                                                         clearing.area_index))
-
         self.discard_card(self.marquise.cards_in_hand, card)
         clearing.token_count[Token.WOOD] += 1
 
@@ -1004,7 +1008,7 @@ class Game:
                          + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_battle))
 
     def generate_actions_eyrie_battle(self) -> list[Action]:
-        actions: list[Action] = self.generate_actions_select_clearing_battle(Faction.EYRIE)
+        actions: list[Action] = self.generate_actions_select_clearing_battle(Faction.EYRIE, self.eyrie_pre_build)
 
         decree_action: DecreeAction = DecreeAction.BATTLE
 
@@ -1506,18 +1510,28 @@ class Game:
             total += area.buildings.count(building)
         return total
 
-    def generate_actions_select_clearing_battle(self, faction, continuation_func) -> list[Action]:
-        clearings = self.get_battlable_clearing(faction)
+    def select_clearing_battle(self, attacker, continuation_func):
+        actions = self.generate_actions_select_clearing_battle(attacker, continuation_func)
+        self.prompt = "Select Clearing"
+        self.set_actions(actions)
+
+    def generate_actions_select_clearing_battle(self, attacker, continuation_func) -> list[Action]:
+        clearings = self.get_battlable_clearing(attacker)
         actions = []
 
         for clearing in clearings:
             actions.append(
                 Action("{}".format(clearing),
-                       perform(continuation_func, clearing)))
+                       perform(self.select_enemy_faction_battle, attacker, clearing, continuation_func)))
 
         return actions
 
-    def generate_actions_select_faction_battle(self, faction: Faction, clearing: Area, continuation_func) -> list[
+    def select_enemy_faction_battle(self, attacker, clearing, continuation_func):
+        actions = self.generate_actions_select_enemy_faction_battle(attacker, clearing, continuation_func)
+        self.prompt = "Select Enemy Faction"
+        self.set_actions(actions)
+
+    def generate_actions_select_enemy_faction_battle(self, faction: Faction, clearing: Area, continuation_func) -> list[
         Action]:
         enemy_factions: list[Faction] = self.get_available_enemy_tokens_from_clearing(faction, clearing)
         actions: list[Action] = []
@@ -2022,10 +2036,20 @@ class Game:
 
         return building_count
 
+    def generate_actions_select_card_to_discard(self, faction):
+        faction_board = self.faction_to_faction_board(faction)
+        actions = []
+
+        for card in faction_board.cards_in_hand:
+            actions.append(Action('Discard {} ({})'.format(card.name, card.suit),
+                                  perform(self.select_card_to_discard, faction, card)))
+
+        return actions
+
     def select_card_to_discard(self, faction: Faction, card: PlayingCard):
         faction_board = self.faction_to_faction_board(faction)
         LOGGER.info(
-            "{}:{}:{}:{}:discard_card {} ({}) discarded".format(self.turn_player, self.phase, self.sub_phase, faction,
+            "{}:{}:{}:{}:{} ({}) discarded".format(self.turn_player, self.phase, self.sub_phase, faction,
                                                                 card.name, card.suit))
         self.discard_card(faction_board.cards_in_hand, card)
         card_in_hand_count = len(faction_board.cards_in_hand)
@@ -2185,8 +2209,8 @@ class Game:
 
         return actions
 
-    def command_warren(self, faction, continuation_func):
-        self.set_actions(self.generate_actions_select_clearing_battle(faction))
+    # def command_warren(self, faction, continuation_func):
+    #     self.set_actions(self.generate_actions_select_clearing_battle(faction))
 
     def tax_collector_select_clearing(self, faction, continuation_func):
         self.prompt = "Select Clearing"
