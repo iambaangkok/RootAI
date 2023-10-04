@@ -7,7 +7,6 @@ from src.game.FactionBoard import FactionBoard
 from src.game.Suit import Suit
 from src.utils import text_utils
 
-
 BUILDING_TRACKER_NAME = [Building.SAWMILL, Building.WORKSHOP, Building.RECRUITER]
 
 
@@ -38,13 +37,12 @@ class MarquiseBoard(FactionBoard):
         return self.building_reward[building][self.building_trackers[building]]
 
     def get_reward_card(self):
-        return self.building_reward_card[Building.RECRUITER][self.building_trackers[Building.RECRUITER]]
+        return self.building_reward_card[Building.RECRUITER][min(self.building_trackers[Building.RECRUITER], 5)]
 
     def build_action_update(self, building):
         cost = self.building_cost[self.building_trackers[building]]
         self.building_trackers[building] = self.building_trackers[building] + 1
         return cost
-
 
     def draw(self, screen: Surface):
         super().draw(screen)
@@ -91,7 +89,8 @@ class MarquiseBoard(FactionBoard):
                 screen.blit(reward, (starting_point.x + (img_size.x + gap) * j + gap + offset_x, starting_point.y))
 
             if self.building_reward_card[title][j] > 0:
-                reward = Config.FONT_SM_BOLD.render("+" + str(self.building_reward_card[title][j]), True, (206, 215, 132))
+                reward = Config.FONT_SM_BOLD.render("+" + str(self.building_reward_card[title][j]), True,
+                                                    (206, 215, 132))
                 reward = text_utils.add_outline(reward, 2, Colors.BLUE)
 
                 screen.blit(reward, (starting_point.x + (img_size.x + gap) * j + gap + offset_x,
