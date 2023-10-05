@@ -1246,10 +1246,19 @@ class Game:
                     can_craft = False
                 elif (card.reward_item is not None) and (not self.board.item_available(card.reward_item)):
                     can_craft = False
+                elif self.duplicated_crafted_cards(faction, card):
+                    can_craft = False
             if can_craft:
                 craftable_cards.append(card)
 
         return craftable_cards
+
+    def duplicated_crafted_cards(self, faction, card):
+        faction_board = self.faction_to_faction_board(faction)
+        for crafted_card in faction_board.crafted_cards:
+            if card.name == crafted_card.name:
+                return False
+        return True
 
     def select_card(self, card: PlayingCard):
         self.selected_card = card
