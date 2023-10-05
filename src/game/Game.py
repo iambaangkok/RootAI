@@ -754,13 +754,25 @@ class Game:
 
         self.added_bird_card = False
         self.addable_count = 2
+        self.eyrie_start_to_add_to_decree()
 
-        self.prompt = "Select Card To Add To Decree"
-        actions: list[Action] = self.generate_actions_add_to_the_decree_first()
-        if len(actions) == 0:
-            self.eyrie_a_new_roost()
+    def eyrie_start_to_add_to_decree(self):
+        LOGGER.info(
+            "{}:{}:{}:eyrie_start_to_add_to_decree addable_count = {}".format(self.ui_turn_player, self.phase, self.sub_phase, self.addable_count))
+        if self.addable_count == 2:
+            self.prompt = "Select Card To Add To Decree"
+            actions: list[Action] = self.generate_actions_add_to_the_decree_first()
+            if len(actions) == 0:
+                self.eyrie_a_new_roost()
+            else:
+                self.set_actions(actions + self.generate_actions_cards_birdsong(Faction.EYRIE, self.eyrie_start_to_add_to_decree))
+        elif self.addable_count == 1:
+            self.prompt = "Select ANOTHER card to add to the Decree"
+            self.set_actions(self.generate_actions_add_to_the_decree_first() + [
+                Action("Skip", perform(self.eyrie_add_to_the_decree_additional_skip))
+            ] + self.generate_actions_cards_birdsong(Faction.EYRIE, self.eyrie_start_to_add_to_decree))
         else:
-            self.set_actions(actions)
+            self.eyrie_a_new_roost()
 
     def generate_actions_add_to_the_decree_first(self) -> list[Action]:
         actions: list[Action] = []
@@ -800,14 +812,7 @@ class Game:
         LOGGER.info(
             "{}:{}:{}:Added card '{}' to {} decree".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                            self.selected_card.name, decree_action))
-
-        if self.addable_count != 0:
-            self.prompt = "Select ANOTHER card to add to the Decree"
-            self.set_actions(self.generate_actions_add_to_the_decree_first() + [
-                Action("Skip", perform(self.eyrie_add_to_the_decree_additional_skip))
-            ])
-        else:
-            self.eyrie_a_new_roost()
+        self.eyrie_start_to_add_to_decree()
 
     def eyrie_add_to_the_decree_additional_skip(self):
         LOGGER.info(
@@ -826,7 +831,7 @@ class Game:
             if len(actions) == 0:
                 self.eyrie_birdsong_to_daylight()
             else:
-                self.set_actions(actions)
+                self.set_actions(actions + self.generate_actions_cards_birdsong(Faction.EYRIE, self.eyrie_start_to_add_to_decree))
         else:
             self.eyrie_birdsong_to_daylight()
 
