@@ -74,7 +74,8 @@ class RootTrainer:
         while self.running:
             self.init()
             self.update()
-            self.render()
+            if config['simulation']['rendering']['enable']:
+                self.render()
 
             # flip() the display to put your work on screen
             pygame.display.flip()
@@ -243,10 +244,11 @@ class RootTrainer:
         self.draw_fps_text()
         self.draw_delta_time_text()
         self.draw_round_text()
-        self.draw_action(self.screen)
+        if config['simulation']['actions']['rendering']['enable']:
+            self.draw_action(self.screen)
 
-        if not self.game.running:
-            self.draw_game_ended(self.screen)
+            if not self.game.running:
+                self.draw_game_ended(self.screen)
 
     def draw_fps_text(self):
         margin_right = 20

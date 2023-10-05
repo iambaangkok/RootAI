@@ -3,10 +3,15 @@ screen:
   height: 960
 
 simulation:
+  rendering:
+    enable: true # true | false
+  actions:
+    rendering:
+      enable: false # true | false
   f-key-action: random # current | random
-  framerate: 600
+  framerate: 5000
   auto-next-round: true # true | false
-  round: 5
+  round: 1000
   output:
     enable: true # true | false
     dir: output # str
@@ -22,6 +27,6 @@ agent:
 
 game:
   rendering:
-    enable: true # true | false
+    enable: false # true | false
   victory-point-limit: 30
-  allow-dominance-card: false # true | false
+  allow-dominance-card: true # true | false

@@ -722,7 +722,11 @@ class Game:
         self.addable_count = 2
 
         self.prompt = "Select Card To Add To Decree"
-        self.set_actions(self.generate_actions_add_to_the_decree_first())
+        actions: list[Action] = self.generate_actions_add_to_the_decree_first()
+        if len(actions) == 0:
+            self.eyrie_a_new_roost()
+        else:
+            self.set_actions(actions)
 
     def generate_actions_add_to_the_decree_first(self) -> list[Action]:
         actions: list[Action] = []
@@ -777,11 +781,18 @@ class Game:
         self.eyrie_a_new_roost()
 
     def eyrie_a_new_roost(self):
+        LOGGER.info(
+            "{}:{}:{}:eyrie_a_new_roost".format(self.ui_turn_player, self.phase, self.sub_phase))
+
         self.sub_phase = 2
 
         if self.eyrie.roost_tracker == 0:
-            self.prompt = "If you have no roost, place a roost and 3 warriors in the clearing with the fewest total pieces. (Select Clearing)"
-            self.set_actions(self.generate_actions_place_roost_and_3_warriors())
+            self.prompt = "If you have no roost, place a roost and 3 warriors in the clearing with the fewest total warriors. (Select Clearing)"
+            actions: list[Action] = self.generate_actions_place_roost_and_3_warriors()
+            if len(actions) == 0:
+                self.eyrie_birdsong_to_daylight()
+            else:
+                self.set_actions(actions)
         else:
             self.eyrie_birdsong_to_daylight()
 
@@ -1149,7 +1160,7 @@ class Game:
             for suit in card.craft_requirement.keys():
                 self.marquise.spend_crafting_piece(suit, card.craft_requirement[suit])
 
-            print("MARQUISE",[card.name for card in self.marquise.cards_in_hand],[card.name for card in self.marquise.crafted_cards])
+            # print("MARQUISE", [card.name for card in self.marquise.cards_in_hand],[card.name for card in self.marquise.crafted_cards])
             self.prompt = "{} has been crafted.".format(card.name)
             self.set_actions([Action("Next", self.marquise_daylight)])
 

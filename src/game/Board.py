@@ -80,7 +80,7 @@ class Board:
             if min_warrior > sum_warrior:
                 min_warrior = sum_warrior
 
-        return [area for area in self.areas if area.sum_all_pieces() == min_warrior]
+        return [area for area in self.areas if area.sum_all_warriors() == min_warrior]
 
     def item_available(self, item: Item) -> bool:
         for item_index in ITEM_SUPPLY_INDEX[item]:
