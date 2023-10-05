@@ -36,7 +36,7 @@ class CSVOutputWriter:
         # print(os.chdir(self.work_dir))
         self.file = open(self.work_dir / (self.output_dir + "/" + file_name), mode)
 
-    def write(self, texts: list[any], separator: str = ', ', newline: bool = True):
+    def write(self, texts: list[any], separator: str = ',', newline: bool = True):
         for text in texts[:-1]:
             self.file.write(str(text) + separator)
         self.file.write(str(texts[-1]) + ('\n' if newline else ''))
