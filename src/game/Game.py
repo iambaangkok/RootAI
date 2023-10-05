@@ -394,6 +394,7 @@ class Game:
         self.marquise_birdsong_cards()
 
     def marquise_birdsong_cards(self):
+        LOGGER.info("{}:{}:{}:Enter marquise_birdsong_cards".format(self.ui_turn_player, self.phase, self.sub_phase))
         if len(self.generate_actions_cards_birdsong(Faction.MARQUISE, self.marquise_birdsong_cards)) == 0:
             self.marquise_daylight()
         else:
@@ -402,6 +403,7 @@ class Game:
                 Action('Next', perform(self.marquise_daylight))])
 
     def marquise_daylight(self):
+        LOGGER.info("{}:{}:{}:Enter marquise_daylight".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.phase = Phase.DAYLIGHT
 
         craftable_cards = self.generate_actions_craft_cards(Faction.MARQUISE)
@@ -413,6 +415,7 @@ class Game:
                 Action('Next', perform(self.marquise_daylight_2))])
 
     def marquise_daylight_craft(self):
+        LOGGER.info("{}:{}:{}:Enter marquise_daylight_craft".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.prompt = "What cards do you want to craft?"
         self.set_actions(self.generate_actions_craft_cards(Faction.MARQUISE)
                          + self.generate_actions_activate_dominance_card(Faction.MARQUISE, self.marquise_daylight_craft)
@@ -420,6 +423,7 @@ class Game:
                          + [Action('Next', perform(self.marquise_daylight_2))])
 
     def marquise_daylight_2(self):
+        LOGGER.info("{}:{}:{}:Enter marquise_daylight_2".format(self.ui_turn_player, self.phase, self.sub_phase))
         actions = []
         self.prompt = "Select Actions (Remaining Action: {})".format(self.marquise_action_count)
         self.ui_turn_player = Faction.MARQUISE
@@ -473,33 +477,47 @@ class Game:
         return len(self.get_battlable_clearing(Faction.MARQUISE)) > 0
 
     def marquise_daylight_hawks_for_hire_select_card(self):
+        LOGGER.info("{}:{}:{}:Enter marquise_daylight_hawks_for_hire_select_card".format(self.ui_turn_player, self.phase, self.sub_phase))
+
         self.prompt = "Select card to discard"
         self.set_actions(self.generate_actions_select_card_hawks_for_hire())
 
     def marquise_daylight_march_move_from(self):
+        LOGGER.info("{}:{}:{}:Enter marquise_daylight_march_move_from".format(self.ui_turn_player, self.phase, self.sub_phase))
+
         self.prompt = "Let's march. Choose area to move from. (Remaining march action: {})".format(
             self.marquise_march_count)
         self.set_actions(self.generate_actions_select_src_clearing(Faction.MARQUISE))
 
     def marquise_daylight_march_move_to(self, faction, src):
+        LOGGER.info("{}:{}:{}:Enter marquise_daylight_march_move_to".format(self.ui_turn_player, self.phase, self.sub_phase))
+
         self.prompt = "Choose area to move to. (Remaining march action: {})".format(
             self.marquise_march_count)
         self.set_actions(self.generate_actions_select_dest_clearing(faction, src))
 
     def marquise_daylight_march_select_warriors(self, faction, src, dest):
+        LOGGER.info("{}:{}:{}:Enter marquise_daylight_march_select_warriors".format(self.ui_turn_player, self.phase, self.sub_phase))
+
         self.prompt = "Choose number of warriors to move. (Remaining march action: {})".format(
             self.marquise_march_count)
         self.set_actions(self.generate_actions_select_warriors(faction, src, dest))
 
     def marquise_daylight_build_select_clearing(self):
+        LOGGER.info("{}:{}:{}:Enter marquise_daylight_build_select_clearing".format(self.ui_turn_player, self.phase, self.sub_phase))
+
         self.prompt = "Let's build. Select clearing"
         self.set_actions(self.generate_actions_select_buildable_clearing(Faction.MARQUISE))
 
     def marquise_daylight_build_select_building(self, clearing):
+        LOGGER.info("{}:{}:{}:Enter marquise_daylight_build_select_building".format(self.ui_turn_player, self.phase, self.sub_phase))
+
         self.prompt = "Select Building"
         self.set_actions(self.generate_actions_select_building(Faction.MARQUISE, clearing))
 
     def marquise_daylight_recruit(self):
+        LOGGER.info("{}:{}:{}:Enter marquise_daylight_recruit".format(self.ui_turn_player, self.phase, self.sub_phase))
+
         self.marquise_recruit_count -= 1
         self.marquise_action_count -= 1
         LOGGER.info("{}:{}:{}:MARQUISE recruit.".format(self.ui_turn_player, self.phase, self.sub_phase))
@@ -514,6 +532,8 @@ class Game:
             self.marquise_daylight_recruit_some_clearings(clearing_with_recruiter)
 
     def marquise_daylight_recruit_some_clearings(self, clearing_with_recruiter):
+        LOGGER.info("{}:{}:{}:Enter marquise_daylight_recruit_some_clearings".format(self.ui_turn_player, self.phase, self.sub_phase))
+
         if clearing_with_recruiter is [] or self.marquise.reserved_warriors == 0:
             self.marquise_daylight_2()
         else:
@@ -533,6 +553,8 @@ class Game:
         return actions
 
     def recruit_single_clearing(self, clearing, remaining_clearing_with_recruiter):
+        LOGGER.info("{}:{}:{}:Enter recruit_single_clearing".format(self.ui_turn_player, self.phase, self.sub_phase))
+
         self.add_warrior(Faction.MARQUISE, clearing, 1)
         LOGGER.info(
             "{}:{}:{}:MARQUISE adds warrior in clearing #{}".format(self.ui_turn_player, self.phase,
@@ -541,6 +563,8 @@ class Game:
         self.marquise_daylight_recruit_some_clearings(remaining_clearing_with_recruiter)
 
     def marquise_daylight_battle(self):
+        LOGGER.info("{}:{}:{}:Enter marquise_daylight_battle".format(self.ui_turn_player, self.phase, self.sub_phase))
+
         self.marquise_action_count -= 1
         self.prompt = "Select Clearing"
         self.set_actions(self.generate_actions_select_clearing_battle(Faction.MARQUISE,
@@ -552,14 +576,20 @@ class Game:
     #         self.generate_actions_select_faction_battle(Faction.MARQUISE, clearing, self.marquise_daylight_2))
 
     def marquise_daylight_overwork_select_clearing(self):
+        LOGGER.info("{}:{}:{}:Enter marquise_daylight_overwork_select_clearing".format(self.ui_turn_player, self.phase, self.sub_phase))
+
         self.prompt = "Select Clearing"
         self.set_actions(self.generate_actions_overwork_select_clearing())
 
     def marquise_daylight_overwork_select_card_to_discard(self, clearing):
+        LOGGER.info("{}:{}:{}:Enter marquise_daylight_overwork_select_card_to_discard".format(self.ui_turn_player, self.phase, self.sub_phase))
+
         self.prompt = "Select Card"
         self.set_actions(self.generate_actions_overwork_select_card(clearing))
 
     def marquise_overwork(self, clearing: Area, card):
+        LOGGER.info("{}:{}:{}:Enter marquise_overwork".format(self.ui_turn_player, self.phase, self.sub_phase))
+
         LOGGER.info("{}:{}:{}:MARQUISE overwork on clearing #{}".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                                         clearing.area_index))
         self.discard_card(self.marquise.cards_in_hand, card)
@@ -570,6 +600,8 @@ class Game:
         self.set_actions([Action('Next', self.marquise_daylight_2)])
 
     def marquise_evening_draw_card(self):
+        LOGGER.info("{}:{}:{}:Enter marquise_evening_draw_card".format(self.ui_turn_player, self.phase, self.sub_phase))
+
         self.prompt = "Draw one card, plus one card per draw bonus"
         number_of_card_to_be_drawn = self.marquise.get_reward_card() + 1
         self.take_card_from_draw_pile(Faction.MARQUISE, number_of_card_to_be_drawn)
@@ -579,6 +611,8 @@ class Game:
         self.set_actions()
 
     def marquise_evening_discard_card(self):
+        LOGGER.info("{}:{}:{}:Enter marquise_evening_discard_card".format(self.ui_turn_player, self.phase, self.sub_phase))
+
         self.phase = Phase.EVENING
         self.sub_phase = 1
         card_in_hand_count = len(self.marquise.cards_in_hand)
