@@ -2212,13 +2212,14 @@ class Game:
             if card.name == PlayingCardName.ROYAL_CLAIM:
                 actions.append(Action('Discard {}'.format(card.name),
                                       perform(self.royal_claim, faction, card, continuation_func)))
-            if card.name == PlayingCardName.STAND_AND_DELIVER:
+            if card.name == PlayingCardName.STAND_AND_DELIVER and self.stand_and_deliver_check(faction):
                 actions.append(
                     Action('Use {} effect'.format(card.name),
                            perform(self.stand_and_deliver_select_faction, faction, card, continuation_func)))
         return actions
 
     def royal_claim(self, faction, card, continuation_func):
+        LOGGER.info("{}:{}:{}:Enter royal_claim".format(self.ui_turn_player, self.phase, self.sub_phase))
         faction_board = self.faction_to_faction_board(faction)
 
         self.discard_card(faction_board.crafted_cards, card)
@@ -2229,15 +2230,33 @@ class Game:
                 gained_vp += 1
         self.gain_vp(faction, gained_vp)
 
+        LOGGER.info("{}:{}:{}:{} discard ROYAL_CLAIM, {} vp gained".format(self.ui_turn_player, self.phase, self.sub_phase, faction, gained_vp))
+
         continuation_func()
 
+    def stand_and_deliver_check(self, faction):
+        LOGGER.info("{}:{}:{}:Enter stand_and_deliver_check".format(self.ui_turn_player, self.phase, self.sub_phase))
+
+        available = False
+        available_faction = [Faction.MARQUISE, Faction.EYRIE]
+        available_faction.remove(faction)
+
+        for enemy_faction in available_faction:
+            if len(self.faction_to_faction_board(enemy_faction).cards_in_hand) > 0:
+                available = True
+        return available
+
     def stand_and_deliver_select_faction(self, faction, card, continuation_func):
+        LOGGER.info("{}:{}:{}:Enter stand_and_deliver_select_faction".format(self.ui_turn_player, self.phase, self.sub_phase))
+
         faction_board = self.faction_to_faction_board(faction)
         faction_board.activated_card.append(card)
         self.prompt = "Select Faction"
         self.set_actions(self.generate_actions_stand_and_deliver_select_faction(faction, continuation_func))
 
     def generate_actions_stand_and_deliver_select_faction(self, faction, continuation_func):
+        LOGGER.info("{}:{}:{}:Enter generate_actions_stand_and_deliver_select_faction".format(self.ui_turn_player, self.phase, self.sub_phase))
+
         actions = []
         available_faction = [Faction.MARQUISE, Faction.EYRIE]
         available_faction.remove(faction)
@@ -2250,6 +2269,8 @@ class Game:
         return actions
 
     def stand_and_deliver(self, faction, stolen_faction, continuation_func):
+        LOGGER.info("{}:{}:{}:Enter stand_and_deliver".format(self.ui_turn_player, self.phase, self.sub_phase))
+
         faction_board = self.faction_to_faction_board(faction)
         stolen_faction_board = self.faction_to_faction_board(stolen_faction)
 
