@@ -27,6 +27,7 @@ wheels/
 share/python-wheels/
 *.egg-info/
 output/
+!/dataanalytics/*/output/
 .installed.cfg
 *.egg
 MANIFEST
