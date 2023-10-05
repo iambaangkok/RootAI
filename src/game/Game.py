@@ -1232,7 +1232,7 @@ class Game:
             faction_board.cards_in_hand.extend(self.draw_pile[0:lesser_amount])
             self.draw_pile = self.draw_pile[lesser_amount:]
             LOGGER.info(
-                "{}:{}:{}:{} drawn {} card(s)".format(self.ui_turn_player, self.phase, self.sub_phase, faction, amount))
+                "{}:{}:{}:{} drawn {} card(s)".format(self.ui_turn_player, self.phase, self.sub_phase, faction, lesser_amount))
 
             self.shuffle_discard_pile_into_draw_pile()
 
@@ -1240,7 +1240,7 @@ class Game:
             faction_board.cards_in_hand.extend(self.draw_pile[0:remaining_amount])
             self.draw_pile = self.draw_pile[remaining_amount:]
             LOGGER.info(
-                "{}:{}:{}:{} drawn {} card(s)".format(self.ui_turn_player, self.phase, self.sub_phase, faction, amount))
+                "{}:{}:{}:{} drawn {} card(s)".format(self.ui_turn_player, self.phase, self.sub_phase, faction, remaining_amount))
 
     def shuffle_discard_pile_into_draw_pile(self):
         self.draw_pile.extend(self.discard_pile)
