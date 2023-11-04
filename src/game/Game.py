@@ -1427,7 +1427,7 @@ class Game:
 
         continuation_func()
 
-    def find_available_source_clearings(self, faction: Faction, decree):
+    def find_available_source_clearings(self, faction: Faction, decree=False):
         movable_clearings = []
 
         if (faction == Faction.MARQUISE) or (faction == Faction.EYRIE and not decree):
