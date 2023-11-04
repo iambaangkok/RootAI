@@ -459,7 +459,7 @@ class Game:
                          + self.generate_actions_take_dominance_card(Faction.MARQUISE,
                                                                      self.marquise_daylight_2)
                          + self.generate_actions_cards_daylight(Faction.MARQUISE,
-                                                                         self.marquise_daylight_2)
+                                                                self.marquise_daylight_2)
                          + [Action('Next', perform(self.marquise_evening_draw_card))]
                          )
 
@@ -2347,6 +2347,9 @@ class Game:
             if card.name == PlayingCardName.TAX_COLLECTOR and self.tax_collector_check(faction):
                 actions.append(Action('* Use {} effect'.format(card.name),
                                       perform(self.tax_collector_select_clearing, faction, card, continuation_func)))
+            if card.name == PlayingCardName.CODEBREAKERS:
+                actions.append(Action('* Use {} effect'.format(card.name),
+                                      perform(self.codebreakers, faction, card, continuation_func)))
 
         return actions
 
@@ -2406,6 +2409,23 @@ class Game:
         faction_board.activated_card.append(card)
 
         continuation_func()
+
+    def codebreakers(self, faction, card, continuation_func):
+        if faction == Faction.MARQUISE:
+            enemy_faction = Faction.EYRIE
+        else:
+            enemy_faction = Faction.MARQUISE
+
+        faction_board = self.faction_to_faction_board(faction)
+        enemy_faction_board = self.faction_to_faction_board(enemy_faction)
+
+        prompt_str = ""
+        for card_in_hand in enemy_faction_board.cards_in_hand:
+            prompt_str = prompt_str + "{} ({}), ".format(card_in_hand.name, card_in_hand.suit)
+        faction_board.activated_card.append(card)
+
+        self.prompt = prompt_str
+        self.set_actions([Action('Next', continuation_func)])
 
     def faction_to_faction_board(self, faction: Faction) -> FactionBoard:
         if faction == Faction.MARQUISE:
