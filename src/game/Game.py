@@ -213,10 +213,10 @@ class Game:
             Phase.DAYLIGHT: [
                 [Action('Craft', perform(self.marquise_daylight_craft)),
                  Action('Next', perform(self.marquise_daylight_2))],
-                [Action('Battle'), Action('March', perform(self.marquise_daylight_march_move_from)), Action('Recruit'),
+                [Action('Battle'), Action('March', perform(self.marquise_daylight_march)), Action('Recruit'),
                  Action('Build'),
                  Action('Overwork'),
-                 Action('Next', perform(self.marquise_evening_draw_card))]
+                 Action('Next', perform(self.marquise_pre_evening))]
             ],
             Phase.EVENING: [[Action('Next', perform(self.marquise_evening_discard_card))],
                             [Action('End turn', perform(self.eyrie_start))]]
@@ -243,6 +243,9 @@ class Game:
         self.marquise_recruit_action_used = False
         self.distance_from_the_keep_list = [4, 3, 2, 3, 3, 2, 1, 1, 3, 2, 1, 0]
         self.distance_from_the_keep = {}
+
+        # Eyrie variables
+        self.selected_clearing = None
 
         # Battle variables
         self.sappers_enable = {
@@ -288,9 +291,9 @@ class Game:
         self.activate_leader(EyrieLeader.CHARISMATIC)
 
         self.marquise.crafted_cards.append(
-            PlayingCard(31, PlayingCardName.COMMAND_WARREN, Suit.RABBIT, PlayingCardPhase.DAYLIGHT, {Suit.RABBIT: 2}))
+            PlayingCard(35, PlayingCardName.COBBLER, Suit.RABBIT, PlayingCardPhase.EVENING, {Suit.RABBIT: 2}))
         self.eyrie.crafted_cards.append(
-            PlayingCard(31, PlayingCardName.COMMAND_WARREN, Suit.RABBIT, PlayingCardPhase.DAYLIGHT, {Suit.RABBIT: 2}))
+            PlayingCard(35, PlayingCardName.COBBLER, Suit.RABBIT, PlayingCardPhase.EVENING, {Suit.RABBIT: 2}))
 
         # Take Cards
         self.shuffle_draw_pile()
@@ -458,7 +461,7 @@ class Game:
         else:
             if self.marquise_march_check():
                 self.marquise_march_count = 2
-                actions.append(Action('March', perform(self.marquise_daylight_march_move_from)))
+                actions.append(Action('March', perform(self.marquise_daylight_march)))
             if self.marquise_build_check():
                 actions.append(Action('Build', perform(self.marquise_daylight_build_select_clearing)))
             if self.marquise_recruit_check():
@@ -475,7 +478,7 @@ class Game:
                                                                      self.marquise_daylight_2)
                          + self.generate_actions_cards_daylight(Faction.MARQUISE,
                                                                 self.marquise_daylight_2)
-                         + [Action('Next', perform(self.marquise_evening_draw_card))]
+                         + [Action('Next', perform(self.marquise_pre_evening))]
                          )
 
     def marquise_hawks_for_hire_check(self):
@@ -504,29 +507,23 @@ class Game:
         self.prompt = "Select card to discard"
         self.set_actions(self.generate_actions_select_card_hawks_for_hire())
 
-    def marquise_daylight_march_move_from(self):
+    def marquise_daylight_march(self):
+        self.select_clearing_src_move(Faction.MARQUISE, self.marquise_daylight_resolve_march)
+
+    def marquise_daylight_resolve_march(self):
+        self.marquise_march_count -= 1
         LOGGER.info(
-            "{}:{}:{}:Enter marquise_daylight_march_move_from".format(self.ui_turn_player, self.phase, self.sub_phase))
-
-        self.prompt = "Let's march. Choose area to move from. (Remaining march action: {})".format(
-            self.marquise_march_count)
-        self.set_actions(self.generate_actions_select_src_clearing(Faction.MARQUISE))
-
-    def marquise_daylight_march_move_to(self, faction, src):
-        LOGGER.info(
-            "{}:{}:{}:Enter marquise_daylight_march_move_to".format(self.ui_turn_player, self.phase, self.sub_phase))
-
-        self.prompt = "Choose area to move to. (Remaining march action: {})".format(
-            self.marquise_march_count)
-        self.set_actions(self.generate_actions_select_dest_clearing(faction, src))
-
-    def marquise_daylight_march_select_warriors(self, faction, src, dest):
-        LOGGER.info("{}:{}:{}:Enter marquise_daylight_march_select_warriors".format(self.ui_turn_player, self.phase,
-                                                                                    self.sub_phase))
-
-        self.prompt = "Choose number of warriors to move. (Remaining march action: {})".format(
-            self.marquise_march_count)
-        self.set_actions(self.generate_actions_select_warriors(faction, src, dest))
+            "{}:{}:{}:MARQUISE's remaining march action: {}".format(self.ui_turn_player, self.phase,
+                                                                    self.sub_phase, self.marquise_march_count))
+        if self.marquise_march_count > 0:
+            self.prompt = "The warriors has been moved. (Remaining march action: {})".format(
+                self.marquise_march_count)
+            self.set_actions([Action('Next', perform(self.marquise_daylight_march))])
+        else:
+            self.marquise_action_count -= 1
+            self.prompt = "The warriors has been moved. (Remaining march action: {})".format(
+                self.marquise_march_count)
+            self.set_actions([Action('Next', perform(self.marquise_daylight_2))])
 
     def marquise_daylight_build_select_clearing(self):
         LOGGER.info("{}:{}:{}:Enter marquise_daylight_build_select_clearing".format(self.ui_turn_player, self.phase,
@@ -622,6 +619,15 @@ class Game:
         self.prompt = "Overwork complete"
         self.marquise_action_count -= 1
         self.set_actions([Action('Next', self.marquise_daylight_2)])
+
+    def marquise_pre_evening(self):
+        actions = self.generate_actions_cobbler(Faction.MARQUISE, self.marquise_evening_draw_card)
+
+        if not actions:
+            self.marquise_evening_draw_card()
+        else:
+            self.prompt = 'Want to move your warriors?'
+            self.set_actions(actions + [Action('Next', self.marquise_evening_draw_card)])
 
     def marquise_evening_draw_card(self):
         LOGGER.info("{}:{}:{}:Enter marquise_evening_draw_card".format(self.ui_turn_player, self.phase, self.sub_phase))
@@ -1068,7 +1074,7 @@ class Game:
                          + self.generate_actions_cards_daylight(Faction.EYRIE, self.eyrie_pre_move))
 
     def generate_actions_eyrie_move(self) -> list[Action]:
-        actions: list[Action] = self.generate_actions_select_src_clearing(Faction.EYRIE)
+        actions: list[Action] = self.generate_actions_select_src_clearing(Faction.EYRIE, self.eyrie_resolve_move, True)
 
         decree_action = DecreeAction.MOVE
 
@@ -1080,21 +1086,11 @@ class Game:
 
         return actions
 
-    def eyrie_choose_move_from(self, faction, src):
-        LOGGER.info(
-            "{}:{}:{}:eyrie_choose_move_from area {}".format(self.ui_turn_player, self.phase, self.sub_phase, src))
-
-        self.update_prompt_eyrie_decree(DecreeAction.MOVE)
-        self.prompt += " Choose area to move to."
-        self.set_actions(self.generate_actions_select_dest_clearing(faction, src))
-
-    def eyrie_choose_move_to(self, faction, src, dest):
-        LOGGER.info(
-            "{}:{}:{}:eyrie_choose_move_to area {}".format(self.ui_turn_player, self.phase, self.sub_phase, src, dest))
-
-        self.update_prompt_eyrie_decree(DecreeAction.MOVE)
-        self.prompt += " Choose number of warriors to move."
-        self.set_actions(self.generate_actions_select_warriors(faction, src, dest))
+    def eyrie_resolve_move(self):
+        decree_action = DecreeAction.MOVE
+        self.remove_decree_counter(decree_action, self.selected_clearing.suit)
+        self.update_prompt_eyrie_decree(decree_action)
+        self.eyrie_pre_move()
 
     def eyrie_pre_battle(self):
         LOGGER.info("{}:{}:{}:eyrie_pre_battle".format(self.ui_turn_player, self.phase, self.sub_phase))
@@ -1107,7 +1103,8 @@ class Game:
                          + self.generate_actions_cards_daylight(Faction.EYRIE, self.eyrie_pre_battle))
 
     def generate_actions_eyrie_battle(self) -> list[Action]:
-        actions: list[Action] = self.generate_actions_select_clearing_battle(Faction.EYRIE, self.eyrie_pre_build, True)
+        actions: list[Action] = self.generate_actions_select_clearing_battle(Faction.EYRIE, self.eyrie_resolve_battle,
+                                                                             True)
 
         decree_action: DecreeAction = DecreeAction.BATTLE
 
@@ -1118,6 +1115,12 @@ class Game:
                 actions.append(Action("Next, To BUILD", self.eyrie_pre_build))
 
         return actions
+
+    def eyrie_resolve_battle(self):
+        decree_action = DecreeAction.BATTLE
+        self.remove_decree_counter(decree_action, self.selected_clearing.suit)
+        self.update_prompt_eyrie_decree(decree_action)
+        self.eyrie_pre_battle()
 
     def eyrie_pre_build(self):
         LOGGER.info("{}:{}:{}:eyrie_pre_battle".format(self.ui_turn_player, self.phase, self.sub_phase))
@@ -1151,7 +1154,14 @@ class Game:
         self.set_actions(self.generate_actions_eyrie_build())
 
     def eyrie_build_to_evening(self):
-        self.eyrie_evening()
+        actions = self.generate_actions_cobbler(Faction.EYRIE, self.eyrie_evening)
+        print(actions)
+
+        if not actions:
+            self.eyrie_evening()
+        else:
+            self.prompt = 'Want to move your warriors?'
+            self.set_actions(actions + [Action('Next', self.eyrie_evening)])
 
     def eyrie_evening(self):
         # score points
@@ -1242,7 +1252,6 @@ class Game:
             for suit in card.craft_requirement.keys():
                 self.marquise.spend_crafting_piece(suit, card.craft_requirement[suit])
 
-            # print("MARQUISE", [card.name for card in self.marquise.cards_in_hand],[card.name for card in self.marquise.crafted_cards])
             self.prompt = "{} has been crafted.".format(card.name)
             self.set_actions([Action("Next", self.marquise_daylight)])
 
@@ -1358,106 +1367,82 @@ class Game:
         else:
             self.discard_pile.append(card)
 
-    def generate_actions_select_src_clearing(self, faction) -> list[Action]:
-        movable_clearings = self.find_available_source_clearings(faction)
+    def select_clearing_src_move(self, faction, continuation_func, decree=False):
+        actions = self.generate_actions_select_src_clearing(faction, continuation_func, decree)
+        self.prompt = "Choose area to move from."
+        self.set_actions(actions)
+
+    def generate_actions_select_src_clearing(self, faction, continuation_func, decree) -> list[Action]:
+        can_move_from_clearing = self.find_available_source_clearings(faction, decree)
         actions = []
 
-        if faction == Faction.MARQUISE:
-            for movable_clearing in movable_clearings:
-                actions.append(
-                    Action("{}".format(movable_clearing),
-                           perform(self.marquise_daylight_march_move_to, faction, movable_clearing)))
+        for clearing in can_move_from_clearing:
+            actions.append(
+                Action("{}".format(clearing),
+                       perform(self.select_clearing_dest_move, faction, clearing, continuation_func, decree)))
 
-            return actions
-        elif faction == Faction.EYRIE:
-            for movable_clearing in movable_clearings:
-                actions.append(
-                    Action("{}".format(movable_clearing),
-                           perform(self.eyrie_choose_move_from, faction, movable_clearing)))
-            return actions
+        return actions
 
-    def generate_actions_select_dest_clearing(self, faction, src) -> list[Action]:
+    def select_clearing_dest_move(self, faction, src, continuation_func, decree):
+        self.selected_clearing = src
+        actions = self.generate_actions_select_dest_clearing(faction, src, continuation_func, decree)
+        self.prompt = "Choose area to move to."
+        self.set_actions(actions)
+
+    def generate_actions_select_dest_clearing(self, faction, src, continuation_func, decree) -> list[Action]:
         dests = self.find_available_destination_clearings(faction, src)
         actions = []
 
-        if faction == Faction.MARQUISE:
-            for dest in dests:
-                actions.append(
-                    Action("{}".format(dest),
-                           perform(self.marquise_daylight_march_select_warriors, faction, src, dest)))
-
-        elif faction == Faction.EYRIE:
-            for dest in dests:
-                actions.append(
-                    Action("{}".format(dest),
-                           perform(self.eyrie_choose_move_to, faction, src, dest)))
+        for dest in dests:
+            actions.append(
+                Action("{}".format(dest),
+                       perform(self.select_warriors, faction, src, dest, continuation_func, decree)))
 
         return actions
 
-    def generate_actions_select_warriors(self, faction, src: Area, dest: Area) -> list[Action]:
+    def select_warriors(self, faction, src, dest, continuation_func, decree):
+        actions = self.generate_actions_select_warriors(faction, src, dest, continuation_func, decree)
+        self.prompt = "Choose number of warriors to move."
+        self.set_actions(actions)
+
+    def generate_actions_select_warriors(self, faction, src: Area, dest: Area, continuation_func, decree) -> list[
+        Action]:
         actions = []
 
-        if faction == Faction.MARQUISE:
-            for num_of_warriors in range(1, src.warrior_count[Warrior.MARQUISE] + 1):
-                actions.append(Action("{}".format(num_of_warriors),
-                                      perform(self.move_warriors, faction, src, dest, num_of_warriors)))
-
-        elif faction == Faction.EYRIE:
-            for num_of_warriors in range(1, src.warrior_count[Warrior.EYRIE] + 1):
-                actions.append(Action("{}".format(num_of_warriors),
-                                      perform(self.move_warriors, faction, src, dest, num_of_warriors)))
+        for num_of_warriors in range(1, src.warrior_count[faction_to_warrior(faction)] + 1):
+            actions.append(Action("{}".format(num_of_warriors),
+                                  perform(self.move_warriors, faction, src, dest, num_of_warriors, continuation_func,
+                                          decree)))
 
         return actions
 
-    def move_warriors(self, faction, src: Area, dest: Area, num):
+    def move_warriors(self, faction, src: Area, dest: Area, num, continuation_func, decree):
         LOGGER.info(
             "{}:{}:{}:{} move {} warrior(s) from Clearing #{} to Clearing #{}".format(self.ui_turn_player, self.phase,
                                                                                       self.sub_phase, faction,
                                                                                       num, src,
                                                                                       dest))
+        src.remove_warrior(faction_to_warrior(faction), num)
+        dest.add_warrior(faction_to_warrior(faction), num)
 
-        if faction == Faction.MARQUISE:
-            src.remove_warrior(Warrior.MARQUISE, num)
-            dest.add_warrior(Warrior.MARQUISE, num)
+        continuation_func()
 
-            self.marquise_march_count -= 1
-            LOGGER.info(
-                "{}:{}:{}:MARQUISE's remaining march action: {}".format(self.ui_turn_player, self.phase,
-                                                                        self.sub_phase, self.marquise_march_count))
-            if self.marquise_march_count > 0:
-                self.prompt = "The warriors has been moved. (Remaining march action: {})".format(
-                    self.marquise_march_count)
-                self.set_actions([Action('Next', perform(self.marquise_daylight_march_move_from))])
-            else:
-                self.marquise_action_count -= 1
-                self.prompt = "The warriors has been moved. (Remaining march action: {})".format(
-                    self.marquise_march_count)
-                self.set_actions([Action('Next', perform(self.marquise_daylight_2))])
-        elif faction == Faction.EYRIE:
-            src.remove_warrior(Warrior.EYRIE, num)
-            dest.add_warrior(Warrior.EYRIE, num)
-            decree_action = DecreeAction.MOVE
-
-            self.remove_decree_counter(decree_action, src.suit)
-
-            self.update_prompt_eyrie_decree(decree_action)
-            self.set_actions(self.generate_actions_eyrie_move())
-
-    def find_available_source_clearings(self, faction: Faction):
+    def find_available_source_clearings(self, faction: Faction, decree):
         movable_clearings = []
 
-        if faction == Faction.MARQUISE:
+        if (faction == Faction.MARQUISE) or (faction == Faction.EYRIE and not decree):
             for area in self.board.areas:
                 if len(self.find_available_destination_clearings(faction, area)) <= 0:
                     continue
-                if area.ruler() == Warrior.MARQUISE and area.warrior_count[Warrior.MARQUISE] > 0:
+                if area.ruler() == faction_to_warrior(faction) and area.warrior_count[faction_to_warrior(faction)] > 0:
                     movable_clearings.append(area)
                 else:
                     for connected_area in area.connected_clearings:
-                        if area.warrior_count[Warrior.MARQUISE] > 0 and connected_area.ruler() == Warrior.MARQUISE:
+                        if area.warrior_count[
+                            faction_to_warrior(faction)] > 0 and connected_area.ruler() == faction_to_warrior(faction):
                             movable_clearings.append(area)
                             break
-        elif faction == Faction.EYRIE:
+        elif faction == Faction.EYRIE and decree:
             decree_can_move_from: {Suit: bool} = {}
             for suit in Suit:
                 decree_can_move_from[suit] = count_decree_action_static(self.decree_counter, DecreeAction.MOVE, suit)
@@ -1631,6 +1616,7 @@ class Game:
         return actions
 
     def select_enemy_faction_battle(self, attacker, clearing, continuation_func):
+        self.selected_clearing = clearing
         actions = self.generate_actions_select_enemy_faction_battle(attacker, clearing, continuation_func)
         self.prompt = "Select Enemy Faction"
         self.set_actions(actions)
@@ -2435,6 +2421,24 @@ class Game:
 
         self.prompt = prompt_str
         self.set_actions([Action('Next', continuation_func)])
+
+    def generate_actions_cobbler(self, faction, continuation_func):
+        actions = []
+        faction_board = self.faction_to_faction_board(faction)
+
+        for card in faction_board.crafted_cards:
+            if card.name == PlayingCardName.COBBLER and len(
+                    self.generate_actions_select_src_clearing(faction, continuation_func, False)) != 0:
+                actions.append(
+                    Action('Use {} card'.format(card.name),
+                           perform(self.cobbler, card, faction, continuation_func)))
+
+        return actions
+
+    def cobbler(self, card, faction, continuation_func):
+        faction_board = self.faction_to_faction_board(faction)
+        faction_board.activated_card.append(card)
+        self.select_clearing_src_move(faction, continuation_func)
 
     def faction_to_faction_board(self, faction: Faction) -> FactionBoard:
         if faction == Faction.MARQUISE:
