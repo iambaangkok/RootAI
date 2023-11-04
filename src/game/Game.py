@@ -55,8 +55,8 @@ class Game:
 
         # Game Data
         self.turn_count: int = 0  # TODO: increase this on birdsong of both faction
-        self.ui_turn_player: Faction = Faction.EYRIE
-        self.turn_player: Faction = Faction.EYRIE
+        self.ui_turn_player: Faction = Faction.MARQUISE
+        self.turn_player: Faction = Faction.MARQUISE
         self.phase: Phase = Phase.BIRDSONG
         self.sub_phase = 0
         self.is_in_action_sub_phase: bool = False
@@ -287,6 +287,11 @@ class Game:
         self.board.areas[0].add_warrior(Warrior.EYRIE, 6)
         self.activate_leader(EyrieLeader.CHARISMATIC)
 
+        self.marquise.crafted_cards.append(
+            PlayingCard(31, PlayingCardName.COMMAND_WARREN, Suit.RABBIT, PlayingCardPhase.DAYLIGHT, {Suit.RABBIT: 2}))
+        self.eyrie.crafted_cards.append(
+            PlayingCard(31, PlayingCardName.COMMAND_WARREN, Suit.RABBIT, PlayingCardPhase.DAYLIGHT, {Suit.RABBIT: 2}))
+
         # Take Cards
         self.shuffle_draw_pile()
         starting_card_amount: int = 5
@@ -396,15 +401,25 @@ class Game:
     def marquise_birdsong_cards(self):
         LOGGER.info("{}:{}:{}:Enter marquise_birdsong_cards".format(self.ui_turn_player, self.phase, self.sub_phase))
         if len(self.generate_actions_cards_birdsong(Faction.MARQUISE, self.marquise_birdsong_cards)) == 0:
-            self.marquise_daylight()
+            self.marquise_pre_daylight()
         else:
             self.prompt = "Do you want to use Birdsong card's action?"
             self.set_actions(self.generate_actions_cards_birdsong(Faction.MARQUISE, self.marquise_birdsong_cards) + [
-                Action('Next', perform(self.marquise_daylight))])
+                Action('Next', perform(self.marquise_pre_daylight))])
+
+    def marquise_pre_daylight(self):
+        LOGGER.info("{}:{}:{}:Enter marquise_pre_daylight".format(self.ui_turn_player, self.phase, self.sub_phase))
+        self.phase = Phase.DAYLIGHT
+
+        actions = self.generate_actions_command_warren(Faction.MARQUISE, self.marquise_daylight)
+        if not actions:
+            self.marquise_daylight()
+        else:
+            self.prompt = 'Want to use Command Warren card effect?'
+            self.set_actions(actions + [Action('Next', self.marquise_daylight)])
 
     def marquise_daylight(self):
         LOGGER.info("{}:{}:{}:Enter marquise_daylight".format(self.ui_turn_player, self.phase, self.sub_phase))
-        self.phase = Phase.DAYLIGHT
 
         craftable_cards = self.generate_actions_craft_cards(Faction.MARQUISE)
         action_cards = self.generate_actions_cards_daylight(Faction.MARQUISE, self.marquise_daylight)
@@ -479,7 +494,7 @@ class Game:
         return len(self.find_available_overwork_clearings()) > 0
 
     def marquise_battle_check(self):
-        return len(self.get_battlable_clearing(Faction.MARQUISE)) > 0
+        return len(self.generate_actions_select_clearing_battle(Faction.MARQUISE, None, True)) > 0
 
     def marquise_daylight_hawks_for_hire_select_card(self):
         LOGGER.info(
@@ -579,9 +594,7 @@ class Game:
         LOGGER.info("{}:{}:{}:Enter marquise_daylight_battle".format(self.ui_turn_player, self.phase, self.sub_phase))
 
         self.marquise_action_count -= 1
-        self.prompt = "Select Clearing"
-        self.set_actions(self.generate_actions_select_clearing_battle(Faction.MARQUISE,
-                                                                      self.marquise_daylight_2))
+        self.select_clearing_battle(Faction.MARQUISE, self.marquise_daylight_2)
 
     def marquise_daylight_overwork_select_clearing(self):
         LOGGER.info("{}:{}:{}:Enter marquise_daylight_overwork_select_clearing".format(self.ui_turn_player, self.phase,
@@ -885,7 +898,12 @@ class Game:
 
         self.eyrie.crafting_pieces_count = self.get_building_count_by_suit(Building.ROOST)
 
-        self.eyrie_daylight_craft()
+        actions = self.generate_actions_command_warren(Faction.EYRIE, self.eyrie_daylight_craft)
+        if not actions:
+            self.eyrie_daylight_craft()
+        else:
+            self.prompt = 'Want to use Command Warren card effect?'
+            self.set_actions(actions + [Action('Next', self.eyrie_daylight_craft)])
 
     def eyrie_daylight_craft(self):
         self.prompt = "Craft Cards"
@@ -1089,7 +1107,7 @@ class Game:
                          + self.generate_actions_cards_daylight(Faction.EYRIE, self.eyrie_pre_battle))
 
     def generate_actions_eyrie_battle(self) -> list[Action]:
-        actions: list[Action] = self.generate_actions_select_clearing_battle(Faction.EYRIE, self.eyrie_pre_build)
+        actions: list[Action] = self.generate_actions_select_clearing_battle(Faction.EYRIE, self.eyrie_pre_build, True)
 
         decree_action: DecreeAction = DecreeAction.BATTLE
 
@@ -1596,13 +1614,13 @@ class Game:
             total += area.buildings.count(building)
         return total
 
-    def select_clearing_battle(self, attacker, continuation_func):
-        actions = self.generate_actions_select_clearing_battle(attacker, continuation_func)
+    def select_clearing_battle(self, attacker, continuation_func, decree=True):
+        actions = self.generate_actions_select_clearing_battle(attacker, continuation_func, decree)
         self.prompt = "Select Clearing"
         self.set_actions(actions)
 
-    def generate_actions_select_clearing_battle(self, attacker, continuation_func) -> list[Action]:
-        clearings = self.get_battlable_clearing(attacker)
+    def generate_actions_select_clearing_battle(self, attacker, continuation_func, decree) -> list[Action]:
+        clearings = self.get_battlable_clearing(attacker, decree)
         actions = []
 
         for clearing in clearings:
@@ -1629,7 +1647,7 @@ class Game:
 
         return actions
 
-    def get_battlable_clearing(self, faction):
+    def get_battlable_clearing(self, faction, decree):
         clearings = []
         if faction == Faction.MARQUISE:
             for area in self.board.areas:
@@ -1645,7 +1663,7 @@ class Game:
                 decree_can_battle_in[suit] = count_decree_action_static(self.decree_counter, DecreeAction.BATTLE, suit)
 
             for area in self.board.areas:
-                if decree_can_battle_in[area.suit] == 0 and decree_can_battle_in[Suit.BIRD] == 0:
+                if decree and decree_can_battle_in[area.suit] == 0 and decree_can_battle_in[Suit.BIRD] == 0:
                     continue
                 if area.warrior_count[Warrior.EYRIE] == 0:
                     continue
@@ -2345,40 +2363,31 @@ class Game:
             if faction_board.activated_card.count(card) > 0:
                 continue
             if card.name == PlayingCardName.TAX_COLLECTOR and self.tax_collector_check(faction):
-                actions.append(Action('* Use {} effect'.format(card.name),
+                actions.append(Action('* Use {} card'.format(card.name),
                                       perform(self.tax_collector_select_clearing, faction, card, continuation_func)))
             if card.name == PlayingCardName.CODEBREAKERS:
-                actions.append(Action('* Use {} effect'.format(card.name),
+                actions.append(Action('* Use {} card'.format(card.name),
                                       perform(self.codebreakers, faction, card, continuation_func)))
 
         return actions
 
-    # def generate_actions_command_warren(self, faction, continuation_func):
-    #     actions = []
-    #     faction_board = self.faction_to_faction_board(faction)
-    #
-    #     for card in faction_board.crafted_cards:
-    #         if card.name == PlayingCardName.COMMAND_WARREN:
-    #             actions.append(
-    #                 Action('Activate COMMAND WARREN', perform(self.command_warren, card, faction, continuation_func)))
-    #
-    #     return actions
+    def generate_actions_command_warren(self, faction, continuation_func):
+        actions = []
+        faction_board = self.faction_to_faction_board(faction)
 
-    # def command_warren(self, card, faction, continuation_func):
-    #     faction_board = self.faction_to_faction_board(faction)
-    #     faction_board.activated_card.append(card)
-    #     self.select_clearing_battle(faction, continuation_func)
-    #
-    # def generate_actions_select_enemy_faction_command_warren(self, faction, clearing, continuation_func):
-    #     enemy_factions: list[Faction] = self.get_available_enemy_tokens_from_clearing(faction, clearing)
-    #     actions: list[Action] = []
-    #
-    #     for enemy_faction in enemy_factions:
-    #         actions.append(
-    #             Action("{}".format(enemy_faction),
-    #                    perform(self.initiate_battle, faction, enemy_faction, clearing, continuation_func)))
-    #
-    #     return actions
+        for card in faction_board.crafted_cards:
+            if card.name == PlayingCardName.COMMAND_WARREN and len(
+                    self.generate_actions_select_clearing_battle(faction, continuation_func, False)) != 0:
+                actions.append(
+                    Action('Use {} card'.format(card.name),
+                           perform(self.command_warren, card, faction, continuation_func)))
+
+        return actions
+
+    def command_warren(self, card, faction, continuation_func):
+        faction_board = self.faction_to_faction_board(faction)
+        faction_board.activated_card.append(card)
+        self.select_clearing_battle(faction, continuation_func, False)
 
     def tax_collector_check(self, faction):
         available = False
