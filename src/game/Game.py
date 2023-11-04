@@ -287,13 +287,6 @@ class Game:
         self.board.areas[0].add_warrior(Warrior.EYRIE, 6)
         self.activate_leader(EyrieLeader.CHARISMATIC)
 
-        self.eyrie.crafted_cards.append(
-            PlayingCard(23, PlayingCardName.TAX_COLLECTOR, Suit.FOX, PlayingCardPhase.DAYLIGHT,
-                        {Suit.FOX: 1, Suit.RABBIT: 1, Suit.MOUSE: 1}))
-        self.marquise.crafted_cards.append(
-            PlayingCard(23, PlayingCardName.TAX_COLLECTOR, Suit.FOX, PlayingCardPhase.DAYLIGHT,
-                        {Suit.FOX: 1, Suit.RABBIT: 1, Suit.MOUSE: 1}))
-
         # Take Cards
         self.shuffle_draw_pile()
         starting_card_amount: int = 5
