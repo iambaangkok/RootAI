@@ -378,6 +378,9 @@ class Game:
     # MARQUISE
 
     def marquise_birdsong_start(self):
+        self.phase = Phase.BIRDSONG
+        self.sub_phase = 0
+
         LOGGER.info("{}:{}:{}:MARQUISE's turn begins".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.turn_count += 1
 
@@ -405,8 +408,9 @@ class Game:
                 Action('Next', perform(self.marquise_pre_daylight))])
 
     def marquise_pre_daylight(self):
-        LOGGER.info("{}:{}:{}:Enter marquise_pre_daylight".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.phase = Phase.DAYLIGHT
+
+        LOGGER.info("{}:{}:{}:Enter marquise_pre_daylight".format(self.ui_turn_player, self.phase, self.sub_phase))
 
         actions = self.generate_actions_command_warren(Faction.MARQUISE, self.marquise_daylight)
         if not actions:
@@ -509,7 +513,8 @@ class Game:
         LOGGER.info(
             "{}:{}:{}:MARQUISE's remaining march action: {}".format(self.ui_turn_player, self.phase,
                                                                     self.sub_phase, self.marquise_march_count))
-        if self.marquise_march_count > 0:
+        if self.marquise_march_count > 0 and len(
+                self.generate_actions_select_src_clearing(Faction.MARQUISE, None, False)) > 0:
             self.prompt = "The warriors has been moved. (Remaining march action: {})".format(
                 self.marquise_march_count)
             self.set_actions([Action('Next', perform(self.marquise_daylight_march))])
@@ -615,6 +620,9 @@ class Game:
         self.set_actions([Action('Next', self.marquise_daylight_2)])
 
     def marquise_pre_evening(self):
+        self.phase = Phase.EVENING
+        self.sub_phase = 0
+        LOGGER.info("{}:{}:{}:Enter marquise_pre_evening".format(self.ui_turn_player, self.phase, self.sub_phase))
         actions = self.generate_actions_cobbler(Faction.MARQUISE, self.marquise_evening_draw_card)
 
         if not actions:
@@ -630,16 +638,14 @@ class Game:
         number_of_card_to_be_drawn = self.marquise.get_reward_card() + 1
         self.take_card_from_draw_pile(Faction.MARQUISE, number_of_card_to_be_drawn)
 
-        self.phase = Phase.EVENING
-        self.sub_phase = 0
         self.set_actions()
 
     def marquise_evening_discard_card(self):
+        self.sub_phase = 1
+
         LOGGER.info(
             "{}:{}:{}:Enter marquise_evening_discard_card".format(self.ui_turn_player, self.phase, self.sub_phase))
 
-        self.phase = Phase.EVENING
-        self.sub_phase = 1
         card_in_hand_count = len(self.marquise.cards_in_hand)
         if card_in_hand_count > 5:
             self.prompt = "Select card to discard down to 5 cards (currently {} cards in hand)".format(
@@ -2402,10 +2408,13 @@ class Game:
         return actions
 
     def tax_collector(self, faction, clearing, card, continuation_func):
-        warrior = faction_to_warrior(faction)
-        clearing.remove_warrior(warrior, 1)
-        self.take_card_from_draw_pile(faction, 1)
         faction_board = self.faction_to_faction_board(faction)
+        warrior = faction_to_warrior(faction)
+
+        clearing.remove_warrior(warrior, 1)
+        faction_board.reserved_warriors += 1
+
+        self.take_card_from_draw_pile(faction, 1)
         faction_board.activated_card.append(card)
 
         continuation_func()
@@ -2473,9 +2482,11 @@ class Game:
                             clearing.remove_building(Building.ROOST)
                         except ValueError:
                             break
+                        self.eyrie.roost_tracker -= 1
                         self.gain_vp(faction, 1)
                     num_warriors_removed = clearing.warrior_count[Warrior.EYRIE]
                     clearing.remove_warrior(Warrior.EYRIE, num_warriors_removed)
+                    self.eyrie.reserved_warriors += num_warriors_removed
                     self.gain_vp(faction, num_warriors_removed)
 
                 elif faction == Faction.EYRIE:
@@ -2484,21 +2495,25 @@ class Game:
                             clearing.remove_building(Building.SAWMILL)
                         except ValueError:
                             break
+                        self.marquise.building_trackers[Building.SAWMILL] -= 1
                         self.gain_vp(faction, 1)
                     while True:
                         try:
                             clearing.remove_building(Building.RECRUITER)
                         except ValueError:
                             break
+                        self.marquise.building_trackers[Building.RECRUITER] -= 1
                         self.gain_vp(faction, 1)
                     while True:
                         try:
                             clearing.remove_building(Building.WORKSHOP)
                         except ValueError:
                             break
+                        self.marquise.building_trackers[Building.WORKSHOP] -= 1
                         self.gain_vp(faction, 1)
                     num_tokens_removed = clearing.token_count[Token.WOOD]
                     num_warriors_removed = clearing.warrior_count[Warrior.MARQUISE]
                     clearing.remove_token(Token.WOOD, num_tokens_removed)
                     clearing.remove_warrior(Warrior.MARQUISE, num_warriors_removed)
+                    self.marquise.reserved_warriors += num_warriors_removed
                     self.gain_vp(faction, num_tokens_removed + num_warriors_removed)
