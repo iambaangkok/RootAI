@@ -55,8 +55,8 @@ class Game:
 
         # Game Data
         self.turn_count: int = 0  # TODO: increase this on birdsong of both faction
-        self.ui_turn_player: Faction = Faction.MARQUISE
-        self.turn_player: Faction = Faction.MARQUISE
+        self.ui_turn_player: Faction = Faction.EYRIE
+        self.turn_player: Faction = Faction.EYRIE
         self.phase: Phase = Phase.BIRDSONG
         self.sub_phase = 0
         self.is_in_action_sub_phase: bool = False
@@ -102,7 +102,6 @@ class Game:
             PlayingCard(24, PlayingCardName.TAX_COLLECTOR, Suit.FOX, PlayingCardPhase.DAYLIGHT,
                         {Suit.FOX: 1, Suit.RABBIT: 1, Suit.MOUSE: 1}),
             PlayingCard(25, PlayingCardName.FAVOR_OF_THE_FOXES, Suit.FOX, PlayingCardPhase.IMMEDIATE, {Suit.FOX: 3}),
-
             PlayingCard(26, PlayingCardName.AMBUSH, Suit.RABBIT, PlayingCardPhase.BATTLE),
             PlayingCard(27, PlayingCardName.SMUGGLERS_TRAIL, Suit.RABBIT, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 1},
                         1, Item.BAG),
@@ -280,7 +279,7 @@ class Game:
     def setup_board(self):
         self.board.areas[-1].add_token(Token.CASTLE)
 
-        for i in range(0, len(self.board.areas)):
+        for i in range(1, len(self.board.areas)):
             self.board.areas[i].add_warrior(Warrior.MARQUISE, 1)
 
         for i in range(0, len(self.board.areas)):
@@ -289,11 +288,6 @@ class Game:
         self.build_roost(self.board.areas[0])
         self.board.areas[0].add_warrior(Warrior.EYRIE, 6)
         self.activate_leader(EyrieLeader.CHARISMATIC)
-
-        self.marquise.crafted_cards.append(
-            PlayingCard(35, PlayingCardName.COBBLER, Suit.RABBIT, PlayingCardPhase.EVENING, {Suit.RABBIT: 2}))
-        self.eyrie.crafted_cards.append(
-            PlayingCard(35, PlayingCardName.COBBLER, Suit.RABBIT, PlayingCardPhase.EVENING, {Suit.RABBIT: 2}))
 
         # Take Cards
         self.shuffle_draw_pile()
@@ -1155,7 +1149,6 @@ class Game:
 
     def eyrie_build_to_evening(self):
         actions = self.generate_actions_cobbler(Faction.EYRIE, self.eyrie_evening)
-        print(actions)
 
         if not actions:
             self.eyrie_evening()
@@ -1244,6 +1237,12 @@ class Game:
                 if card.reward_item is not None:
                     self.marquise.items[card.reward_item] += 1
                     self.board.remove_item_from_board(card.reward_item)
+                elif card.name == PlayingCardName.FAVOR_OF_THE_FOXES:
+                    self.favor_card(faction, Suit.FOX)
+                elif card.name == PlayingCardName.FAVOR_OF_THE_MICE:
+                    self.favor_card(faction, Suit.MOUSE)
+                elif card.name == PlayingCardName.FAVOR_OF_THE_RABBITS:
+                    self.favor_card(faction, Suit.RABBIT)
                 self.discard_card(self.marquise.cards_in_hand, card)
             else:
                 self.marquise.cards_in_hand.remove(card)
@@ -1268,6 +1267,12 @@ class Game:
                 if card.reward_item is not None:
                     self.eyrie.items[card.reward_item] += 1
                     self.board.remove_item_from_board(card.reward_item)
+                elif card.name == PlayingCardName.FAVOR_OF_THE_FOXES:
+                    self.favor_card(faction, Suit.FOX)
+                elif card.name == PlayingCardName.FAVOR_OF_THE_MICE:
+                    self.favor_card(faction, Suit.MOUSE)
+                elif card.name == PlayingCardName.FAVOR_OF_THE_RABBITS:
+                    self.favor_card(faction, Suit.RABBIT)
 
                 self.discard_card(self.eyrie.cards_in_hand, card)
             else:
@@ -1309,8 +1314,8 @@ class Game:
         faction_board = self.faction_to_faction_board(faction)
         for crafted_card in faction_board.crafted_cards:
             if card.name == crafted_card.name:
-                return False
-        return True
+                return True
+        return False
 
     def select_card(self, card: PlayingCard):
         self.selected_card = card
@@ -2458,3 +2463,42 @@ class Game:
         self.board.draw(screen)
         self.marquise.draw(screen)
         self.eyrie.draw(screen)
+
+    def favor_card(self, faction, suit):
+        for clearing in self.board.areas:
+            if clearing.suit == suit:
+                if faction == Faction.MARQUISE:
+                    while True:
+                        try:
+                            clearing.remove_building(Building.ROOST)
+                        except ValueError:
+                            break
+                        self.gain_vp(faction, 1)
+                    num_warriors_removed = clearing.warrior_count[Warrior.EYRIE]
+                    clearing.remove_warrior(Warrior.EYRIE, num_warriors_removed)
+                    self.gain_vp(faction, num_warriors_removed)
+
+                elif faction == Faction.EYRIE:
+                    while True:
+                        try:
+                            clearing.remove_building(Building.SAWMILL)
+                        except ValueError:
+                            break
+                        self.gain_vp(faction, 1)
+                    while True:
+                        try:
+                            clearing.remove_building(Building.RECRUITER)
+                        except ValueError:
+                            break
+                        self.gain_vp(faction, 1)
+                    while True:
+                        try:
+                            clearing.remove_building(Building.WORKSHOP)
+                        except ValueError:
+                            break
+                        self.gain_vp(faction, 1)
+                    num_tokens_removed = clearing.token_count[Token.WOOD]
+                    num_warriors_removed = clearing.warrior_count[Warrior.MARQUISE]
+                    clearing.remove_token(Token.WOOD, num_tokens_removed)
+                    clearing.remove_warrior(Warrior.MARQUISE, num_warriors_removed)
+                    self.gain_vp(faction, num_tokens_removed + num_warriors_removed)
