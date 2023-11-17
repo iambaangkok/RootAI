@@ -7,7 +7,7 @@ class Agent:
         self.agent_type: str = "interface"
         self.faction: Faction = faction
 
-    def choose_action(self, state: Game) -> Action | None:
+    def choose_action(self, state: Game, actions: list[Action]) -> Action | None:
         """
         Chooses an action to execute from all legal actions in the current `state`.
 

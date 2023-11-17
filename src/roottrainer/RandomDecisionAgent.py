@@ -10,5 +10,5 @@ class RandomDecisionAgent(Agent):
         super().__init__(faction)
         self.agent_type: str = "random"
 
-    def choose_action(self, state: Game) -> Action:
-        return state.get_actions()[randint(0, len(state.get_actions()) - 1)]
+    def choose_action(self, state: Game, actions: list[Action]) -> Action:
+        return actions[randint(0, len(actions) - 1)]

@@ -7,19 +7,19 @@ simulation:
     enable: true # true | false
   actions:
     rendering:
-      enable: false # true | false
+      enable: true # true | false
   f-key-action: random # current | random
-  framerate: 5000
-  auto-next-round: true # true | false
+  framerate: 60
+  auto-next-round: false # true | false
   round: 1000
   output:
-    enable: true # true | false
+    enable: false # true | false
     dir: output # str
 
 agent:
-  require-key-hold: false # true | false
+  require-key-hold: true # true | false
   marquise:
-    enable: true # true | false
+    enable: false # true | false
     type: random # random | mcts | rnn
   eyrie:
     enable: true
@@ -27,6 +27,6 @@ agent:
 
 game:
   rendering:
-    enable: false # true | false
+    enable: true # true | false
   victory-point-limit: 30
   allow-dominance-card: true # true | false

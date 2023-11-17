@@ -15,8 +15,9 @@ class CSVOutputWriter:
         self.work_dir: Path = Path(__file__).parent.parent.parent
 
     def __del__(self):
-        self.file.close()
-        print(os.path.realpath(self.file.name))
+        if self.file is not None:
+            self.file.close()
+            print(os.path.realpath(self.file.name))
 
     def open(self,
              file_name: str = "{}-{}-{}-{}.csv".format(

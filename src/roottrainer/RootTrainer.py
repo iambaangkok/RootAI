@@ -39,7 +39,8 @@ class RootTrainer:
         self.action_col = 1
 
         self.current_action: Action | None = None
-        self.actions: list[Action] = self.game.get_actions()
+        self.actions: list[Action] = []
+        self.get_actions()
         self.reset_arrow()
 
         # Agent
@@ -87,7 +88,7 @@ class RootTrainer:
     #####
     # Init
     def init(self):
-        self.actions = self.game.get_actions()
+        self.get_actions()
         pass
 
     #####
@@ -118,21 +119,13 @@ class RootTrainer:
         if not self.game.running:
             if self.round + 1 <= self.round_limit:
                 if config['simulation']['auto-next-round']:
-                    self.game = Game()
-                    self.collected_end_game_data = False
-                    self.round += 1
-                    self.actions = self.game.get_actions()
-                    self.reset_arrow()
+                    self.next_round()
                 else:
                     for event in pygame.event.get():
                         if event.type == pygame.KEYDOWN:
                             match event.key:
                                 case pygame.K_n:
-                                    self.game = Game()
-                                    self.collected_end_game_data = False
-                                    self.round += 1
-                                    self.actions = self.game.get_actions()
-                                    self.reset_arrow()
+                                    self.next_round()
                                 case pygame.K_q:
                                     self.running = False
             else:
@@ -151,11 +144,17 @@ class RootTrainer:
             #         self.actions = self.game.get_actions()
             #         self.reset_arrow()
             #
-            #     elif config['simulation']['f-key-action'] == 'random':
-            #         self.random_arrow()
-            #         self.current_action.function()
-            #         self.actions = self.game.get_actions()
-            #         self.reset_arrow()
+            if keys[pygame.K_f] and config['simulation']['f-key-action'] == 'random':
+                if self.game.turn_player == Faction.MARQUISE and not config['agent']['marquise']['enable']:
+                    self.random_arrow()
+                    self.execute_action()
+                    self.get_actions()
+                    self.reset_arrow()
+                elif self.game.turn_player == Faction.EYRIE and not config['agent']['eyrie']['enable']:
+                    self.random_arrow()
+                    self.execute_action()
+                    self.get_actions()
+                    self.reset_arrow()
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -169,18 +168,25 @@ class RootTrainer:
 
                     if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
                         self.current_action.function()
-                        self.actions = self.game.get_actions()
+                        self.get_actions()
                         self.reset_arrow()
 
         self.fps = self.calculate_fps()
 
+    def next_round(self):
+        self.game = Game()
+        self.collected_end_game_data = False
+        self.round += 1
+        self.get_actions()
+        self.reset_arrow()
+
     def execute_agent_action(self, faction: Faction):
         agent = self.faction_to_agent(faction)
-        action = agent.choose_action(self.game)
+        action = agent.choose_action(self.game, self.actions)
         action_index = self.actions.index(action)
         self.set_arrow(action_index)
-        self.current_action.function()
-        self.actions = self.game.get_actions()
+        self.execute_action()
+        self.get_actions()
         self.reset_arrow()
 
     def random_arrow(self):
@@ -219,6 +225,18 @@ class RootTrainer:
     def reset_arrow(self):
         self.action_arrow_pos.y = 0
         self.current_action = self.actions[int(self.action_arrow_pos.y)]
+
+    def get_actions(self):
+        if self.game.turn_player == Faction.MARQUISE and not config['agent']['marquise']['enable']:
+            self.actions = self.game.get_actions()
+        elif self.game.turn_player == Faction.EYRIE and not config['agent']['eyrie']['enable']:
+            self.actions = self.game.get_actions()
+        else:
+            self.actions = self.game.get_agent_actions()
+
+
+    def execute_action(self):
+        self.current_action.function()
 
     def faction_to_agent(self, faction: Faction):
         if faction == Faction.MARQUISE:
