@@ -412,6 +412,8 @@ class Game:
             self.set_actions(self.generate_actions_cards_birdsong(Faction.MARQUISE, self.marquise_birdsong_cards) + [
                 Action('Next', perform(self.marquise_pre_daylight))])
             # TODO: set_agent_actions
+            self.set_agent_actions(self.generate_actions_agent_cards_birdsong(Faction.MARQUISE, self.marquise_birdsong_cards) + [
+                Action('Next', perform(self.marquise_pre_daylight))])
 
     def marquise_pre_daylight(self):
         self.phase = Phase.DAYLIGHT
@@ -446,6 +448,7 @@ class Game:
                          + self.generate_actions_activate_dominance_card(Faction.MARQUISE, self.marquise_daylight_craft)
                          + self.generate_actions_take_dominance_card(Faction.MARQUISE, self.marquise_daylight_craft)
                          + [Action('Next', perform(self.marquise_daylight_2))])
+        self.set_agent_actions(self.get_actions())
 
     def marquise_daylight_2(self):
         LOGGER.info("{}:{}:{}:Enter marquise_daylight_2".format(self.ui_turn_player, self.phase, self.sub_phase))
@@ -624,6 +627,7 @@ class Game:
         self.prompt = "Overwork complete"
         self.marquise_action_count -= 1
         self.set_actions([Action('Next', self.marquise_daylight_2)])  # TODO: set_agent_actions
+        self.set_agent_actions(self.get_actions())
 
     def marquise_pre_evening(self):
         self.phase = Phase.EVENING
@@ -636,6 +640,7 @@ class Game:
         else:
             self.prompt = 'Want to move your warriors?'
             self.set_actions(actions + [Action('Next', self.marquise_evening_draw_card)])  # TODO: set_agent_actions
+            self.set_agent_actions(self.get_actions())
 
     def marquise_evening_draw_card(self):
         LOGGER.info("{}:{}:{}:Enter marquise_evening_draw_card".format(self.ui_turn_player, self.phase, self.sub_phase))
@@ -645,6 +650,7 @@ class Game:
         self.take_card_from_draw_pile(Faction.MARQUISE, number_of_card_to_be_drawn)
 
         self.set_actions()  # TODO: set_agent_actions
+        self.set_agent_actions(self.get_actions())
 
     def marquise_evening_discard_card(self):
         self.sub_phase = 1
@@ -657,6 +663,7 @@ class Game:
             self.prompt = "Select card to discard down to 5 cards (currently {} cards in hand)".format(
                 card_in_hand_count)
             self.set_actions(self.generate_actions_select_card_to_discard(Faction.MARQUISE))  # TODO: set_agent_actions
+            self.set_agent_actions(self.get_actions())
         else:
             self.ui_turn_player = Faction.EYRIE
             self.turn_player = Faction.EYRIE
@@ -664,6 +671,7 @@ class Game:
             self.sub_phase = 0
             self.prompt = "Eyrie's Turn"
             self.set_actions()  # TODO: set_agent_actions
+            self.set_agent_actions(self.get_actions())
 
     def get_workshop_count_by_suit(self) -> {Suit: int}:
         return self.get_building_count_by_suit(Building.WORKSHOP)
@@ -767,8 +775,9 @@ class Game:
         self.discard_card(self.marquise.cards_in_hand, card)
         self.marquise_action_count += 1
 
-        self.prompt = "Gain 1 extra action."
+        self.prompt = "Gained 1 extra action."
         self.set_actions([Action('Next', self.marquise_daylight_2)])  # TODO: set_agent_actions
+        self.set_agent_actions(self.get_actions())
 
     #####
     # Eyrie
@@ -805,7 +814,7 @@ class Game:
             )
             self.set_agent_actions(
                 self.generate_actions_agent_add_card_to_decree() +
-                self.generate_actions_cards_birdsong(Faction.EYRIE, self.eyrie_start_to_add_to_decree)
+                self.generate_actions_agent_cards_birdsong(Faction.EYRIE, self.eyrie_start_to_add_to_decree)
             )
         elif self.addable_count == 1:
             self.prompt = "Select ANOTHER card to add to the Decree"
@@ -821,7 +830,7 @@ class Game:
                 [
                     Action("Skip", perform(self.eyrie_add_to_the_decree_additional_skip))
                 ] +
-                self.generate_actions_cards_birdsong(Faction.EYRIE, self.eyrie_start_to_add_to_decree)
+                self.generate_actions_agent_cards_birdsong(Faction.EYRIE, self.eyrie_start_to_add_to_decree)
             )
 
         else:
@@ -907,7 +916,9 @@ class Game:
             else:
                 self.set_actions(
                     actions + self.generate_actions_cards_birdsong(Faction.EYRIE, self.eyrie_start_to_add_to_decree))
-                self.set_agent_actions(self.get_actions())
+                self.set_agent_actions(
+                    actions + self.generate_actions_agent_cards_birdsong(Faction.EYRIE, self.eyrie_start_to_add_to_decree)
+                )
         else:
             self.eyrie_birdsong_to_daylight()
 
@@ -961,7 +972,11 @@ class Game:
                          + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_daylight_craft)
                          + self.generate_actions_cards_daylight(Faction.EYRIE, self.eyrie_daylight_craft)
                          + [Action('Next', perform(self.eyrie_daylight_craft_to_resolve_the_decree))])
-        self.set_agent_actions(self.get_actions())
+        self.set_agent_actions(self.generate_actions_craft_cards(Faction.EYRIE)
+                               + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_daylight_craft)
+                               + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_daylight_craft)
+                               + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_daylight_craft)
+                               + [Action('Next', perform(self.eyrie_daylight_craft_to_resolve_the_decree))])
 
     def get_roost_count_by_suit(self) -> {Suit: int}:
         roost_count: {Suit: int} = {
@@ -996,7 +1011,10 @@ class Game:
                          + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_recruit)
                          + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_recruit)
                          + self.generate_actions_cards_daylight(Faction.EYRIE, self.eyrie_pre_recruit))
-        self.set_agent_actions(self.get_actions())
+        self.set_agent_actions(self.generate_actions_eyrie_recruit()
+                               + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_recruit)
+                               + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_recruit)
+                               + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_pre_recruit))
 
     def eyrie_turmoil(self):
         # humiliate
@@ -1122,7 +1140,7 @@ class Game:
         self.set_agent_actions(self.generate_actions_agent_eyrie_move()
                                + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_move)
                                + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_move)
-                               + self.generate_actions_cards_daylight(Faction.EYRIE, self.eyrie_pre_move)
+                               + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_pre_move)
                                )
 
     def generate_actions_agent_eyrie_move(self) -> list[Action]:
@@ -1160,14 +1178,15 @@ class Game:
         LOGGER.info("{}:{}:{}:eyrie_pre_battle".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.update_prompt_eyrie_decree(DecreeAction.BATTLE)
         self.prompt += " Choose area to battle in."
-        additional_actions: list[Action] = self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_battle) \
-                         + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_battle) \
-                         + self.generate_actions_cards_daylight(Faction.EYRIE, self.eyrie_pre_battle)
 
         self.set_actions(self.generate_actions_eyrie_battle()
-                         + additional_actions)
+                         + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_battle) \
+                         + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_battle) \
+                         + self.generate_actions_cards_daylight(Faction.EYRIE, self.eyrie_pre_battle))
         self.set_agent_actions(self.generate_actions_agent_eyrie_battle()
-                               + additional_actions)
+                               + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_battle) \
+                               + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_battle) \
+                               + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_pre_battle))
 
     def generate_actions_agent_eyrie_battle(self) -> list[Action]:
         actions: list[Action] = self.generate_actions_agent_battle(Faction.EYRIE, self.eyrie_resolve_battle,
@@ -1209,10 +1228,14 @@ class Game:
 
         self.ui_turn_player = Faction.EYRIE
         self.prompt += " Choose area to build roost in."
-        self.set_actions(self.generate_actions_eyrie_build()  # TODO: set_agent_actions
+        self.set_actions(self.generate_actions_eyrie_build()
                          + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_build)
                          + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_build)
                          + self.generate_actions_cards_daylight(Faction.EYRIE, self.eyrie_pre_build))
+        self.set_agent_actions(self.generate_actions_eyrie_build()
+                               + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_build)
+                               + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_build)
+                               + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_pre_build))
 
     def generate_actions_eyrie_build(self):
         actions: list[Action] = self.generate_actions_select_buildable_clearing(Faction.EYRIE)
@@ -1232,7 +1255,8 @@ class Game:
         self.remove_decree_counter(DecreeAction.BUILD, clearing.suit)
 
         self.update_prompt_eyrie_decree(DecreeAction.BUILD)
-        self.set_actions(self.generate_actions_eyrie_build())  # TODO: set_agent_actions
+        self.set_actions(self.generate_actions_eyrie_build())
+        self.set_agent_actions(self.get_actions())
 
     def eyrie_build_to_evening(self):
         actions = self.generate_actions_cobbler(Faction.EYRIE, self.eyrie_evening)
@@ -1241,7 +1265,8 @@ class Game:
             self.eyrie_evening()
         else:
             self.prompt = 'Want to move your warriors?'
-            self.set_actions(actions + [Action('Next', self.eyrie_evening)])  # TODO: set_agent_actions
+            self.set_actions(actions + [Action('Next', self.eyrie_evening)])
+            self.set_agent_actions(self.get_actions())
 
     def eyrie_evening(self):
         # score points
@@ -1259,7 +1284,8 @@ class Game:
         if card_in_hand_count > 5:
             self.prompt = "Select card to discard down to 5 cards (currently {} cards in hand)".format(
                 card_in_hand_count)
-            self.set_actions(self.generate_actions_select_card_to_discard(Faction.EYRIE))  # TODO: set_agent_actions
+            self.set_actions(self.generate_actions_select_card_to_discard(Faction.EYRIE))
+            self.set_agent_actions(self.get_actions())
         else:
             self.eyrie_evening_to_marquise()
 
@@ -1270,7 +1296,8 @@ class Game:
         self.phase = Phase.BIRDSONG
         self.sub_phase = 0
         self.prompt = "Marquise's Turn"
-        self.set_actions()  # to marquise  # TODO: set_agent_actions
+        self.set_actions()  # to marquise
+        self.set_agent_actions(self.get_actions())
 
     def get_decree_card_to_use(self, decree_action: DecreeAction, suit: Suit) -> PlayingCard:
         eligible_cards = [card for card in self.decree_counter[decree_action] if card.suit == suit]
@@ -2397,6 +2424,19 @@ class Game:
                            perform(self.stand_and_deliver_select_faction, faction, card, continuation_func)))
         return actions
 
+    def generate_actions_agent_cards_birdsong(self, faction, continuation_func):
+        actions = []
+        faction_board = self.faction_to_faction_board(faction)
+        for card in faction_board.crafted_cards:
+            if faction_board.activated_card.count(card) > 0:
+                continue
+            if card.name == PlayingCardName.ROYAL_CLAIM:
+                actions.append(Action('Discard {}'.format(card.name),
+                                      perform(self.royal_claim, faction, card, continuation_func)))
+            if card.name == PlayingCardName.STAND_AND_DELIVER and self.stand_and_deliver_check(faction):
+                actions = actions + self.generate_actions_agent_stand_and_deliver(faction, card, continuation_func)
+        return actions
+
     def royal_claim(self, faction, card, continuation_func):
         LOGGER.info("{}:{}:{}:Enter royal_claim".format(self.ui_turn_player, self.phase, self.sub_phase))
         faction_board = self.faction_to_faction_board(faction)
@@ -2431,32 +2471,48 @@ class Game:
         LOGGER.info(
             "{}:{}:{}:Enter stand_and_deliver_select_faction".format(self.ui_turn_player, self.phase, self.sub_phase))
 
-        faction_board = self.faction_to_faction_board(faction)
-        faction_board.activated_card.append(card)
         self.prompt = "Select Faction"
-        self.set_actions(self.generate_actions_stand_and_deliver_select_faction(faction, continuation_func))
+        self.set_actions(self.generate_actions_stand_and_deliver_select_faction(faction, card, continuation_func))
 
-    def generate_actions_stand_and_deliver_select_faction(self, faction, continuation_func):
+    def generate_actions_agent_stand_and_deliver(self, faction, card, continuation_func) -> list[Action]:
+        LOGGER.info(
+            "{}:{}:{}:Enter generate_actions_agent_stand_and_deliver".format(self.ui_turn_player, self.phase,
+                                                                             self.sub_phase))
+
+        actions: list[Action] = []
+        available_faction: list[Faction] = [Faction.MARQUISE, Faction.EYRIE]
+        available_faction.remove(faction)
+
+        for enemy_faction in available_faction:
+            if len(self.faction_to_faction_board(enemy_faction).cards_in_hand) > 0:
+                actions.append(
+                    Action('Use {} card on {}'.format(card.name, enemy_faction),
+                           perform(self.stand_and_deliver, faction, enemy_faction, card, continuation_func)))
+        return actions
+
+    def generate_actions_stand_and_deliver_select_faction(self, faction, card, continuation_func) -> list[Action]:
         LOGGER.info(
             "{}:{}:{}:Enter generate_actions_stand_and_deliver_select_faction".format(self.ui_turn_player, self.phase,
                                                                                       self.sub_phase))
 
-        actions = []
-        available_faction = [Faction.MARQUISE, Faction.EYRIE]
+        actions: list[Action] = []
+        available_faction: list[Faction] = [Faction.MARQUISE, Faction.EYRIE]
         available_faction.remove(faction)
 
         for enemy_faction in available_faction:
             if len(self.faction_to_faction_board(enemy_faction).cards_in_hand) > 0:
                 actions.append(
                     Action('{}'.format(enemy_faction),
-                           perform(self.stand_and_deliver, faction, enemy_faction, continuation_func)))
+                           perform(self.stand_and_deliver, faction, enemy_faction, card, continuation_func)))
         return actions
 
-    def stand_and_deliver(self, faction, stolen_faction, continuation_func):
+    def stand_and_deliver(self, faction, stolen_faction, card, continuation_func):
         LOGGER.info("{}:{}:{}:Enter stand_and_deliver".format(self.ui_turn_player, self.phase, self.sub_phase))
 
         faction_board = self.faction_to_faction_board(faction)
         stolen_faction_board = self.faction_to_faction_board(stolen_faction)
+
+        faction_board.activated_card.append(card)
 
         random_card = random.choice(stolen_faction_board.cards_in_hand)
 
@@ -2474,6 +2530,20 @@ class Game:
         if len(cards) > 0:
             for faction in [Faction.MARQUISE, Faction.EYRIE]:
                 self.take_card_from_draw_pile(faction)
+
+    def generate_actions_agent_cards_daylight(self, faction, continuation_func):
+        actions = []
+        faction_board = self.faction_to_faction_board(faction)
+        for card in faction_board.crafted_cards:
+            if faction_board.activated_card.count(card) > 0:
+                continue
+            if card.name == PlayingCardName.TAX_COLLECTOR and self.tax_collector_check(faction):
+                actions = actions + self.generate_actions_agent_tax_collector(faction, card, continuation_func)
+            if card.name == PlayingCardName.CODEBREAKERS:
+                actions.append(Action('* Use {} card'.format(card.name),
+                                      perform(self.codebreakers, faction, card, continuation_func)))
+
+        return actions
 
     def generate_actions_cards_daylight(self, faction, continuation_func):
         actions = []
@@ -2517,10 +2587,20 @@ class Game:
 
     def tax_collector_select_clearing(self, faction, card, continuation_func):
         self.prompt = "Select Clearing"
-        self.set_actions(self.generate_actions_tax_collector_select_clearing(faction, card, continuation_func))  # TODO: set_agent_actions
+        self.set_actions(self.generate_actions_tax_collector_select_clearing(faction, card, continuation_func))
 
-    def generate_actions_tax_collector_select_clearing(self, faction, card, continuation_func):
-        actions = []
+    def generate_actions_agent_tax_collector(self, faction, card, continuation_func) -> list[Action]:
+        actions: list[Action] = []
+
+        for clearing in self.board.areas:
+            if clearing.warrior_count[faction_to_warrior(faction)] > 0:
+                actions.append(Action('* Use Tax Collector: remove 1 warrior from {}'.format(clearing.area_index),
+                                      perform(self.tax_collector, faction, clearing, card, continuation_func)))
+
+        return actions
+
+    def generate_actions_tax_collector_select_clearing(self, faction, card, continuation_func) -> list[Action]:
+        actions: list[Action] = []
 
         for clearing in self.board.areas:
             if clearing.warrior_count[faction_to_warrior(faction)] > 0:
@@ -2556,7 +2636,8 @@ class Game:
         faction_board.activated_card.append(card)
 
         self.prompt = prompt_str
-        self.set_actions([Action('Next', continuation_func)])  # TODO: set_agent_actions
+        self.set_actions([Action('Next', continuation_func)])
+        self.set_agent_actions(self.get_actions())
 
     def generate_actions_cobbler(self, faction, continuation_func):
         actions = []
