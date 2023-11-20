@@ -1126,20 +1126,9 @@ class Game:
                                )
 
     def generate_actions_agent_eyrie_move(self) -> list[Action]:
-        actions: list[Action] = []
         decree_action = DecreeAction.MOVE
         faction = Faction.EYRIE
-
-        can_move_from_clearing = self.find_available_source_clearings(faction, decree=True)
-        for src in can_move_from_clearing:
-            dests = self.find_available_destination_clearings(faction, src)
-            for dest in dests:
-                for num_of_warriors in range(1, src.warrior_count[faction_to_warrior(faction)] + 1):
-                    actions.append(Action("Move {} warriors from {} to {}".format(
-                        num_of_warriors, src.area_index, dest.area_index),
-                        perform(self.move_warriors,
-                                faction, src, dest,
-                                num_of_warriors, self.eyrie_resolve_move)))
+        actions: list[Action] = self.generate_actions_agent_move(faction)
 
         if len(actions) == 0:
             if len(self.decree_counter[decree_action]) > 0:
@@ -1171,11 +1160,28 @@ class Game:
         LOGGER.info("{}:{}:{}:eyrie_pre_battle".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.update_prompt_eyrie_decree(DecreeAction.BATTLE)
         self.prompt += " Choose area to battle in."
+        additional_actions: list[Action] = self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_battle) \
+                         + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_battle) \
+                         + self.generate_actions_cards_daylight(Faction.EYRIE, self.eyrie_pre_battle)
 
-        self.set_actions(self.generate_actions_eyrie_battle()  # TODO: set_agent_actions
-                         + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_battle) \
-                         + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_battle)
-                         + self.generate_actions_cards_daylight(Faction.EYRIE, self.eyrie_pre_battle))
+        self.set_actions(self.generate_actions_eyrie_battle()
+                         + additional_actions)
+        self.set_agent_actions(self.generate_actions_agent_eyrie_battle()
+                               + additional_actions)
+
+    def generate_actions_agent_eyrie_battle(self) -> list[Action]:
+        actions: list[Action] = self.generate_actions_agent_battle(Faction.EYRIE, self.eyrie_resolve_battle,
+                                                                   True)
+
+        decree_action: DecreeAction = DecreeAction.BATTLE
+
+        if len(actions) == 0:
+            if len(self.decree_counter[decree_action]) > 0:
+                actions.append(Action("Turmoil", self.eyrie_turmoil))
+            else:
+                actions.append(Action("Next, To BUILD", self.eyrie_pre_build))
+
+        return actions
 
     def generate_actions_eyrie_battle(self) -> list[Action]:
         actions: list[Action] = self.generate_actions_select_clearing_battle(Faction.EYRIE, self.eyrie_resolve_battle,
@@ -1459,10 +1465,25 @@ class Game:
         else:
             self.discard_pile.append(card)
 
+    def generate_actions_agent_move(self, faction: Faction) -> list[Action]:
+        actions: list[Action] = []
+
+        can_move_from_clearing = self.find_available_source_clearings(faction, decree=(faction == Faction.EYRIE))
+        for src in can_move_from_clearing:
+            dests = self.find_available_destination_clearings(faction, src)
+            for dest in dests:
+                for num_of_warriors in range(1, src.warrior_count[faction_to_warrior(faction)] + 1):
+                    actions.append(Action("Move {} warriors from {} to {}".format(
+                        num_of_warriors, src.area_index, dest.area_index),
+                        perform(self.move_warriors,
+                                faction, src, dest,
+                                num_of_warriors, self.eyrie_resolve_move)))
+        return actions
+
     def select_clearing_src_move(self, faction, continuation_func, decree=False):
         actions = self.generate_actions_select_src_clearing(faction, continuation_func, decree)
         self.prompt = "Choose area to move from."
-        self.set_actions(actions)  # TODO: set_agent_actions
+        self.set_actions(actions)
 
     def generate_actions_select_src_clearing(self, faction, continuation_func, decree) -> list[Action]:
         can_move_from_clearing = self.find_available_source_clearings(faction, decree)
@@ -1494,7 +1515,7 @@ class Game:
     def select_warriors(self, faction, src, dest, continuation_func):
         actions = self.generate_actions_select_warriors(faction, src, dest, continuation_func)
         self.prompt = "Choose number of warriors to move."
-        self.set_actions(actions)  # TODO: set_agent_actions
+        self.set_actions(actions)
 
     def generate_actions_select_warriors(self, faction, src: Area, dest: Area, continuation_func) -> list[
         Action]:
@@ -1690,10 +1711,25 @@ class Game:
             total += area.buildings.count(building)
         return total
 
+    def generate_actions_agent_battle(self, attacker, continuation_func, decree) -> list[Action]:
+        clearings = self.get_battlable_clearing(attacker, decree)
+        actions = []
+
+        for clearing in clearings:
+            enemy_factions: list[Faction] = self.get_available_enemy_tokens_from_clearing(attacker, clearing)
+            actions: list[Action] = []
+
+            for enemy_faction in enemy_factions:
+                actions.append(
+                    Action("Attack {} in area {}".format(enemy_faction, clearing.area_index),
+                           perform(self.initiate_battle, attacker, enemy_faction, clearing, continuation_func)))
+
+        return actions
+
     def select_clearing_battle(self, attacker, continuation_func, decree=True):
         actions = self.generate_actions_select_clearing_battle(attacker, continuation_func, decree)
         self.prompt = "Select Clearing"
-        self.set_actions(actions)  # TODO: set_agent_actions
+        self.set_actions(actions)
 
     def generate_actions_select_clearing_battle(self, attacker, continuation_func, decree) -> list[Action]:
         clearings = self.get_battlable_clearing(attacker, decree)
@@ -1710,7 +1746,7 @@ class Game:
         self.selected_clearing = clearing
         actions = self.generate_actions_select_enemy_faction_battle(attacker, clearing, continuation_func)
         self.prompt = "Select Enemy Faction"
-        self.set_actions(actions)  # TODO: set_agent_actions
+        self.set_actions(actions)
 
     def generate_actions_select_enemy_faction_battle(self, faction: Faction, clearing: Area, continuation_func) -> list[
         Action]:
@@ -1805,9 +1841,10 @@ class Game:
                                              perform(self.attacker_use_ambush, card, attacker, defender, clearing,
                                                      continuation_func)))
 
-        self.set_actions(  # TODO: set_agent_actions
+        self.set_actions(
             def_ambush_actions + [
                 Action('Skip', perform(self.roll_dice, attacker, defender, clearing, continuation_func))])
+        self.set_agent_actions(self.get_actions())
 
     def attacker_use_ambush(self, ambush_discarded, attacker, defender, clearing, continuation_func):
         LOGGER.info(
@@ -1829,12 +1866,13 @@ class Game:
                 atk_ambush_actions.append(Action('Discard {} ({})'.format(card.name, card.suit),
                                                  perform(self.foil_ambush, card, attacker, defender, clearing,
                                                          continuation_func)))
-            self.set_actions(  # TODO: set_agent_actions
+            self.set_actions(
                 atk_ambush_actions
                 + [Action('Skip',
                           perform(self.resolve_hits, attacker, defender, 0, 0, 0, 2, clearing, continuation_func,
                                   self.roll_dice))]
             )
+            self.set_agent_actions(self.get_actions())
 
     def foil_ambush(self, ambush_discarded, attacker, defender, clearing, continuation_func):
         LOGGER.info(
@@ -1910,12 +1948,13 @@ class Game:
         if len(atk_actions) > 0:
             self.ui_turn_player = attacker
             self.prompt = "{}: Activate Battle Ability Card?".format(attacker)
-            self.set_actions(atk_actions + [Action('Skip',  # TODO: set_agent_actions
+            self.set_actions(atk_actions + [Action('Skip',
                                                    perform(self.defender_activate_battle_ability_card, attacker,
                                                            defender,
                                                            attacker_rolled_hits, defender_rolled_hits,
                                                            attacker_extra_hits,
                                                            defender_extra_hits, clearing, continuation_func))])
+            self.set_agent_actions(self.get_actions())
         else:
             self.defender_activate_battle_ability_card(attacker, defender, attacker_rolled_hits, defender_rolled_hits,
                                                        attacker_extra_hits,
@@ -1961,11 +2000,12 @@ class Game:
         if len(def_actions) > 0:
             self.ui_turn_player = defender
             self.prompt = "{}: Activate Battle Ability Card?".format(defender)
-            self.set_actions(def_actions + [Action('Skip',  # TODO: set_agent_actions
+            self.set_actions(def_actions + [Action('Skip',
                                                    perform(self.resolve_hits, attacker, defender,
                                                            attacker_rolled_hits, defender_rolled_hits,
                                                            attacker_extra_hits,
                                                            defender_extra_hits, clearing, continuation_func))])
+            self.set_agent_actions(self.get_actions())
         else:
             self.resolve_hits(attacker, defender, attacker_rolled_hits, defender_rolled_hits,
                               attacker_extra_hits,
@@ -2075,7 +2115,7 @@ class Game:
         self.ui_turn_player = Faction.MARQUISE
         self.prompt = "MARQUISE: Discard a card matching warrior's clearing to bring {} warriors back to the keep.".format(
             removed_warriors)
-        self.set_actions(  # TODO: set_agent_actions
+        self.set_actions(
             self.generate_actions_field_hospital_select_card_to_discard(removed_warriors, attacker,
                                                                         defender, attacker_remaining_hits,
                                                                         defender_remaining_hits,
@@ -2083,6 +2123,7 @@ class Game:
             + [Action('Next', perform(self.resolve_remaining_hits, attacker, defender, attacker_remaining_hits,
                                       defender_remaining_hits, clearing, continuation_func, redirect_func))]
         )
+        self.set_agent_actions(self.get_actions())
 
     def marquise_field_hospital_check(self, clearing: Area):
         return len(self.marquise_field_hospital_get_cards(clearing)) > 0
@@ -2165,7 +2206,8 @@ class Game:
                 self.resolve_remaining_hits(attacker, defender, 0, defender_remaining_hits, clearing,
                                             continuation_func, redirect_func)
         else:
-            self.set_actions(actions)  # TODO: set_agent_actions
+            self.set_actions(actions)
+            self.set_agent_actions(self.get_actions())
 
     def generate_actions_select_piece_to_remove(self, selecting_faction, attacker, defender, attacker_remaining_hits,
                                                 defender_remaining_hits, clearing,
@@ -2268,11 +2310,11 @@ class Game:
         if card_in_hand_count > 5:
             self.prompt = "Select card to discard down to 5 cards (currently {} cards in hand)".format(
                 card_in_hand_count)
-            self.set_actions(self.generate_actions_select_card_to_discard(faction))  # TODO: set_agent_actions
+            self.set_actions(self.generate_actions_select_card_to_discard(faction))
+            self.set_agent_actions(self.get_actions())
         else:
             if faction == Faction.MARQUISE:
                 self.marquise_evening_discard_card()
-                pass
             elif faction == Faction.EYRIE:
                 self.eyrie_evening_to_marquise()
 
@@ -2392,7 +2434,7 @@ class Game:
         faction_board = self.faction_to_faction_board(faction)
         faction_board.activated_card.append(card)
         self.prompt = "Select Faction"
-        self.set_actions(self.generate_actions_stand_and_deliver_select_faction(faction, continuation_func))  # TODO: set_agent_actions
+        self.set_actions(self.generate_actions_stand_and_deliver_select_faction(faction, continuation_func))
 
     def generate_actions_stand_and_deliver_select_faction(self, faction, continuation_func):
         LOGGER.info(
