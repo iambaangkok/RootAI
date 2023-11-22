@@ -283,7 +283,6 @@ class Game:
         self.board.areas[-1].add_token(Token.CASTLE)
         for i in range(1, len(self.board.areas)):
             self.board.areas[i].add_warrior(Warrior.MARQUISE, 1)
-            self.board.areas[i].add_warrior(Warrior.EYRIE, 1)
 
         for i in range(0, len(self.board.areas)):
             self.distance_from_the_keep[self.board.areas[i]] = self.distance_from_the_keep_list[i]
@@ -493,7 +492,13 @@ class Game:
                          + [Action('Next', perform(self.marquise_pre_evening))]
                          )
         self.set_agent_actions(
-            agent_actions + [Action('Next', perform(self.marquise_pre_evening))]
+            agent_actions + self.generate_actions_activate_dominance_card(Faction.MARQUISE,
+                                                                          self.marquise_daylight_2)
+            + self.generate_actions_take_dominance_card(Faction.MARQUISE,
+                                                        self.marquise_daylight_2)
+            + self.generate_actions_cards_daylight(Faction.MARQUISE,
+                                                   self.marquise_daylight_2)
+            + [Action('Next', perform(self.marquise_pre_evening))]
         )
 
     def marquise_hawks_for_hire_check(self):
@@ -1484,7 +1489,8 @@ class Game:
                 self.marquise.spend_crafting_piece(suit, card.craft_requirement[suit])
 
             self.prompt = "{} has been crafted.".format(card.name)
-            self.set_actions([Action("Next", self.marquise_daylight)])  # TODO: set_agent_actions
+            self.set_actions([Action("Next", self.marquise_daylight)])
+            self.set_agent_actions([Action("Next", self.marquise_daylight)])
 
         elif faction == Faction.EYRIE:
             if card.phase == PlayingCardPhase.IMMEDIATE:
