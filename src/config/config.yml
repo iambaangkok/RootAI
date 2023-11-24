@@ -10,7 +10,7 @@ simulation:
       enable: true # true | false
   f-key-action: random # current | random
   framerate: 60
-  auto-next-round: false # true | false
+  auto-next-round: true # true | false
   round: 1000
   output:
     enable: false # true | false

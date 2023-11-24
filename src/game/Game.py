@@ -46,6 +46,9 @@ class Action:
         self.name: str = name
         self.function: any = function
 
+    def __str__(self):
+        return "Action {}".format(self.name)
+
     def get(self):
         return self.name, self.function
 
@@ -1314,7 +1317,8 @@ class Game:
     def generate_actions_agent_eyrie_battle(self) -> list[Action]:
         actions: list[Action] = self.generate_actions_agent_battle(Faction.EYRIE, self.eyrie_resolve_battle,
                                                                    True)
-
+        for action in actions:
+            print(action)
         decree_action: DecreeAction = DecreeAction.BATTLE
 
         if len(actions) == 0:
@@ -1341,6 +1345,7 @@ class Game:
 
     def eyrie_resolve_battle(self):
         decree_action = DecreeAction.BATTLE
+
         self.remove_decree_counter(decree_action, self.selected_clearing.suit)
         self.update_prompt_eyrie_decree(decree_action)
         self.eyrie_pre_battle()
@@ -1425,6 +1430,7 @@ class Game:
     def get_decree_card_to_use(self, decree_action: DecreeAction, suit: Suit) -> PlayingCard:
         eligible_cards = [card for card in self.decree_counter[decree_action] if card.suit == suit]
         bird_cards = [card for card in self.decree_counter[decree_action] if card.suit == Suit.BIRD]
+        LOGGER.info("after {} {}".format(len(eligible_cards), len(bird_cards)))
         if len(eligible_cards) > 0:
             return eligible_cards[0]
         else:
@@ -1866,17 +1872,16 @@ class Game:
 
     def generate_actions_agent_battle(self, attacker, continuation_func, decree) -> list[Action]:
         clearings = self.get_battlable_clearing(attacker, decree)
-        actions = []
-
+        actions: list[Action] = []
+        LOGGER.info("clearing {}".format(len(clearings)))
         for clearing in clearings:
             enemy_factions: list[Faction] = self.get_available_enemy_tokens_from_clearing(attacker, clearing)
-            actions: list[Action] = []
 
             for enemy_faction in enemy_factions:
                 actions.append(
                     Action("Attack {} in area {}".format(enemy_faction, clearing.area_index),
                            perform(self.initiate_battle, attacker, enemy_faction, clearing, continuation_func)))
-
+        LOGGER.info("len actions {}".format(len(actions)))
         return actions
 
     def select_clearing_battle(self, attacker, continuation_func, decree=True):
