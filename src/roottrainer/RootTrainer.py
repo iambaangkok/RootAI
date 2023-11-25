@@ -186,12 +186,7 @@ class RootTrainer:
         action = agent.choose_action(self.game, self.actions)
         action_index = self.actions.index(action)
         self.set_arrow(action_index)
-        for action in self.actions:
-            print(str(action))
-        print(str(self.current_action))
         decree_counter = self.game.decree_counter
-        for decree in DecreeAction:
-            print("chosen", decree, len(decree_counter[decree]))
         self.execute_action()
         self.get_actions()
         self.reset_arrow()

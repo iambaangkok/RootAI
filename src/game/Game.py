@@ -528,7 +528,8 @@ class Game:
                                                                                  self.sub_phase))
 
         self.prompt = "Select card to discard"
-        self.set_actions(self.generate_actions_select_card_hawks_for_hire())  # TODO: set_agent_actions
+        self.set_actions(self.generate_actions_select_card_hawks_for_hire())
+        self.set_agent_actions(self.generate_actions_select_card_hawks_for_hire())
 
     def marquise_daylight_march(self):
         self.select_clearing_src_move(Faction.MARQUISE, self.marquise_daylight_resolve_march)
@@ -542,12 +543,12 @@ class Game:
                 self.generate_actions_select_src_clearing(Faction.MARQUISE, None, False)) > 0:
             self.prompt = "The warriors has been moved. (Remaining march action: {})".format(
                 self.marquise_march_count)
-            self.set_actions([Action('Next', perform(self.marquise_daylight_march))])  # TODO: set_agent_actions
+            self.set_actions([Action('Next', perform(self.marquise_daylight_march))])
         else:
             self.marquise_action_count -= 1
             self.prompt = "The warriors has been moved. (Remaining march action: {})".format(
                 self.marquise_march_count)
-            self.set_actions([Action('Next', perform(self.marquise_daylight_2))])  # TODO: set_agent_actions
+            self.set_actions([Action('Next', perform(self.marquise_daylight_2))])
 
     def marquise_daylight_agent_march(self):
         self.set_agent_actions(self.generate_actions_agent_marquise_march())
@@ -577,26 +578,26 @@ class Game:
             self.prompt = "The warriors has been moved. (Remaining march action: {})".format(
                 self.marquise_march_count)
             self.set_agent_actions(
-                [Action('Next', perform(self.marquise_daylight_agent_march))])  # TODO: set_agent_actions
+                [Action('Next', perform(self.marquise_daylight_agent_march))])
         else:
             self.marquise_action_count -= 1
             self.prompt = "The warriors has been moved. (Remaining march action: {})".format(
                 self.marquise_march_count)
-            self.set_agent_actions([Action('Next', perform(self.marquise_daylight_2))])  # TODO: set_agent_actions
+            self.set_agent_actions([Action('Next', perform(self.marquise_daylight_2))])
 
     def marquise_daylight_build_select_clearing(self):
         LOGGER.info("{}:{}:{}:Enter marquise_daylight_build_select_clearing".format(self.ui_turn_player, self.phase,
                                                                                     self.sub_phase))
 
         self.prompt = "Let's build. Select clearing"
-        self.set_actions(self.generate_actions_select_buildable_clearing(Faction.MARQUISE))  # TODO: set_agent_actions
+        self.set_actions(self.generate_actions_select_buildable_clearing(Faction.MARQUISE))
 
     def marquise_daylight_build_select_building(self, clearing):
         LOGGER.info("{}:{}:{}:Enter marquise_daylight_build_select_building".format(self.ui_turn_player, self.phase,
                                                                                     self.sub_phase))
 
         self.prompt = "Select Building"
-        self.set_actions(self.generate_actions_select_building(Faction.MARQUISE, clearing))  # TODO: set_agent_actions
+        self.set_actions(self.generate_actions_select_building(Faction.MARQUISE, clearing))
 
     def generate_actions_agent_marquise_build(self):
         actions = []
@@ -635,7 +636,7 @@ class Game:
             self.marquise_daylight_2()
         else:
             actions = self.generate_actions_select_recruiter(clearing_with_recruiter)
-            self.set_actions(actions)  # TODO: set_agent_actions
+            self.set_actions(actions)
             self.prompt = 'Select Clearing to add warriors'
 
     def generate_actions_select_recruiter(self, clearing_with_recruiter):
@@ -718,7 +719,7 @@ class Game:
                                                                                        self.sub_phase))
 
         self.prompt = "Select Clearing"
-        self.set_actions(self.generate_actions_overwork_select_clearing())  # TODO: set_agent_actions
+        self.set_actions(self.generate_actions_overwork_select_clearing())
 
     def marquise_daylight_overwork_select_card_to_discard(self, clearing):
         LOGGER.info(
@@ -726,7 +727,7 @@ class Game:
                                                                                       self.sub_phase))
 
         self.prompt = "Select Card"
-        self.set_actions(self.generate_actions_overwork_select_card(clearing))  # TODO: set_agent_actions
+        self.set_actions(self.generate_actions_overwork_select_card(clearing))
 
     def marquise_overwork(self, clearing: Area, card):
         LOGGER.info("{}:{}:{}:Enter marquise_overwork".format(self.ui_turn_player, self.phase, self.sub_phase))
@@ -901,8 +902,8 @@ class Game:
         self.marquise_action_count += 1
 
         self.prompt = "Gained 1 extra action."
-        self.set_actions([Action('Next', self.marquise_daylight_2)])  # TODO: set_agent_actions
-        self.set_agent_actions(self.get_actions())
+        self.set_actions([Action('Next', self.marquise_daylight_2)])
+        self.set_agent_actions([Action('Next', self.marquise_daylight_2)])
 
     #####
     # Eyrie
@@ -1317,8 +1318,6 @@ class Game:
     def generate_actions_agent_eyrie_battle(self) -> list[Action]:
         actions: list[Action] = self.generate_actions_agent_battle(Faction.EYRIE, self.eyrie_resolve_battle,
                                                                    True)
-        for action in actions:
-            print(action)
         decree_action: DecreeAction = DecreeAction.BATTLE
 
         if len(actions) == 0:
@@ -1815,7 +1814,8 @@ class Game:
                                                                      building, clearing.area_index))
             self.prompt = "The {} has been build at clearing #{}.".format(building, clearing.area_index)
             self.marquise_action_count -= 1
-            self.set_actions([Action('Next', perform(self.marquise_daylight_2))])  # TODO: set_agent_actions
+            self.set_actions([Action('Next', perform(self.marquise_daylight_2))])
+            self.set_agent_actions([Action('Next', perform(self.marquise_daylight_2))])
         elif faction == Faction.EYRIE:
             self.eyrie_build(clearing)
 
@@ -1872,8 +1872,8 @@ class Game:
 
     def generate_actions_agent_battle(self, attacker, continuation_func, decree) -> list[Action]:
         clearings = self.get_battlable_clearing(attacker, decree)
+
         actions: list[Action] = []
-        LOGGER.info("clearing {}".format(len(clearings)))
         for clearing in clearings:
             enemy_factions: list[Faction] = self.get_available_enemy_tokens_from_clearing(attacker, clearing)
 
@@ -1881,7 +1881,7 @@ class Game:
                 actions.append(
                     Action("Attack {} in area {}".format(enemy_faction, clearing.area_index),
                            perform(self.initiate_battle, attacker, enemy_faction, clearing, continuation_func)))
-        LOGGER.info("len actions {}".format(len(actions)))
+
         return actions
 
     def select_clearing_battle(self, attacker, continuation_func, decree=True):
@@ -1901,7 +1901,6 @@ class Game:
         return actions
 
     def select_enemy_faction_battle(self, attacker, clearing, continuation_func):
-        self.selected_clearing = clearing
         actions = self.generate_actions_select_enemy_faction_battle(attacker, clearing, continuation_func)
         self.prompt = "Select Enemy Faction"
         self.set_actions(actions)
@@ -1970,6 +1969,7 @@ class Game:
         return factions
 
     def initiate_battle(self, attacker, defender, clearing: Area, continuation_func):
+        self.selected_clearing = clearing
         LOGGER.info(
             "{}:{}:{}:battle:{} initiate battle on {} in clearing #{}".format(self.ui_turn_player, self.phase,
                                                                               self.sub_phase,
