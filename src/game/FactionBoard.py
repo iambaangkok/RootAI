@@ -28,6 +28,8 @@ class FactionBoard:
         }
         self.crafted_cards: list[PlayingCard] = []
         self.cards_in_hand: list[PlayingCard] = []
+        self.activated_card: list[PlayingCard] = []
+        self.dominance_card: PlayingCard | None = None
 
         self.crafting_pieces_count = {
             Suit.FOX: 0,
@@ -37,15 +39,23 @@ class FactionBoard:
 
         self.reserved_warriors: int = reserved_warriors
 
-        self.victory_point = 0
-
         self.starting_point: Vector2 = starting_point
 
         self.text_surface: Surface = Config.FONT_MD_BOLD.render(name, True, color)
 
-        self.dominance_card: PlayingCard | None = None
+    def get_state_as_num_array(self):
+        n_features: int = 7
+        arr: list = [[]] * n_features
 
-        self.activated_card: list[PlayingCard] = []
+        arr[0] = [self.items[item] for item in Item]
+        arr[1] = [card.card_id for card in self.cards_in_hand]
+        arr[2] = [card.card_id for card in self.crafted_cards]
+        arr[3] = [card.card_id for card in self.activated_card]
+        arr[4] = [-1 if self.dominance_card is None else self.dominance_card.card_id]
+        arr[5] = [self.crafting_pieces_count[suit] for suit in [Suit.FOX, Suit.RABBIT, Suit.MOUSE]]
+        arr[6] = self.reserved_warriors
+
+        return arr
 
     def clear_activated_cards(self):
         self.activated_card = []

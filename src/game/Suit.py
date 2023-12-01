@@ -6,3 +6,4 @@ class Suit(StrEnum):
     FOX = "FOX"
     RABBIT = "RABBIT"
     MOUSE = "MOUSE"
+

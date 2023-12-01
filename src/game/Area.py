@@ -12,10 +12,10 @@ from src.game.Warrior import Warrior
 
 
 class Area:
-    area_count: int = 0
+    # area_count: int = 0
     size_ratio: float = 0.07
 
-    def __init__(self, position: Vector2, radius: float, suit: Suit, buildings: list[Building]):
+    def __init__(self, area_index: int, position: Vector2, radius: float, suit: Suit, buildings: list[Building]):
         self.position: Vector2 = position
         self.radius: float = radius
         self.suit: Suit = suit
@@ -26,8 +26,10 @@ class Area:
         self.connected_clearings: list = []
         self.connected_forests: list = []
 
-        self.area_index: int = Area.area_count
-        Area.area_count += 1
+        self.area_index: int = area_index
+
+        # self.area_index: int = Area.area_count
+        # Area.area_count += 1
 
         self.token_count = {}
         for token in Token:
@@ -37,8 +39,20 @@ class Area:
         for warrior in Warrior:
             self.warrior_count[warrior] = 0
 
-    def __del__(self):
-        Area.area_count -= 1
+    def get_state_as_num_array(self):
+        n_features: int = 4
+        arr: list = [[]] * n_features
+
+        arr[0] = self.area_index
+        arr[1] = [building.to_number() for building in self.buildings]
+        arr[2] = [self.token_count[token] for token in Token]
+        arr[3] = [self.warrior_count[warrior] for warrior in Warrior]
+
+        return arr
+
+
+    # def __del__(self):
+    #     Area.area_count -= 1
 
     def draw(self, screen: Surface):
         # circle

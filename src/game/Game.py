@@ -40,6 +40,15 @@ class Phase(StrEnum):
     EVENING = "EVENING"
     TURMOIL = "TURMOIL"
 
+    def to_number(self) -> int:
+        mapping: dict[str, int] = {
+            "BIRDSONG": 0,
+            "DAYLIGHT": 1,
+            "EVENING": 2,
+            "TURMOIL": 3
+        }
+        return mapping[self.name]
+
 
 class Action:
     def __init__(self, name: str, function: any = None):
@@ -157,44 +166,44 @@ class Game:
         areas_offset_y = 0.05
         areas_radius = Board.rect.width * Area.size_ratio
         areas: list[Area] = [
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.12,
-                         Board.rect.y + Board.rect.height * (0.20 - areas_offset_y)), areas_radius,
+            Area(0, Vector2(Board.rect.x + Board.rect.width * 0.12,
+                            Board.rect.y + Board.rect.height * (0.20 - areas_offset_y)), areas_radius,
                  Suit.FOX, [Building.EMPTY]),
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.55,
-                         Board.rect.y + Board.rect.height * (0.15 - areas_offset_y)), areas_radius,
+            Area(1, Vector2(Board.rect.x + Board.rect.width * 0.55,
+                            Board.rect.y + Board.rect.height * (0.15 - areas_offset_y)), areas_radius,
                  Suit.RABBIT, [Building.EMPTY, Building.EMPTY]),
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.88,
-                         Board.rect.y + Board.rect.height * (0.25 - areas_offset_y)), areas_radius,
+            Area(2, Vector2(Board.rect.x + Board.rect.width * 0.88,
+                            Board.rect.y + Board.rect.height * (0.25 - areas_offset_y)), areas_radius,
                  Suit.MOUSE, [Building.EMPTY, Building.EMPTY]),
 
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.43,
-                         Board.rect.y + Board.rect.height * (0.35 - areas_offset_y)), areas_radius,
+            Area(3, Vector2(Board.rect.x + Board.rect.width * 0.43,
+                            Board.rect.y + Board.rect.height * (0.35 - areas_offset_y)), areas_radius,
                  Suit.RABBIT, [Building.EMPTY]),
 
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.10,
-                         Board.rect.y + Board.rect.height * (0.45 - areas_offset_y)), areas_radius,
+            Area(4, Vector2(Board.rect.x + Board.rect.width * 0.10,
+                            Board.rect.y + Board.rect.height * (0.45 - areas_offset_y)), areas_radius,
                  Suit.MOUSE, [Building.EMPTY, Building.EMPTY]),
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.34,
-                         Board.rect.y + Board.rect.height * (0.58 - areas_offset_y)), areas_radius,
+            Area(5, Vector2(Board.rect.x + Board.rect.width * 0.34,
+                            Board.rect.y + Board.rect.height * (0.58 - areas_offset_y)), areas_radius,
                  Suit.FOX, [Building.EMPTY]),
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.66,
-                         Board.rect.y + Board.rect.height * (0.53 - areas_offset_y)), areas_radius,
+            Area(6, Vector2(Board.rect.x + Board.rect.width * 0.66,
+                            Board.rect.y + Board.rect.height * (0.53 - areas_offset_y)), areas_radius,
                  Suit.MOUSE, [Building.EMPTY, Building.EMPTY]),
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.90,
-                         Board.rect.y + Board.rect.height * (0.56 - areas_offset_y)), areas_radius,
+            Area(7, Vector2(Board.rect.x + Board.rect.width * 0.90,
+                            Board.rect.y + Board.rect.height * (0.56 - areas_offset_y)), areas_radius,
                  Suit.FOX, [Building.WORKSHOP]),
 
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.12,
-                         Board.rect.y + Board.rect.height * (0.83 - areas_offset_y)), areas_radius,
+            Area(8, Vector2(Board.rect.x + Board.rect.width * 0.12,
+                            Board.rect.y + Board.rect.height * (0.83 - areas_offset_y)), areas_radius,
                  Suit.RABBIT, [Building.EMPTY]),
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.39,
-                         Board.rect.y + Board.rect.height * (0.88 - areas_offset_y)), areas_radius,
+            Area(9, Vector2(Board.rect.x + Board.rect.width * 0.39,
+                            Board.rect.y + Board.rect.height * (0.88 - areas_offset_y)), areas_radius,
                  Suit.FOX, [Building.EMPTY, Building.EMPTY]),
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.62,
-                         Board.rect.y + Board.rect.height * (0.80 - areas_offset_y)), areas_radius,
+            Area(10, Vector2(Board.rect.x + Board.rect.width * 0.62,
+                             Board.rect.y + Board.rect.height * (0.80 - areas_offset_y)), areas_radius,
                  Suit.MOUSE, [Building.RECRUITER, Building.EMPTY]),
-            Area(Vector2(Board.rect.x + Board.rect.width * 0.84,
-                         Board.rect.y + Board.rect.height * (0.88 - areas_offset_y)), areas_radius,
+            Area(11, Vector2(Board.rect.x + Board.rect.width * 0.84,
+                             Board.rect.y + Board.rect.height * (0.88 - areas_offset_y)), areas_radius,
                  Suit.RABBIT, [Building.SAWMILL]),
         ]
 
@@ -249,6 +258,9 @@ class Game:
         self.distance_from_the_keep_list = [4, 3, 2, 3, 3, 2, 1, 1, 3, 2, 1, 0]
         self.distance_from_the_keep = {}
 
+        for i in range(0, len(self.board.areas)):
+            self.distance_from_the_keep[self.board.areas[i]] = self.distance_from_the_keep_list[i]
+
         # Eyrie variables
         self.selected_clearing = None
 
@@ -280,15 +292,53 @@ class Game:
         # Setup Game
         self.setup_board()
 
+    def get_state_as_num_array(self):
+        n_features: int = 24
+        arr: list = [[]] * n_features
+
+        arr[0] = 1 if self.running else 0
+
+        arr[1] = self.turn_count
+        arr[2] = 1 if self.ui_turn_player == Faction.MARQUISE else 0
+        arr[3] = 1 if self.turn_player == Faction.MARQUISE else 0
+        arr[4] = self.phase.to_number()  # 0, 1, 2, 3
+        arr[5] = self.sub_phase
+        arr[6] = 1 if self.is_in_action_sub_phase else 0
+
+        arr[7] = [card.card_id for card in self.draw_pile]
+        arr[8] = [card.card_id for card in self.discard_pile]
+        arr[9] = [card.card_id for card in self.discard_pile_dominance]
+
+        arr[10] = self.board.get_state_as_num_array()
+
+        arr[11] = self.marquise.get_state_as_num_array()
+        arr[12] = self.eyrie.get_state_as_num_array()
+
+        arr[13] = self.marquise_action_count
+        arr[14] = self.marquise_march_count
+        arr[15] = self.marquise_recruit_count
+        arr[16] = 1 if self.marquise_recruit_action_used else 0
+
+        arr[17] = self.selected_clearing.area_index if self.selected_clearing is not None else -1
+
+        arr[18] = [1 if self.sappers_enable[Faction.MARQUISE] else 0, 1 if self.sappers_enable[Faction.EYRIE] else 0]
+        arr[19] = [1 if self.sappers_enable[Faction.MARQUISE] else 0, 1 if self.sappers_enable[Faction.EYRIE] else 0]
+
+        arr[20] = self.selected_card.card_id if self.selected_card is not None else -1
+        arr[21] = 1 if self.added_bird_card else 0
+        arr[22] = self.addable_count
+        arr[23] = [
+            [card.card_id for card in self.decree_counter[decree_action]] for decree_action in DecreeAction
+        ]
+
+        return arr
+
     #####
     # Setup Board
     def setup_board(self):
         self.board.areas[-1].add_token(Token.CASTLE)
         for i in range(1, len(self.board.areas)):
             self.board.areas[i].add_warrior(Warrior.MARQUISE, 1)
-
-        for i in range(0, len(self.board.areas)):
-            self.distance_from_the_keep[self.board.areas[i]] = self.distance_from_the_keep_list[i]
 
         self.build_roost(self.board.areas[0])
         self.board.areas[0].add_warrior(Warrior.EYRIE, 6)
@@ -303,12 +353,31 @@ class Game:
     def shuffle_draw_pile(self):
         shuffle(self.draw_pile)
 
+    #####
+    # Actions
     def get_actions(self) -> list[Action]:
         return self.actions
 
     def get_agent_actions(self) -> list[Action]:
         return self.agent_actions
 
+    def set_actions(self, actions: list[Action] = None):
+        if actions is not None:
+            self.actions = actions
+        else:
+            if self.ui_turn_player == Faction.MARQUISE:
+                self.actions = self.marquise_base_actions[self.phase][self.sub_phase]
+            elif self.ui_turn_player == Faction.EYRIE:
+                self.actions = self.eyrie_base_actions[self.phase][self.sub_phase]
+
+    def set_agent_actions(self, actions: list[Action] = None):
+        if actions is not None:
+            self.agent_actions = actions
+        else:
+            raise Exception("set_agent_actions did not receive any parameters")
+
+    #####
+    # Win Condition
     def gain_vp(self, faction: Faction, vp: int):
         if self.faction_to_faction_board(faction).dominance_card is not None:
             return
@@ -358,6 +427,14 @@ class Game:
     def end_game(self):
         self.running = False
 
+    #####
+    # Utils
+    def faction_to_faction_board(self, faction: Faction) -> FactionBoard:
+        if faction == Faction.MARQUISE:
+            return self.marquise
+        if faction == Faction.EYRIE:
+            return self.eyrie
+
     def get_end_game_data(self) -> tuple[Faction | None, str, int, Faction, int, int, None | PlayingCard] | None:
         """
         Should only be called with the game has already ended.
@@ -384,7 +461,6 @@ class Game:
 
     #####
     # MARQUISE
-
     def marquise_birdsong_start(self):
         self.phase = Phase.BIRDSONG
         self.sub_phase = 0
@@ -1562,21 +1638,6 @@ class Game:
 
     def select_card(self, card: PlayingCard):
         self.selected_card = card
-
-    def set_actions(self, actions: list[Action] = None):
-        if actions is not None:
-            self.actions = actions
-        else:
-            if self.ui_turn_player == Faction.MARQUISE:
-                self.actions = self.marquise_base_actions[self.phase][self.sub_phase]
-            elif self.ui_turn_player == Faction.EYRIE:
-                self.actions = self.eyrie_base_actions[self.phase][self.sub_phase]
-
-    def set_agent_actions(self, actions: list[Action] = None):
-        if actions is not None:
-            self.agent_actions = actions
-        else:
-            raise Exception("set_agent_actions did not receive any parameters")
 
     def can_take_card_from_draw_pile(self, amount: int = 1) -> bool:
         return len(self.draw_pile) >= amount
@@ -2787,12 +2848,6 @@ class Game:
         faction_board = self.faction_to_faction_board(faction)
         faction_board.activated_card.append(card)
         self.select_clearing_src_move(faction, continuation_func)
-
-    def faction_to_faction_board(self, faction: Faction) -> FactionBoard:
-        if faction == Faction.MARQUISE:
-            return self.marquise
-        if faction == Faction.EYRIE:
-            return self.eyrie
 
     #####
     # DRAW

@@ -33,6 +33,16 @@ class MarquiseBoard(FactionBoard):
             Building.RECRUITER: [0, 0, 1, 1, 2, 2]
         }
 
+    def get_state_as_num_array(self):
+        prev_arr = super().get_state_as_num_array()
+
+        n_features: int = 1
+        arr: list = prev_arr + [[]] * n_features
+
+        arr[7] = [self.building_trackers[building] for building in [Building.SAWMILL, Building.WORKSHOP, Building.RECRUITER]]
+
+        return arr
+
     def get_reward(self, building):
         return self.building_reward[building][self.building_trackers[building]]
 

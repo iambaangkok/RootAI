@@ -63,6 +63,16 @@ class Board:
         self.turn_player = None
         self.turn_count = 0
 
+    def get_state_as_num_array(self):
+        n_features = 3
+        arr: list = [[]] * n_features
+
+        arr[0] = [self.faction_points[Faction.MARQUISE], self.faction_points[Faction.EYRIE]]
+        arr[1] = [area.get_state_as_num_array() for area in self.areas]
+        arr[2] = [(1 if item_available else 0) for item_available in self.item_supply_available]
+
+        return arr
+
     def add_path(self, area_1: int, area_2: int):
         if ((area_1, area_2) in self.paths) or \
                 (self.areas[area_2] in self.areas[area_1].connected_clearings) or \

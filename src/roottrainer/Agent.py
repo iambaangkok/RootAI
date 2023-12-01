@@ -11,6 +11,7 @@ class Agent:
         """
         Chooses an action to execute from all legal actions in the current `state`.
 
+        :param actions: list of all legal actions
         :param state: the current state of the game
         :return: an action to be executed
         """

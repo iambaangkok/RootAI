@@ -11,7 +11,7 @@ class MCTSAgent(Agent):
     def choose_action(self, state: Game, actions: list[Action]) -> Action:
         return self.choose_best_actions(state, actions)
 
-    def choose_best_actions(self, state: Game, actions: list[Action]) -> Action: #TODO
+    def choose_best_actions(self, state: Game, actions: list[Action]) -> Action:  # TODO
         pass
 
 

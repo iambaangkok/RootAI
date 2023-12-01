@@ -32,6 +32,7 @@ class RootTrainer:
 
         # Game
         self.game: Game = Game()
+        print(self.get_game_as_num_array())
 
         # Action Board
         self.action_arrow_pos = Vector2(0, 0)
@@ -90,21 +91,20 @@ class RootTrainer:
     # Init
     def init(self):
         self.get_actions()
-        pass
 
     #####
     # Update
     def update(self):
         keys = pygame.key.get_pressed()  # Checking pressed (hold) keys
 
-        if not self.game.running and not self.collected_end_game_data:
+        if not self.get_game().running and not self.collected_end_game_data:
             self.winning_faction, \
                 self.winning_condition, \
                 self.turns_played, \
                 self.turn_player, \
                 self.vp_marquise, \
                 self.vp_eyrie, \
-                self.winning_dominance = self.game.get_end_game_data()
+                self.winning_dominance = self.get_game().get_end_game_data()
 
             if self.winning_dominance is None:
                 self.winning_dominance = "none"
@@ -117,7 +117,7 @@ class RootTrainer:
                     self.winning_faction, self.winning_condition, self.turns_played, self.turn_player,
                     self.vp_marquise, self.vp_eyrie, self.winning_dominance])
 
-        if not self.game.running:
+        if not self.get_game().running:
             if self.round + 1 <= self.round_limit:
                 if config['simulation']['auto-next-round']:
                     self.next_round()
@@ -132,26 +132,26 @@ class RootTrainer:
             else:
                 self.running = False
 
-        if self.game.running:
+        if self.get_game().running:
             if keys[pygame.K_a] or (not config['agent']['require-key-hold']):
-                if self.game.turn_player == Faction.MARQUISE and config['agent']['marquise']['enable']:
+                if self.get_game().turn_player == Faction.MARQUISE and config['agent']['marquise']['enable']:
                     self.execute_agent_action(Faction.MARQUISE)
-                elif self.game.turn_player == Faction.EYRIE and config['agent']['eyrie']['enable']:
+                elif self.get_game().turn_player == Faction.EYRIE and config['agent']['eyrie']['enable']:
                     self.execute_agent_action(Faction.EYRIE)
 
             # elif keys[pygame.K_f]:
             #     if config['simulation']['f-key-action'] == 'current':
             #         self.current_action.function()
-            #         self.actions = self.game.get_actions()
+            #         self.actions = self.get_game().get_actions()
             #         self.reset_arrow()
             #
             if keys[pygame.K_f] and config['simulation']['f-key-action'] == 'random':
-                if self.game.turn_player == Faction.MARQUISE and not config['agent']['marquise']['enable']:
+                if self.get_game().turn_player == Faction.MARQUISE and not config['agent']['marquise']['enable']:
                     self.random_arrow()
                     self.execute_action()
                     self.get_actions()
                     self.reset_arrow()
-                elif self.game.turn_player == Faction.EYRIE and not config['agent']['eyrie']['enable']:
+                elif self.get_game().turn_player == Faction.EYRIE and not config['agent']['eyrie']['enable']:
                     self.random_arrow()
                     self.execute_action()
                     self.get_actions()
@@ -160,7 +160,7 @@ class RootTrainer:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
-            if self.game.running:
+            if self.get_game().running:
                 if event.type == pygame.KEYDOWN:
                     self.move_arrow(event.key)
 
@@ -175,22 +175,14 @@ class RootTrainer:
         self.fps = self.calculate_fps()
 
     def next_round(self):
-        self.game = Game()
+        self.new_game()
         self.collected_end_game_data = False
         self.round += 1
         self.get_actions()
         self.reset_arrow()
 
-    def execute_agent_action(self, faction: Faction):
-        agent = self.faction_to_agent(faction)
-        action = agent.choose_action(self.game, self.actions)
-        action_index = self.actions.index(action)
-        self.set_arrow(action_index)
-        decree_counter = self.game.decree_counter
-        self.execute_action()
-        self.get_actions()
-        self.reset_arrow()
-
+    ###
+    # Arrows
     def random_arrow(self):
         self.reset_arrow()
 
@@ -228,18 +220,45 @@ class RootTrainer:
         self.action_arrow_pos.y = 0
         self.current_action = self.actions[int(self.action_arrow_pos.y)]
 
-    def get_actions(self):
-        if self.game.turn_player == Faction.MARQUISE and not config['agent']['marquise']['enable']:
-            self.actions = self.game.get_actions()
-        elif self.game.turn_player == Faction.EYRIE and not config['agent']['eyrie']['enable']:
-            self.actions = self.game.get_actions()
-        else:
-            self.actions = self.game.get_agent_actions()
+    ###
+    # Actions
+    def execute_agent_action(self, faction: Faction):
+        agent = self.faction_to_agent(faction)
+        action = agent.choose_action(self.get_game(), self.actions)
+        action_index = self.actions.index(action)
+        self.set_arrow(action_index)
+        decree_counter = self.get_game().decree_counter
+        self.execute_action()
+        self.get_actions()
+        self.reset_arrow()
 
+    def get_actions(self):
+        if self.get_game().turn_player == Faction.MARQUISE and config['agent']['marquise']['enable']:
+            self.actions = self.get_game().get_agent_actions()
+        elif self.get_game().turn_player == Faction.EYRIE and config['agent']['eyrie']['enable']:
+            self.actions = self.get_game().get_agent_actions()
+        else:
+            self.actions = self.get_game().get_actions()
 
     def execute_action(self):
         self.current_action.function()
 
+    ###
+    # Game
+
+    def get_game_as_num_array(self):
+        arr: list = []
+        arr = self.get_game().get_state_as_num_array()
+        return arr
+
+    def get_game(self) -> Game:
+        return self.game
+
+    def new_game(self):
+        self.game = Game()
+
+    ###
+    # Utils
     def faction_to_agent(self, faction: Faction):
         if faction == Faction.MARQUISE:
             return self.marquise_agent
@@ -259,7 +278,7 @@ class RootTrainer:
         self.screen.fill("black")
 
         if config['game']['rendering']['enable']:
-            self.game.draw(self.screen)
+            self.get_game().draw(self.screen)
 
         self.draw_fps_text()
         self.draw_delta_time_text()
@@ -267,7 +286,7 @@ class RootTrainer:
         if config['simulation']['actions']['rendering']['enable']:
             self.draw_action(self.screen)
 
-            if not self.game.running:
+            if not self.get_game().running:
                 self.draw_game_ended(self.screen)
 
     def draw_fps_text(self):
@@ -311,9 +330,9 @@ class RootTrainer:
     def draw_action(self, screen: Surface):
         # Phase
         color = Colors.ORANGE
-        if self.game.turn_player == Faction.EYRIE:
+        if self.get_game().turn_player == Faction.EYRIE:
             color = Colors.BLUE
-        phase = Config.FONT_MD_BOLD.render("{} ({})".format(self.game.phase, self.game.sub_phase), True, color)
+        phase = Config.FONT_MD_BOLD.render("{} ({})".format(self.get_game().phase, self.get_game().sub_phase), True, color)
         phase_rect = phase.get_rect()
         starting_point = Vector2(0.75 * Config.SCREEN_WIDTH, 0.0 * Config.SCREEN_HEIGHT)
         shift = Vector2(10, 0.05 * Config.SCREEN_HEIGHT)
@@ -332,7 +351,7 @@ class RootTrainer:
         shift = Vector2(0, 8)
         prompt_rect.topleft = phase_rect.bottomleft + shift
         # screen.blit(prompt, prompt_rect)
-        draw_text_in_rect(screen, "{}".format(self.game.prompt), Colors.WHITE, prompt_rect, Config.FONT_1, True)
+        draw_text_in_rect(screen, "{}".format(self.get_game().prompt), Colors.WHITE, prompt_rect, Config.FONT_1, True)
 
         self.draw_arrow(screen, starting_point)
         self.draw_action_list(screen, starting_point)

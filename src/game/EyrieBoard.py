@@ -26,6 +26,16 @@ class EyrieLeader(StrEnum):
     BUILDER = "BUILDER"
     CHARISMATIC = "CHARISMATIC"
 
+    def to_number(self) -> int:
+        mapping: dict[str, int] = {
+            "None": -1,
+            "COMMANDER": 0,
+            "DESPOT": 1,
+            "BUILDER": 2,
+            "CHARISMATIC": 3
+        }
+        return mapping[self.name]
+
 
 class LeaderStatus(StrEnum):
     ACTIVE = "ACTIVE"
@@ -60,10 +70,26 @@ class EyrieBoard(FactionBoard):
             DecreeAction.BUILD: []
         }
 
-    def get_active_leader(self) -> EyrieLeader:
+    def get_state_as_num_array(self):
+        prev_arr = super().get_state_as_num_array()
+
+        n_features: int = 3
+        arr: list = prev_arr + [[]] * n_features
+
+        arr[7] = self.roost_tracker
+        arr[8] = self.get_active_leader().to_number()
+        arr[9] = [
+            [card.card_id for card in self.decree[decree_action]] for decree_action in DecreeAction
+        ]
+
+        return arr
+
+    def get_active_leader(self) -> EyrieLeader | str:
         for leader in self.leaders.keys():
             if self.leaders[leader] == LeaderStatus.ACTIVE:
                 return leader
+
+        return "None"
 
     def get_inactive_leader(self) -> list[EyrieLeader]:
         inactive_leaders: list[EyrieLeader] = []
