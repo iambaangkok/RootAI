@@ -75,7 +75,7 @@ class Game:
         self.is_in_action_sub_phase: bool = False
 
         # Board Game Components
-        self.draw_pile: list[Card] = [build_card(i) for i in range(0, 53)]
+        self.draw_pile: list[Card] = [build_card(i) for i in range(0,54)]
         self.discard_pile: list[Card] = []
         self.discard_pile_dominance: list[Card] = []
 
@@ -249,6 +249,22 @@ class Game:
         ]
 
         return arr
+
+    # TODO: complete set_state
+    def set_state(self,
+                  running: bool = True,
+                  turn_count: int = 0,
+                  ui_turn_player: Faction = Faction.MARQUISE,
+                  turn_player: Faction = Faction.MARQUISE,
+                  phase: Phase = Phase.BIRDSONG,
+                  sub_phase: int = 0,
+                  is_in_action_sub_phase: bool = False,
+                  draw_pile: list[Card] = [build_card(i) for i in range(0, 54)],
+                  discard_pile: list[Card] = [],
+                  discard_pile_dominance: list[Card] = [],
+
+                  ):
+        pass
 
     #####
     # Setup Board
