@@ -4,7 +4,7 @@ from pygame import Rect, Color, Surface, Vector2
 from src.config import Config, Colors
 from src.game.Building import Building
 from src.game.Item import Item
-from src.game.PlayingCard import PlayingCard
+from src.game.Card import Card
 from src.game.Suit import Suit
 from src.utils import text_utils
 from src.utils.draw_utils import draw_key_value, draw_cards
@@ -26,10 +26,10 @@ class FactionBoard:
             Item.COIN: 0,
             Item.TORCH: 0,
         }
-        self.crafted_cards: list[PlayingCard] = []
-        self.cards_in_hand: list[PlayingCard] = []
-        self.activated_card: list[PlayingCard] = []
-        self.dominance_card: PlayingCard | None = None
+        self.crafted_cards: list[Card] = []
+        self.cards_in_hand: list[Card] = []
+        self.activated_card: list[Card] = []
+        self.dominance_card: Card | None = None
 
         self.crafting_pieces_count = {
             Suit.FOX: 0,

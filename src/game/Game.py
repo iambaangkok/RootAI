@@ -20,7 +20,7 @@ from src.game.Faction import Faction
 from src.game.FactionBoard import FactionBoard
 from src.game.Item import Item
 from src.game.MarquiseBoard import MarquiseBoard
-from src.game.PlayingCard import PlayingCard, PlayingCardName, PlayingCardPhase
+from src.game.Card import Card, CardName, CardPhase, build_card
 from src.game.Suit import Suit
 from src.game.Token import Token
 from src.game.Warrior import Warrior
@@ -75,92 +75,9 @@ class Game:
         self.is_in_action_sub_phase: bool = False
 
         # Board Game Components
-        self.draw_pile: list[PlayingCard] = [
-            PlayingCard(0, PlayingCardName.AMBUSH, Suit.BIRD, PlayingCardPhase.BATTLE),
-            PlayingCard(1, PlayingCardName.AMBUSH, Suit.BIRD, PlayingCardPhase.BATTLE),
-            PlayingCard(2, PlayingCardName.BIRDY_HANDLE, Suit.BIRD, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 1}, 1,
-                        Item.BAG),
-            PlayingCard(3, PlayingCardName.ARMORERS, Suit.BIRD, PlayingCardPhase.BATTLE, {Suit.FOX: 1}),
-            PlayingCard(4, PlayingCardName.ARMORERS, Suit.BIRD, PlayingCardPhase.BATTLE, {Suit.FOX: 1}),
-            PlayingCard(5, PlayingCardName.WOODLAND_RUNNERS, Suit.BIRD, PlayingCardPhase.IMMEDIATE, {Suit.RABBIT: 1}, 1,
-                        Item.BOOTS),
-            PlayingCard(6, PlayingCardName.ARMS_TRADER, Suit.BIRD, PlayingCardPhase.IMMEDIATE, {Suit.FOX: 2}, 2,
-                        Item.KNIFE),
-            PlayingCard(7, PlayingCardName.CROSSBOW, Suit.BIRD, PlayingCardPhase.IMMEDIATE, {Suit.FOX: 1}, 1,
-                        Item.CROSSBOW),
-            PlayingCard(8, PlayingCardName.SAPPERS, Suit.BIRD, PlayingCardPhase.BATTLE, {Suit.MOUSE: 1}),
-            PlayingCard(9, PlayingCardName.SAPPERS, Suit.BIRD, PlayingCardPhase.BATTLE, {Suit.MOUSE: 1}),
-            PlayingCard(10, PlayingCardName.BRUTAL_TACTICS, Suit.BIRD, PlayingCardPhase.BATTLE, {Suit.FOX: 2}),
-            PlayingCard(11, PlayingCardName.BRUTAL_TACTICS, Suit.BIRD, PlayingCardPhase.BATTLE, {Suit.FOX: 2}),
-            PlayingCard(12, PlayingCardName.ROYAL_CLAIM, Suit.BIRD, PlayingCardPhase.BIRDSONG, {Suit.BIRD: 4}),
-
-            PlayingCard(13, PlayingCardName.AMBUSH, Suit.FOX, PlayingCardPhase.BATTLE),
-            PlayingCard(14, PlayingCardName.GENTLY_USED_KNAPSACK, Suit.FOX, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 1},
-                        1, Item.BAG),
-            PlayingCard(15, PlayingCardName.ROOT_TEA, Suit.FOX, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 1}, 2,
-                        Item.KEG),
-            PlayingCard(16, PlayingCardName.TRAVEL_GEAR, Suit.FOX, PlayingCardPhase.IMMEDIATE, {Suit.RABBIT: 1}, 1,
-                        Item.BOOTS),
-            PlayingCard(17, PlayingCardName.PROTECTION_RACKET, Suit.FOX, PlayingCardPhase.IMMEDIATE, {Suit.RABBIT: 2},
-                        3, Item.COIN),
-            PlayingCard(18, PlayingCardName.FOXFOLK_STEEL, Suit.FOX, PlayingCardPhase.IMMEDIATE, {Suit.FOX: 2}, 2,
-                        Item.KNIFE),
-            PlayingCard(19, PlayingCardName.ANVIL, Suit.FOX, PlayingCardPhase.IMMEDIATE, {Suit.FOX: 1}, 2, Item.HAMMER),
-            PlayingCard(20, PlayingCardName.STAND_AND_DELIVER, Suit.FOX, PlayingCardPhase.BIRDSONG, {Suit.MOUSE: 3}),
-            PlayingCard(21, PlayingCardName.STAND_AND_DELIVER, Suit.FOX, PlayingCardPhase.BIRDSONG, {Suit.MOUSE: 3}),
-            PlayingCard(22, PlayingCardName.TAX_COLLECTOR, Suit.FOX, PlayingCardPhase.DAYLIGHT,
-                        {Suit.FOX: 1, Suit.RABBIT: 1, Suit.MOUSE: 1}),
-            PlayingCard(23, PlayingCardName.TAX_COLLECTOR, Suit.FOX, PlayingCardPhase.DAYLIGHT,
-                        {Suit.FOX: 1, Suit.RABBIT: 1, Suit.MOUSE: 1}),
-            PlayingCard(24, PlayingCardName.TAX_COLLECTOR, Suit.FOX, PlayingCardPhase.DAYLIGHT,
-                        {Suit.FOX: 1, Suit.RABBIT: 1, Suit.MOUSE: 1}),
-            PlayingCard(25, PlayingCardName.FAVOR_OF_THE_FOXES, Suit.FOX, PlayingCardPhase.IMMEDIATE, {Suit.FOX: 3}),
-            PlayingCard(26, PlayingCardName.AMBUSH, Suit.RABBIT, PlayingCardPhase.BATTLE),
-            PlayingCard(27, PlayingCardName.SMUGGLERS_TRAIL, Suit.RABBIT, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 1},
-                        1, Item.BAG),
-            PlayingCard(28, PlayingCardName.ROOT_TEA, Suit.RABBIT, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 1}, 2,
-                        Item.KEG),
-            PlayingCard(29, PlayingCardName.A_VISIT_TO_FRIENDS, Suit.RABBIT, PlayingCardPhase.IMMEDIATE,
-                        {Suit.RABBIT: 1}, 1, Item.BOOTS),
-            PlayingCard(30, PlayingCardName.BAKE_SALE, Suit.RABBIT, PlayingCardPhase.IMMEDIATE, {Suit.RABBIT: 2}, 3,
-                        Item.COIN),
-            PlayingCard(31, PlayingCardName.COMMAND_WARREN, Suit.RABBIT, PlayingCardPhase.DAYLIGHT, {Suit.RABBIT: 2}),
-            PlayingCard(32, PlayingCardName.COMMAND_WARREN, Suit.RABBIT, PlayingCardPhase.DAYLIGHT, {Suit.RABBIT: 2}),
-            PlayingCard(33, PlayingCardName.BETTER_BURROW_BANK, Suit.RABBIT, PlayingCardPhase.BIRDSONG,
-                        {Suit.RABBIT: 2}),
-            PlayingCard(34, PlayingCardName.BETTER_BURROW_BANK, Suit.RABBIT, PlayingCardPhase.BIRDSONG,
-                        {Suit.RABBIT: 2}),
-            PlayingCard(35, PlayingCardName.COBBLER, Suit.RABBIT, PlayingCardPhase.EVENING, {Suit.RABBIT: 2}),
-            PlayingCard(36, PlayingCardName.COBBLER, Suit.RABBIT, PlayingCardPhase.EVENING, {Suit.RABBIT: 2}),
-            PlayingCard(37, PlayingCardName.FAVOR_OF_THE_RABBITS, Suit.RABBIT, PlayingCardPhase.IMMEDIATE,
-                        {Suit.RABBIT: 3}),
-
-            PlayingCard(38, PlayingCardName.AMBUSH, Suit.MOUSE, PlayingCardPhase.BATTLE),
-            PlayingCard(39, PlayingCardName.MOUSE_IN_A_SACK, Suit.MOUSE, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 1}, 1,
-                        Item.BAG),
-            PlayingCard(40, PlayingCardName.ROOT_TEA, Suit.MOUSE, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 1}, 2,
-                        Item.KEG),
-            PlayingCard(41, PlayingCardName.TRAVEL_GEAR, Suit.MOUSE, PlayingCardPhase.IMMEDIATE, {Suit.RABBIT: 1}, 1,
-                        Item.BOOTS),
-            PlayingCard(42, PlayingCardName.INVESTMENTS, Suit.MOUSE, PlayingCardPhase.IMMEDIATE, {Suit.RABBIT: 2}, 3,
-                        Item.COIN),
-            PlayingCard(43, PlayingCardName.SWORD, Suit.MOUSE, PlayingCardPhase.IMMEDIATE, {Suit.FOX: 2}, 2,
-                        Item.KNIFE),
-            PlayingCard(44, PlayingCardName.CROSSBOW, Suit.MOUSE, PlayingCardPhase.IMMEDIATE, {Suit.FOX: 1}, 1,
-                        Item.CROSSBOW),
-            PlayingCard(45, PlayingCardName.SCOUTING_PARTY, Suit.MOUSE, PlayingCardPhase.BATTLE, {Suit.MOUSE: 2}),
-            PlayingCard(46, PlayingCardName.SCOUTING_PARTY, Suit.MOUSE, PlayingCardPhase.BATTLE, {Suit.MOUSE: 2}),
-            PlayingCard(47, PlayingCardName.CODEBREAKERS, Suit.MOUSE, PlayingCardPhase.DAYLIGHT, {Suit.MOUSE: 1}),
-            PlayingCard(48, PlayingCardName.CODEBREAKERS, Suit.MOUSE, PlayingCardPhase.DAYLIGHT, {Suit.MOUSE: 1}),
-            PlayingCard(49, PlayingCardName.FAVOR_OF_THE_MICE, Suit.MOUSE, PlayingCardPhase.IMMEDIATE, {Suit.MOUSE: 3}),
-
-            PlayingCard(50, PlayingCardName.DOMINANCE_RABBIT, Suit.RABBIT, PlayingCardPhase.DAYLIGHT),
-            PlayingCard(51, PlayingCardName.DOMINANCE_MOUSE, Suit.MOUSE, PlayingCardPhase.DAYLIGHT),
-            PlayingCard(52, PlayingCardName.DOMINANCE_BIRD, Suit.BIRD, PlayingCardPhase.DAYLIGHT),
-            PlayingCard(53, PlayingCardName.DOMINANCE_FOX, Suit.FOX, PlayingCardPhase.DAYLIGHT),
-        ]
-        self.discard_pile: list[PlayingCard] = []
-        self.discard_pile_dominance: list[PlayingCard] = []
+        self.draw_pile: list[Card] = [build_card(i) for i in range(0, 53)]
+        self.discard_pile: list[Card] = []
+        self.discard_pile_dominance: list[Card] = []
 
         # Board, Areas (Clearings)
         areas_offset_y = 0.05
@@ -275,12 +192,12 @@ class Game:
         }
 
         # # Add Card To Decree variables
-        self.selected_card: PlayingCard | None = None
+        self.selected_card: Card | None = None
         self.added_bird_card: bool = False
         self.addable_count: int = 2
 
         # # Resolve Decree variables
-        self.decree_counter: {DecreeAction: list[PlayingCard]} = {
+        self.decree_counter: {DecreeAction: list[Card]} = {
             DecreeAction.RECRUIT: [],
             DecreeAction.MOVE: [],
             DecreeAction.BATTLE: [],
@@ -385,7 +302,7 @@ class Game:
         self.check_win_condition(faction)
 
     def check_win_condition(self, faction: Faction, no_end_action: bool = False) -> tuple[
-                                                                                        int, int] | PlayingCard | None:
+                                                                                        int, int] | Card | None:
         faction_board = self.faction_to_faction_board(faction)
         if faction_board.dominance_card is None:
             return self.check_win_condition_vp(faction, no_end_action)
@@ -401,15 +318,15 @@ class Game:
                 self.end_game()
             return self.board.faction_points[Faction.MARQUISE], self.board.faction_points[Faction.EYRIE]
 
-    def check_win_condition_dominance(self, faction: Faction, no_end_action: bool = False) -> PlayingCard | None:
+    def check_win_condition_dominance(self, faction: Faction, no_end_action: bool = False) -> Card | None:
         faction_board = self.faction_to_faction_board(faction)
         warrior = faction_to_warrior(faction)
 
         areas = self.board.areas
 
-        winning_dominance: PlayingCard | None = None
+        winning_dominance: Card | None = None
 
-        if faction_board.dominance_card.name == PlayingCardName.DOMINANCE_BIRD:
+        if faction_board.dominance_card.name == CardName.DOMINANCE_BIRD:
             if (areas[0].ruler() == warrior and areas[11].ruler() == warrior) or (
                     areas[2].ruler() == warrior and areas[8].ruler() == warrior):
                 winning_dominance = faction_board.dominance_card
@@ -435,7 +352,7 @@ class Game:
         if faction == Faction.EYRIE:
             return self.eyrie
 
-    def get_end_game_data(self) -> tuple[Faction | None, str, int, Faction, int, int, None | PlayingCard] | None:
+    def get_end_game_data(self) -> tuple[Faction | None, str, int, Faction, int, int, None | Card] | None:
         """
         Should only be called with the game has already ended.
         :return: Winning faction, winning condition, turns played, current player, marquise's vp, eyrie's vp,
@@ -452,8 +369,8 @@ class Game:
         turn_player: Faction = self.ui_turn_player
         vp_marquise: int = self.board.faction_points[Faction.MARQUISE]
         vp_eyrie: int = self.board.faction_points[Faction.EYRIE]
-        winning_dominance: None | PlayingCard = self.check_win_condition_dominance(winning_faction,
-                                                                                   True) if self.faction_to_faction_board(
+        winning_dominance: None | Card = self.check_win_condition_dominance(winning_faction,
+                                                                            True) if self.faction_to_faction_board(
             winning_faction).dominance_card is not None else None
         winning_condition: str = "vp" if winning_dominance is None else "dominance"
 
@@ -1054,7 +971,7 @@ class Game:
                                                                            len(actions)))
         return actions
 
-    def agent_add_card_to_decree(self, card: PlayingCard, decree_action: DecreeAction | str):
+    def agent_add_card_to_decree(self, card: Card, decree_action: DecreeAction | str):
         self.select_card(card)
         self.select_decree_to_add_card_to(decree_action)
 
@@ -1072,7 +989,7 @@ class Game:
                                                                           len(actions)))
         return actions
 
-    def select_card_to_add_to_the_decree(self, card: PlayingCard):
+    def select_card_to_add_to_the_decree(self, card: Card):
         self.select_card(card)
 
         self.prompt = "Select Decree ({} ({}))".format(card.name, card.suit)
@@ -1502,7 +1419,7 @@ class Game:
         self.set_actions()  # to marquise
         self.set_agent_actions(self.get_actions())
 
-    def get_decree_card_to_use(self, decree_action: DecreeAction, suit: Suit) -> PlayingCard:
+    def get_decree_card_to_use(self, decree_action: DecreeAction, suit: Suit) -> Card:
         eligible_cards = [card for card in self.decree_counter[decree_action] if card.suit == suit]
         bird_cards = [card for card in self.decree_counter[decree_action] if card.suit == Suit.BIRD]
         LOGGER.info("after {} {}".format(len(eligible_cards), len(bird_cards)))
@@ -1547,19 +1464,19 @@ class Game:
 
         return actions
 
-    def craft_card(self, faction: Faction, card: PlayingCard):
+    def craft_card(self, faction: Faction, card: Card):
         LOGGER.info("{}:{}:{}:Crafted {} card".format(self.ui_turn_player, self.phase, self.sub_phase, card.name))
         if faction == Faction.MARQUISE:
-            if card.phase == PlayingCardPhase.IMMEDIATE:
+            if card.phase == CardPhase.IMMEDIATE:
                 self.gain_vp(faction, card.reward_vp)
                 if card.reward_item is not None:
                     self.marquise.items[card.reward_item] += 1
                     self.board.remove_item_from_board(card.reward_item)
-                elif card.name == PlayingCardName.FAVOR_OF_THE_FOXES:
+                elif card.name == CardName.FAVOR_OF_THE_FOXES:
                     self.favor_card(faction, Suit.FOX)
-                elif card.name == PlayingCardName.FAVOR_OF_THE_MICE:
+                elif card.name == CardName.FAVOR_OF_THE_MICE:
                     self.favor_card(faction, Suit.MOUSE)
-                elif card.name == PlayingCardName.FAVOR_OF_THE_RABBITS:
+                elif card.name == CardName.FAVOR_OF_THE_RABBITS:
                     self.favor_card(faction, Suit.RABBIT)
                 self.discard_card(self.marquise.cards_in_hand, card)
             else:
@@ -1574,7 +1491,7 @@ class Game:
             self.set_agent_actions([Action("Next", self.marquise_daylight)])
 
         elif faction == Faction.EYRIE:
-            if card.phase == PlayingCardPhase.IMMEDIATE:
+            if card.phase == CardPhase.IMMEDIATE:
                 # Gain VP
                 if card.reward_vp > 0:
                     if self.eyrie.get_active_leader() == EyrieLeader.BUILDER:
@@ -1586,11 +1503,11 @@ class Game:
                 if card.reward_item is not None:
                     self.eyrie.items[card.reward_item] += 1
                     self.board.remove_item_from_board(card.reward_item)
-                elif card.name == PlayingCardName.FAVOR_OF_THE_FOXES:
+                elif card.name == CardName.FAVOR_OF_THE_FOXES:
                     self.favor_card(faction, Suit.FOX)
-                elif card.name == PlayingCardName.FAVOR_OF_THE_MICE:
+                elif card.name == CardName.FAVOR_OF_THE_MICE:
                     self.favor_card(faction, Suit.MOUSE)
-                elif card.name == PlayingCardName.FAVOR_OF_THE_RABBITS:
+                elif card.name == CardName.FAVOR_OF_THE_RABBITS:
                     self.favor_card(faction, Suit.RABBIT)
 
                 self.discard_card(self.eyrie.cards_in_hand, card)
@@ -1602,10 +1519,10 @@ class Game:
                 self.marquise.spend_crafting_piece(suit, card.craft_requirement[suit])
             self.eyrie_daylight_craft()
 
-    def get_craftable_cards(self, faction: Faction) -> list[PlayingCard]:
-        craftable_cards: list[PlayingCard] = []
+    def get_craftable_cards(self, faction: Faction) -> list[Card]:
+        craftable_cards: list[Card] = []
 
-        cards_in_hand: list[PlayingCard] = []
+        cards_in_hand: list[Card] = []
         faction_board = self.faction_to_faction_board(faction)
         if faction == Faction.MARQUISE:
             cards_in_hand = self.marquise.cards_in_hand
@@ -1636,7 +1553,7 @@ class Game:
                 return True
         return False
 
-    def select_card(self, card: PlayingCard):
+    def select_card(self, card: Card):
         self.selected_card = card
 
     def can_take_card_from_draw_pile(self, amount: int = 1) -> bool:
@@ -1675,9 +1592,9 @@ class Game:
         self.discard_pile = []
         self.shuffle_draw_pile()
 
-    def discard_card(self, discard_from: list[PlayingCard], card: PlayingCard):
+    def discard_card(self, discard_from: list[Card], card: Card):
         discard_from.remove(card)
-        if card.name in PlayingCard.DOMINANCE_CARD_NAMES:
+        if card.name in Card.DOMINANCE_CARD_NAMES:
             self.discard_pile_dominance.append(card)
         else:
             self.discard_pile.append(card)
@@ -2038,9 +1955,9 @@ class Game:
         attacker_board = self.faction_to_faction_board(attacker)
         defender_board = self.faction_to_faction_board(defender)
         atk_scouting_party = [card for card in attacker_board.crafted_cards if
-                              card.name == PlayingCardName.SCOUTING_PARTY]
+                              card.name == CardName.SCOUTING_PARTY]
         def_ambush = [card for card in defender_board.cards_in_hand if
-                      card.name == PlayingCardName.AMBUSH and (card.suit == Suit.BIRD or card.suit == clearing.suit)]
+                      card.name == CardName.AMBUSH and (card.suit == Suit.BIRD or card.suit == clearing.suit)]
 
         if len(atk_scouting_party) > 0 or len(def_ambush) == 0:
             self.roll_dice(attacker, defender, clearing, continuation_func)
@@ -2054,7 +1971,7 @@ class Game:
         defender_board = self.faction_to_faction_board(defender)
         def_ambush_actions = []
         def_ambush = [card for card in defender_board.cards_in_hand if
-                      card.name == PlayingCardName.AMBUSH and (card.suit == Suit.BIRD or card.suit == clearing.suit)]
+                      card.name == CardName.AMBUSH and (card.suit == Suit.BIRD or card.suit == clearing.suit)]
         for card in def_ambush:
             def_ambush_actions.append(Action('Discard {} ({})'.format(card.name, card.suit),
                                              perform(self.attacker_use_ambush, card, attacker, defender, clearing,
@@ -2075,7 +1992,7 @@ class Game:
         self.prompt = "{}: Use Ambush Card?".format(attacker)
 
         attacker_board = self.faction_to_faction_board(attacker)
-        atk_ambush = [card for card in attacker_board.cards_in_hand if card.name == PlayingCardName.AMBUSH]
+        atk_ambush = [card for card in attacker_board.cards_in_hand if card.name == CardName.AMBUSH]
 
         if len(atk_ambush) == 0:
             self.resolve_hits(attacker, defender, 0, 0, 0, 2, clearing, continuation_func, self.roll_dice)
@@ -2144,8 +2061,8 @@ class Game:
         attacker_faction_board = self.faction_to_faction_board(attacker)
 
         atk_brutal_tactics = [card for card in attacker_faction_board.crafted_cards if
-                              card.name == PlayingCardName.BRUTAL_TACTICS]
-        atk_armorers = [card for card in attacker_faction_board.crafted_cards if card.name == PlayingCardName.ARMORERS]
+                              card.name == CardName.BRUTAL_TACTICS]
+        atk_armorers = [card for card in attacker_faction_board.crafted_cards if card.name == CardName.ARMORERS]
 
         atk_actions = []
 
@@ -2196,8 +2113,8 @@ class Game:
 
         defender_faction_board = self.faction_to_faction_board(defender)
 
-        def_sappers = [card for card in defender_faction_board.crafted_cards if card.name == PlayingCardName.SAPPERS]
-        def_armorers = [card for card in defender_faction_board.crafted_cards if card.name == PlayingCardName.ARMORERS]
+        def_sappers = [card for card in defender_faction_board.crafted_cards if card.name == CardName.SAPPERS]
+        def_armorers = [card for card in defender_faction_board.crafted_cards if card.name == CardName.ARMORERS]
 
         def_actions = []
 
@@ -2519,7 +2436,7 @@ class Game:
 
         return actions
 
-    def select_card_to_discard(self, faction: Faction, card: PlayingCard):
+    def select_card_to_discard(self, faction: Faction, card: Card):
         faction_board = self.faction_to_faction_board(faction)
         LOGGER.info(
             "{}:{}:{}:{}:{} ({}) discarded".format(self.ui_turn_player, self.phase, self.sub_phase, faction,
@@ -2548,14 +2465,14 @@ class Game:
             return []
 
         for card in faction_board.cards_in_hand:
-            if card.name not in PlayingCard.DOMINANCE_CARD_NAMES:
+            if card.name not in Card.DOMINANCE_CARD_NAMES:
                 continue
             actions.append(Action("Activate {}".format(card.name),
                                   perform(self.activate_dominance_card, faction, card, perform(continuation_func))))
 
         return actions
 
-    def activate_dominance_card(self, faction: Faction, card: PlayingCard, continuation_func: any):
+    def activate_dominance_card(self, faction: Faction, card: Card, continuation_func: any):
         if config['game']['allow-dominance-card']:
             LOGGER.info(
                 "{}:{}:{}:{}:activate_dominance_card {} ".format(self.ui_turn_player, self.phase, self.sub_phase,
@@ -2585,7 +2502,7 @@ class Game:
 
         return actions
 
-    def take_dominance_card(self, faction: Faction, dominance_card: PlayingCard, card_to_spend: PlayingCard,
+    def take_dominance_card(self, faction: Faction, dominance_card: Card, card_to_spend: Card,
                             continuation_func: any):
         LOGGER.info(
             "{}:{}:{}:{}:take_dominance_card {} by spending {}".format(self.ui_turn_player, self.phase, self.sub_phase,
@@ -2607,10 +2524,10 @@ class Game:
         for card in faction_board.crafted_cards:
             if faction_board.activated_card.count(card) > 0:
                 continue
-            if card.name == PlayingCardName.ROYAL_CLAIM:
+            if card.name == CardName.ROYAL_CLAIM:
                 actions.append(Action('Discard {}'.format(card.name),
                                       perform(self.royal_claim, faction, card, continuation_func)))
-            if card.name == PlayingCardName.STAND_AND_DELIVER and self.stand_and_deliver_check(faction):
+            if card.name == CardName.STAND_AND_DELIVER and self.stand_and_deliver_check(faction):
                 actions.append(
                     Action('Use {} effect'.format(card.name),
                            perform(self.stand_and_deliver_select_faction, faction, card, continuation_func)))
@@ -2622,10 +2539,10 @@ class Game:
         for card in faction_board.crafted_cards:
             if faction_board.activated_card.count(card) > 0:
                 continue
-            if card.name == PlayingCardName.ROYAL_CLAIM:
+            if card.name == CardName.ROYAL_CLAIM:
                 actions.append(Action('Discard {}'.format(card.name),
                                       perform(self.royal_claim, faction, card, continuation_func)))
-            if card.name == PlayingCardName.STAND_AND_DELIVER and self.stand_and_deliver_check(faction):
+            if card.name == CardName.STAND_AND_DELIVER and self.stand_and_deliver_check(faction):
                 actions = actions + self.generate_actions_agent_stand_and_deliver(faction, card, continuation_func)
         return actions
 
@@ -2718,7 +2635,7 @@ class Game:
     def better_burrow_bank(self,
                            faction):  # There is only 2 faction. So when this effect activate, both faction draws a card.
         faction_board = self.faction_to_faction_board(faction)
-        cards = [card for card in faction_board.crafted_cards if card.name == PlayingCardName.BETTER_BURROW_BANK]
+        cards = [card for card in faction_board.crafted_cards if card.name == CardName.BETTER_BURROW_BANK]
         if len(cards) > 0:
             for faction in [Faction.MARQUISE, Faction.EYRIE]:
                 self.take_card_from_draw_pile(faction)
@@ -2729,9 +2646,9 @@ class Game:
         for card in faction_board.crafted_cards:
             if faction_board.activated_card.count(card) > 0:
                 continue
-            if card.name == PlayingCardName.TAX_COLLECTOR and self.tax_collector_check(faction):
+            if card.name == CardName.TAX_COLLECTOR and self.tax_collector_check(faction):
                 actions = actions + self.generate_actions_agent_tax_collector(faction, card, continuation_func)
-            if card.name == PlayingCardName.CODEBREAKERS:
+            if card.name == CardName.CODEBREAKERS:
                 actions.append(Action('* Use {} card'.format(card.name),
                                       perform(self.codebreakers, faction, card, continuation_func)))
 
@@ -2743,10 +2660,10 @@ class Game:
         for card in faction_board.crafted_cards:
             if faction_board.activated_card.count(card) > 0:
                 continue
-            if card.name == PlayingCardName.TAX_COLLECTOR and self.tax_collector_check(faction):
+            if card.name == CardName.TAX_COLLECTOR and self.tax_collector_check(faction):
                 actions.append(Action('* Use {} card'.format(card.name),
                                       perform(self.tax_collector_select_clearing, faction, card, continuation_func)))
-            if card.name == PlayingCardName.CODEBREAKERS:
+            if card.name == CardName.CODEBREAKERS:
                 actions.append(Action('* Use {} card'.format(card.name),
                                       perform(self.codebreakers, faction, card, continuation_func)))
 
@@ -2757,7 +2674,7 @@ class Game:
         faction_board = self.faction_to_faction_board(faction)
 
         for card in faction_board.crafted_cards:
-            if card.name == PlayingCardName.COMMAND_WARREN and len(
+            if card.name == CardName.COMMAND_WARREN and len(
                     self.generate_actions_select_clearing_battle(faction, continuation_func, False)) != 0:
                 actions.append(
                     Action('Use {} card'.format(card.name),
@@ -2836,7 +2753,7 @@ class Game:
         faction_board = self.faction_to_faction_board(faction)
 
         for card in faction_board.crafted_cards:
-            if card.name == PlayingCardName.COBBLER and len(
+            if card.name == CardName.COBBLER and len(
                     self.generate_actions_select_src_clearing(faction, continuation_func, False)) != 0:
                 actions.append(
                     Action('Use {} card'.format(card.name),

@@ -6,7 +6,7 @@ from pygame import Color, Vector2, Surface
 
 from src.config import Config, Colors
 from src.game.FactionBoard import FactionBoard
-from src.game.PlayingCard import PlayingCard, PlayingCardPhase
+from src.game.Card import Card, CardPhase
 from src.game.Suit import Suit
 from src.utils import text_utils
 
@@ -43,10 +43,10 @@ class LeaderStatus(StrEnum):
     USED = "USED"
 
 
-LOYAL_VIZIER = PlayingCard(0, "Loyal Vizier", Suit.BIRD, PlayingCardPhase.IMMEDIATE)
+LOYAL_VIZIER = Card(0, "Loyal Vizier", Suit.BIRD, CardPhase.IMMEDIATE)
 
 
-def count_decree_action_static(decree: {DecreeAction: list[PlayingCard]}, decree_action: DecreeAction | str, suit: Suit | str) -> int:
+def count_decree_action_static(decree: {DecreeAction: list[Card]}, decree_action: DecreeAction | str, suit: Suit | str) -> int:
     return len([x for x in decree[decree_action] if x.suit == suit])
 
 
@@ -63,7 +63,7 @@ class EyrieBoard(FactionBoard):
             EyrieLeader.BUILDER: LeaderStatus.INACTIVE,
             EyrieLeader.CHARISMATIC: LeaderStatus.INACTIVE
         }
-        self.decree: {DecreeAction: list[PlayingCard]} = {
+        self.decree: {DecreeAction: list[Card]} = {
             DecreeAction.RECRUIT: [],
             DecreeAction.MOVE: [],
             DecreeAction.BATTLE: [],
