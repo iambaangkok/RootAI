@@ -32,7 +32,7 @@ class RootTrainer:
 
         # Game
         self.game: Game = Game()
-        print(self.get_game_as_num_array())
+        self.print_game_state()
 
         # Action Board
         self.action_arrow_pos = Vector2(0, 0)
@@ -172,6 +172,9 @@ class RootTrainer:
                         self.get_actions()
                         self.reset_arrow()
 
+                    if event.key == pygame.K_o:
+                        self.print_game_state()
+
         self.fps = self.calculate_fps()
 
     def next_round(self):
@@ -245,6 +248,13 @@ class RootTrainer:
 
     ###
     # Game
+
+    def print_game_state(self):
+        arr: list = self.get_game_as_num_array()
+        print("[")
+        for i in range(len(arr)):
+            print(" ", str(arr[i]) + ",")
+        print("]")
 
     def get_game_as_num_array(self):
         arr: list = []
