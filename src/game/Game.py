@@ -62,6 +62,15 @@ class Action:
         return self.name, self.function
 
 
+def get_card(card_id: int, cards: list[Card]):
+    for card in cards:
+        if card.card_id == card_id:
+            target: Card = card
+            cards.remove(target)
+            return target
+    return None
+
+
 class Game:
     def __init__(self):
         self.running: bool = True
@@ -75,7 +84,7 @@ class Game:
         self.is_in_action_sub_phase: bool = False
 
         # Board Game Components
-        self.draw_pile: list[Card] = [build_card(i) for i in range(0,54)]
+        self.draw_pile: list[Card] = [build_card(i) for i in range(0, 54)]
         self.discard_pile: list[Card] = []
         self.discard_pile_dominance: list[Card] = []
 
@@ -209,7 +218,7 @@ class Game:
         # Setup Game
         self.setup_board()
 
-    def get_state_as_num_array(self):
+    def get_state_as_num_array(self) -> list:
         n_features: int = 24
         arr: list = [[]] * n_features
 
@@ -239,7 +248,7 @@ class Game:
         arr[17] = self.selected_clearing.area_index if self.selected_clearing is not None else -1
 
         arr[18] = [1 if self.sappers_enable[Faction.MARQUISE] else 0, 1 if self.sappers_enable[Faction.EYRIE] else 0]
-        arr[19] = [1 if self.sappers_enable[Faction.MARQUISE] else 0, 1 if self.sappers_enable[Faction.EYRIE] else 0]
+        arr[19] = [1 if self.brutal_tactics_enable[Faction.MARQUISE] else 0, 1 if self.brutal_tactics_enable[Faction.EYRIE] else 0]
 
         arr[20] = self.selected_card.card_id if self.selected_card is not None else -1
         arr[21] = 1 if self.added_bird_card else 0
@@ -251,20 +260,91 @@ class Game:
         return arr
 
     # TODO: complete set_state
-    def set_state(self,
-                  running: bool = True,
-                  turn_count: int = 0,
-                  ui_turn_player: Faction = Faction.MARQUISE,
-                  turn_player: Faction = Faction.MARQUISE,
-                  phase: Phase = Phase.BIRDSONG,
-                  sub_phase: int = 0,
-                  is_in_action_sub_phase: bool = False,
-                  draw_pile: list[Card] = [build_card(i) for i in range(0, 54)],
-                  discard_pile: list[Card] = [],
-                  discard_pile_dominance: list[Card] = [],
+    def set_state_from_num_arrays(self,
+                                  running: bool = True,
+                                  turn_count: int = 0,
+                                  ui_turn_player: Faction = Faction.MARQUISE,
+                                  turn_player: Faction = Faction.MARQUISE,
+                                  phase: Phase = Phase.BIRDSONG,
+                                  sub_phase: int = 0,
+                                  is_in_action_sub_phase: bool = False,
+                                  draw_pile_card_ids: list[int] = None,
+                                  discard_pile_card_ids: list[int] = None,
+                                  discard_pile_dominance_card_ids: list[int] = None,
+                                  board: list = None,
+                                  marquise_board: MarquiseBoard = None,
+                                  eyrie_board: EyrieBoard = None,
+                                  marquise_action_count: int = 3,
+                                  marquise_march_count: int = 2,
+                                  marquise_recruit_count: int = 1,
+                                  marquise_recruit_action_used: bool = False,
+                                  selected_clearing_area_index: int = 0,
+                                  sappers_enable: list[bool] = None,
+                                  brutal_tactics_enable: list[bool] = None,
+                                  selected_card_id: int = 0,
+                                  added_bird_card: bool = False,
+                                  addable_count: int = 2,
+                                  decree_counter: list[list[int]] = None
+                                  ):
 
-                  ):
-        pass
+        CARDS: list[Card] = [build_card(i) for i in range(0, 54)]
+
+        self.running = running
+
+        # Game Data
+        self.turn_count = turn_count
+        self.ui_turn_player = ui_turn_player
+        self.turn_player = turn_player
+        self.phase = phase
+        self.sub_phase = sub_phase
+        self.is_in_action_sub_phase = is_in_action_sub_phase
+
+        # Board Game Components
+        self.draw_pile = [get_card(i, CARDS) for i in draw_pile_card_ids]
+        self.discard_pile = [get_card(i, CARDS) for i in discard_pile_card_ids]
+        self.discard_pile_dominance = [get_card(i, CARDS) for i in discard_pile_dominance_card_ids]
+
+        # Board, Areas (Clearings)
+        self.board.set_state_from_num_array(board)
+
+        # Faction Board
+        self.marquise = marquise_board  # TODO: this
+        self.eyrie = eyrie_board  # TODO: this
+
+        # Marquise variables
+        self.marquise_action_count = marquise_action_count
+        self.marquise_march_count = marquise_march_count
+        self.marquise_recruit_count = marquise_recruit_count
+        self.marquise_recruit_action_used = marquise_recruit_action_used
+
+        # Eyrie variables
+        self.selected_clearing = self.get_area(selected_clearing_area_index)
+
+        # Battle variables
+        self.sappers_enable = {
+            Faction.MARQUISE: sappers_enable[0],
+            Faction.EYRIE: sappers_enable[1]
+        }
+        self.brutal_tactics_enable = {
+            Faction.MARQUISE: brutal_tactics_enable[0],
+            Faction.EYRIE: brutal_tactics_enable[1]
+        }
+
+        # # Add Card To Decree variables
+        self.selected_card = get_card(selected_card_id, CARDS)
+        self.added_bird_card = added_bird_card
+        self.addable_count = addable_count
+
+        # # Resolve Decree variables
+        self.decree_counter = {
+            DecreeAction.RECRUIT: [get_card(i, CARDS) for i in decree_counter[0]],
+            DecreeAction.MOVE: [get_card(i, CARDS) for i in decree_counter[1]],
+            DecreeAction.BATTLE: [get_card(i, CARDS) for i in decree_counter[2]],
+            DecreeAction.BUILD: [get_card(i, CARDS) for i in decree_counter[3]]
+        }
+
+        if len(CARDS) != 0:
+            LOGGER.warning("Missing card. There are {} cards unassigned.".format(CARDS))
 
     #####
     # Setup Board
@@ -362,6 +442,10 @@ class Game:
 
     #####
     # Utils
+
+    def get_area(self, area_index: int) -> Area | None:
+        return self.board.get_area(area_index)
+
     def faction_to_faction_board(self, faction: Faction) -> FactionBoard:
         if faction == Faction.MARQUISE:
             return self.marquise

@@ -39,7 +39,7 @@ class Area:
         for warrior in Warrior:
             self.warrior_count[warrior] = 0
 
-    def get_state_as_num_array(self):
+    def get_state_as_num_array(self) -> list:
         n_features: int = 4
         arr: list = [[]] * n_features
 
@@ -50,6 +50,22 @@ class Area:
 
         return arr
 
+    def set_state_from_num_array(self,
+                                 arr: list
+                                 ):
+        self.set_state_from_num_array(arr[1], arr[2], arr[3])
+
+    def set_state_from_num_arrays(self,
+                                  building_ids: list[int],
+                                  token_count: list[int],
+                                  warrior_count: list[int]
+                                  ):
+        for i in range(len(self.buildings)):
+            self.buildings[i] = Building.to_building(building_ids[i])
+        for i, token in enumerate(Token):
+            self.token_count[token] = token_count[i]
+        for i, warrior in enumerate(Warrior):
+            self.warrior_count[warrior] = warrior_count[i]
 
     # def __del__(self):
     #     Area.area_count -= 1

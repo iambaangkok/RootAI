@@ -59,11 +59,11 @@ class Board:
             Faction.MARQUISE: 0,
             Faction.EYRIE: 0
         }
-        self.item_supply_available = [True, True, True, True, True, True, True, True, True, True, True, True]
-        self.turn_player = None
-        self.turn_count = 0
+        self.item_supply_available: list[bool] = [True, True, True, True, True, True, True, True, True, True, True, True]
+        self.turn_player: Faction | None = None
+        self.turn_count: int = 0
 
-    def get_state_as_num_array(self):
+    def get_state_as_num_array(self) -> list[list]:
         n_features = 3
         arr: list = [[]] * n_features
 
@@ -72,6 +72,30 @@ class Board:
         arr[2] = [(1 if item_available else 0) for item_available in self.item_supply_available]
 
         return arr
+
+    def set_state_from_num_array(self,
+                                 arr: list):
+        self.set_state_from_num_arrays(arr[0], arr[1], arr[2])
+
+    def set_state_from_num_arrays(self,
+                                  faction_points: list[int] = None,
+                                  areas: list = None,
+                                  item_supply_available: list[int] = None):
+        self.faction_points = {
+            Faction.MARQUISE: faction_points[0],
+            Faction.EYRIE: faction_points[1]
+        }
+
+        for i in range(len(areas)):
+            self.areas[i].set_state_from_num_array(areas[i])
+
+        self.item_supply_available = [item_available == 1 for item_available in item_supply_available]
+
+    def get_area(self, area_index: int) -> Area | None:
+        for area in self.areas:
+            if area.area_index == area_index:
+                return area
+        return None
 
     def add_path(self, area_1: int, area_2: int):
         if ((area_1, area_2) in self.paths) or \
