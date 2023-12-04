@@ -175,6 +175,9 @@ class RootTrainer:
                     if event.key == pygame.K_o:
                         self.print_game_state()
 
+                    if event.key == pygame.K_c:
+                        self.new_game_from_current_game_state()
+
         self.fps = self.calculate_fps()
 
     def next_round(self):
@@ -266,6 +269,18 @@ class RootTrainer:
 
     def new_game(self):
         self.game = Game()
+
+    def set_game_state(self, arr: list = None):
+        self.game.set_state_from_num_array(arr)
+
+    def get_game_state(self) -> list:
+        return self.game.get_state_as_num_array()
+
+    def new_game_from_current_game_state(self):
+        LOGGER.info("new_game_from_current_game_state")
+        arr: list = self.get_game_state()
+        self.new_game()
+        self.set_game_state(arr)
 
     ###
     # Utils

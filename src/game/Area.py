@@ -53,7 +53,7 @@ class Area:
     def set_state_from_num_array(self,
                                  arr: list
                                  ):
-        self.set_state_from_num_array(arr[1], arr[2], arr[3])
+        self.set_state_from_num_arrays(arr[1], arr[2], arr[3])
 
     def set_state_from_num_arrays(self,
                                   building_ids: list[int],

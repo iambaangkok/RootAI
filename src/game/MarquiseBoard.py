@@ -3,6 +3,7 @@ from pygame import Color, Vector2, Surface, Rect
 
 from src.config import Config, Colors
 from src.game.Building import Building
+from src.game.Card import Card
 from src.game.FactionBoard import FactionBoard
 from src.game.Suit import Suit
 from src.utils import text_utils
@@ -42,6 +43,18 @@ class MarquiseBoard(FactionBoard):
         arr[7] = [self.building_trackers[building] for building in [Building.SAWMILL, Building.WORKSHOP, Building.RECRUITER]]
 
         return arr
+
+    def set_state_from_num_array(self,
+                                 arr: list = None,
+                                 cards: list[Card] = None):
+        super().set_state_from_num_array(arr, cards)
+        self.__set_state_from_num_arrays(arr[7])
+
+    def __set_state_from_num_arrays(self,
+                                    building_trackers: list[int] = None):
+
+        for i, building in enumerate(self.building_trackers):
+            self.building_trackers[building] = building_trackers[i]
 
     def get_reward(self, building):
         return self.building_reward[building][self.building_trackers[building]]

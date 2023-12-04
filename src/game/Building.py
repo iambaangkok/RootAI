@@ -12,7 +12,7 @@ mapping: dict[str, int] = {
     "BASE": 6,
 }
 
-reverse_mapping = [key for key in mapping]
+mapping_reversed = [key for key in mapping]
 
 
 class Building(StrEnum):
@@ -28,4 +28,4 @@ class Building(StrEnum):
         return mapping[self.name]
 
     def to_building(building_id: int) -> Building:
-        return Building(reverse_mapping[building_id])
+        return Building[mapping_reversed[building_id]]

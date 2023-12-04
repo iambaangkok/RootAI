@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from src.game.Building import Building
+from src.game.Card import Card
 from src.game.Faction import Faction
 from src.game.Token import Token
 from src.game.Warrior import Warrior
@@ -6,6 +9,14 @@ from src.game.Warrior import Warrior
 
 def perform(function: any, *args):
     return lambda: function(*args)
+
+
+def get_card(card_id: int, cards: list[Card]):
+    for card in cards:
+        if card.card_id == card_id:
+            target: Card = card
+            return target
+    return None
 
 
 FACTION_TO_WARRIOR: {Faction: Warrior} = {

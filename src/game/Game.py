@@ -1,37 +1,43 @@
+from __future__ import annotations
+
 import logging
 import random
-from copy import copy, deepcopy
+from copy import deepcopy
 from enum import StrEnum
 from itertools import combinations
 from random import shuffle, randint
-from typing import List
 
-import pygame
-from pygame import Vector2, Surface, Rect
-from pygame.time import Clock
+from pygame import Vector2, Surface
 
 from src.config import Config, Colors
 from src.game.Area import Area
 from src.game.Board import Board
 from src.game.Building import Building
-from src.game.EyrieBoard import EyrieBoard, DecreeAction, EyrieLeader, LeaderStatus, LOYAL_VIZIER, \
+from src.game.EyrieBoard import EyrieBoard, DecreeAction, EyrieLeader, LOYAL_VIZIER, \
     count_decree_action_static
 from src.game.Faction import Faction
 from src.game.FactionBoard import FactionBoard
-from src.game.Item import Item
 from src.game.MarquiseBoard import MarquiseBoard
 from src.game.Card import Card, CardName, CardPhase, build_card
 from src.game.Suit import Suit
 from src.game.Token import Token
 from src.game.Warrior import Warrior
-from src.utils.draw_utils import draw_text_in_rect
-from src.utils.utils import perform, faction_to_warrior, faction_to_tokens, faction_to_buildings
+from src.utils.utils import perform, faction_to_warrior, faction_to_tokens, faction_to_buildings, get_card
 
 import yaml
 
 config = yaml.safe_load(open("config/config.yml"))
 
 LOGGER = logging.getLogger('logger')
+
+phase_mapping: dict[str, int] = {
+    "BIRDSONG": 0,
+    "DAYLIGHT": 1,
+    "EVENING": 2,
+    "TURMOIL": 3
+}
+
+phase_mapping_reversed = [key for key in phase_mapping]
 
 
 class Phase(StrEnum):
@@ -41,13 +47,10 @@ class Phase(StrEnum):
     TURMOIL = "TURMOIL"
 
     def to_number(self) -> int:
-        mapping: dict[str, int] = {
-            "BIRDSONG": 0,
-            "DAYLIGHT": 1,
-            "EVENING": 2,
-            "TURMOIL": 3
-        }
-        return mapping[self.name]
+        return phase_mapping[self.name]
+
+    def to_phase(phase_id: int) -> Phase:
+        return Phase[phase_mapping_reversed[phase_id]]
 
 
 class Action:
@@ -60,15 +63,6 @@ class Action:
 
     def get(self):
         return self.name, self.function
-
-
-def get_card(card_id: int, cards: list[Card]):
-    for card in cards:
-        if card.card_id == card_id:
-            target: Card = card
-            cards.remove(target)
-            return target
-    return None
 
 
 class Game:
@@ -254,38 +248,97 @@ class Game:
         arr[21] = 1 if self.added_bird_card else 0
         arr[22] = self.addable_count
         arr[23] = [
-            [card.card_id for card in self.decree_counter[decree_action]] for decree_action in DecreeAction
+            [card.card_id for card in self.decree_counter[decree_action]] for decree_action in self.decree_counter
         ]
 
         return arr
 
-    # TODO: complete set_state
+    def set_state_from_num_array(self,
+                                 arr: list = None):
+        self.set_state_from_num_arrays(
+            arr[0], arr[1], arr[2], arr[3], arr[4], arr[5], arr[6], arr[7], arr[8],
+            arr[9], arr[10], arr[11], arr[12], arr[13], arr[14], arr[15], arr[16],
+            arr[17], arr[18], arr[19], arr[20], arr[21], arr[22], arr[23]
+        )
+
     def set_state_from_num_arrays(self,
-                                  running: bool = True,
+                                  running: int = 0,
                                   turn_count: int = 0,
-                                  ui_turn_player: Faction = Faction.MARQUISE,
-                                  turn_player: Faction = Faction.MARQUISE,
-                                  phase: Phase = Phase.BIRDSONG,
+                                  ui_turn_player: int = 1,
+                                  turn_player: int = 1,
+                                  phase: int = 0,
                                   sub_phase: int = 0,
-                                  is_in_action_sub_phase: bool = False,
+                                  is_in_action_sub_phase: int = 0,
                                   draw_pile_card_ids: list[int] = None,
                                   discard_pile_card_ids: list[int] = None,
                                   discard_pile_dominance_card_ids: list[int] = None,
                                   board: list = None,
-                                  marquise_board: MarquiseBoard = None,
-                                  eyrie_board: EyrieBoard = None,
+                                  marquise_board: list = None,
+                                  eyrie_board: list = None,
                                   marquise_action_count: int = 3,
                                   marquise_march_count: int = 2,
                                   marquise_recruit_count: int = 1,
-                                  marquise_recruit_action_used: bool = False,
+                                  marquise_recruit_action_used: int = 0,
                                   selected_clearing_area_index: int = 0,
-                                  sappers_enable: list[bool] = None,
-                                  brutal_tactics_enable: list[bool] = None,
+                                  sappers_enable: list[int] = None,
+                                  brutal_tactics_enable: list[int] = None,
                                   selected_card_id: int = 0,
-                                  added_bird_card: bool = False,
+                                  added_bird_card: int = 0,
                                   addable_count: int = 2,
-                                  decree_counter: list[list[int]] = None
-                                  ):
+                                  decree_counter: list[list[int]] = None):
+        self.set_state(
+            running == 1,
+            turn_count,
+            Faction.MARQUISE if ui_turn_player == 1 else Faction.EYRIE,
+            Faction.MARQUISE if turn_player == 1 else Faction.EYRIE,
+            Phase.to_phase(phase),
+            sub_phase,
+            is_in_action_sub_phase == 1,
+            draw_pile_card_ids,
+            discard_pile_card_ids,
+            discard_pile_dominance_card_ids,
+            board,
+            marquise_board,
+            eyrie_board,
+            marquise_action_count,
+            marquise_march_count,
+            marquise_recruit_count,
+            marquise_recruit_action_used == 1,
+            selected_clearing_area_index == 1,
+            [i == 1 for i in sappers_enable],
+            [i == 1 for i in brutal_tactics_enable],
+            selected_card_id,
+            added_bird_card == 1,
+            addable_count,
+            decree_counter
+        )
+
+    def set_state(self,
+                  running: bool = True,
+                  turn_count: int = 0,
+                  ui_turn_player: Faction = Faction.MARQUISE,
+                  turn_player: Faction = Faction.MARQUISE,
+                  phase: Phase = Phase.BIRDSONG,
+                  sub_phase: int = 0,
+                  is_in_action_sub_phase: bool = False,
+                  draw_pile_card_ids: list[int] = None,
+                  discard_pile_card_ids: list[int] = None,
+                  discard_pile_dominance_card_ids: list[int] = None,
+                  board: list = None,
+                  marquise_board: list = None,
+                  eyrie_board: list = None,
+                  marquise_action_count: int = 3,
+                  marquise_march_count: int = 2,
+                  marquise_recruit_count: int = 1,
+                  marquise_recruit_action_used: bool = False,
+                  selected_clearing_area_index: int = 0,
+                  sappers_enable: list[bool] = None,
+                  brutal_tactics_enable: list[bool] = None,
+                  selected_card_id: int = 0,
+                  added_bird_card: bool = False,
+                  addable_count: int = 2,
+                  decree_counter: list[list[int]] = None
+                  ):
 
         CARDS: list[Card] = [build_card(i) for i in range(0, 54)]
 
@@ -308,8 +361,8 @@ class Game:
         self.board.set_state_from_num_array(board)
 
         # Faction Board
-        self.marquise = marquise_board  # TODO: this
-        self.eyrie = eyrie_board  # TODO: this
+        self.marquise.set_state_from_num_array(marquise_board, CARDS)
+        self.eyrie.set_state_from_num_array(eyrie_board, CARDS)
 
         # Marquise variables
         self.marquise_action_count = marquise_action_count
@@ -1169,7 +1222,7 @@ class Game:
             "{}:{}:{}:build_roost built {} in clearing #{}".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                                    Building.ROOST, clearing.area_index))
 
-    def eyrie_birdsong_to_daylight(self):  # TODO: Eyrie Royal Claim
+    def eyrie_birdsong_to_daylight(self):
         LOGGER.info("{}:{}:{}:eyrie_birdsong_to_daylight".format(self.ui_turn_player, self.phase, self.sub_phase))
 
         self.phase = Phase.DAYLIGHT
@@ -2347,7 +2400,7 @@ class Game:
 
     def resolve_marquise_field_hospital(self, attacker, defender, attacker_remaining_hits, defender_remaining_hits,
                                         removed_warriors, clearing, continuation_func,
-                                        redirect_func):  # TODO: if attacker == marquise, marquise field hospital trigger immediately , otherwise , trigger at the birdsong
+                                        redirect_func):
         self.ui_turn_player = Faction.MARQUISE
         self.prompt = "MARQUISE: Discard a card matching warrior's clearing to bring {} warriors back to the keep.".format(
             removed_warriors)

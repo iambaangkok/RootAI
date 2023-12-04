@@ -2,7 +2,7 @@ import pygame
 from pygame import Rect, Color, Surface, Vector2
 
 from src.config import Config, Colors
-from src.game.Building import Building
+from src.utils.utils import get_card
 from src.game.Item import Item
 from src.game.Card import Card
 from src.game.Suit import Suit
@@ -57,6 +57,34 @@ class FactionBoard:
 
         return arr
 
+    def set_state_from_num_array(self,
+                                 arr: list = None,
+                                 cards: list[Card] = None):
+        self.set_state_from_num_arrays(arr[0], arr[1], arr[2], arr[3], arr[4], arr[5], arr[6], cards)
+
+    def set_state_from_num_arrays(self,
+                                  item_count: list[int] = None,
+                                  cards_in_hand_ids: list[int] = None,
+                                  crafted_cards_ids: list[int] = None,
+                                  activated_card_ids: list[int] = None,
+                                  dominance_card_id: int = -1,
+                                  crafting_pieces_count: list[int] = None,
+                                  reserved_warriors: int = 0,
+                                  cards: list[Card] = None):
+
+        for i, item in enumerate(self.items):
+            self.items[item] = item_count[i]
+
+        self.cards_in_hand = [get_card(i, cards) for i in cards_in_hand_ids]
+        self.crafted_cards = [get_card(i, cards) for i in crafted_cards_ids]
+        self.activated_card = [get_card(i, cards) for i in activated_card_ids]
+        self.dominance_card = get_card(dominance_card_id, cards)
+
+        for i, suit in enumerate(self.crafting_pieces_count):
+            self.crafting_pieces_count[suit] = crafting_pieces_count[i]
+
+        self.reserved_warriors = reserved_warriors
+
     def clear_activated_cards(self):
         self.activated_card = []
 
@@ -77,7 +105,6 @@ class FactionBoard:
                     self.crafting_pieces_count[_suit] = 0
         else:
             self.crafting_pieces_count[suit] -= amount
-
 
     def draw(self, screen: Surface):
         pygame.draw.rect(screen, self.color, Rect(self.starting_point,
@@ -103,13 +130,13 @@ class FactionBoard:
     def draw_dominance_card(self, screen):
         size_ratio: float = 0.03
 
-        radius = size_ratio * Config.SCREEN_WIDTH/4
+        radius = size_ratio * Config.SCREEN_WIDTH / 4
         color = Colors.WHITE
         width = 1
         text = ""
 
-        offset: Vector2 = Vector2(-radius-2, radius+2)
-        position: Vector2 = Vector2(self.starting_point.x + Config.SCREEN_WIDTH/4, self.starting_point.y) + offset
+        offset: Vector2 = Vector2(-radius - 2, radius + 2)
+        position: Vector2 = Vector2(self.starting_point.x + Config.SCREEN_WIDTH / 4, self.starting_point.y) + offset
 
         if self.dominance_card is not None:
             if self.dominance_card.suit is Suit.MOUSE:

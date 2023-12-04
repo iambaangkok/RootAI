@@ -26,4 +26,15 @@
 ### Running the Game
 1. Run `Run main.py` to run the game
 
+## Controls
+- Press UP/DOWN --- change action
+- Press R --- random action
+- Press RETURN/SPACE --- execute selected action
+- Press O --- print_game_state
+- Press C --- new_game_from_current_game_state
+- Hold F --- continuously run player
+- Hold A --- continuously run agent
+- Press N in game-end state --- new game
+- Press Q in game-end state --- quit game
+
 

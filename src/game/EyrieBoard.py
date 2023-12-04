@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from enum import StrEnum
 
@@ -7,6 +9,7 @@ from pygame import Color, Vector2, Surface
 from src.config import Config, Colors
 from src.game.FactionBoard import FactionBoard
 from src.game.Card import Card, CardPhase
+from src.utils.utils import get_card
 from src.game.Suit import Suit
 from src.utils import text_utils
 
@@ -20,6 +23,16 @@ class DecreeAction(StrEnum):
     BUILD = "BUILD"
 
 
+eyrie_leader_mapping: dict[str, int] = {
+    "COMMANDER": 0,
+    "DESPOT": 1,
+    "BUILDER": 2,
+    "CHARISMATIC": 3
+}
+
+eyrie_leader_mapping_reversed = [key for key in eyrie_leader_mapping]
+
+
 class EyrieLeader(StrEnum):
     COMMANDER = "COMMANDER"
     DESPOT = "DESPOT"
@@ -27,14 +40,10 @@ class EyrieLeader(StrEnum):
     CHARISMATIC = "CHARISMATIC"
 
     def to_number(self) -> int:
-        mapping: dict[str, int] = {
-            "None": -1,
-            "COMMANDER": 0,
-            "DESPOT": 1,
-            "BUILDER": 2,
-            "CHARISMATIC": 3
-        }
-        return mapping[self.name]
+        return eyrie_leader_mapping[self.name]
+
+    def to_eyrie_leader(leader_id: int) -> EyrieLeader:
+        return EyrieLeader[eyrie_leader_mapping_reversed[leader_id]]
 
 
 class LeaderStatus(StrEnum):
@@ -77,19 +86,43 @@ class EyrieBoard(FactionBoard):
         arr: list = prev_arr + [[]] * n_features
 
         arr[7] = self.roost_tracker
-        arr[8] = self.get_active_leader().to_number()
+        arr[8] = self.get_active_leader().to_number() if self.get_active_leader() is not None else -1
         arr[9] = [
-            [card.card_id for card in self.decree[decree_action]] for decree_action in DecreeAction
+            [card.card_id for card in self.decree[decree_action]] for decree_action in self.decree
         ]
 
         return arr
 
-    def get_active_leader(self) -> EyrieLeader | str:
+    def set_state_from_num_array(self,
+                                 arr: list = None,
+                                 cards: list[Card] = None):
+        super().set_state_from_num_array(arr, cards)
+        self.__set_state_from_num_arrays(arr[7], arr[8], arr[9], cards)
+
+    def __set_state_from_num_arrays(self,
+                                    roost_tracker: list[int] = None,
+                                    active_leader_id: int = -1,
+                                    decree: list = None,
+                                    cards: list[Card] = None):
+
+        self.roost_tracker = roost_tracker
+
+        self.a_new_generation()
+        self.activate_leader(EyrieLeader.to_eyrie_leader(active_leader_id))
+
+        self.decree = {
+            DecreeAction.RECRUIT: [get_card(i, cards) for i in decree[0]],
+            DecreeAction.MOVE: [get_card(i, cards) for i in decree[1]],
+            DecreeAction.BATTLE: [get_card(i, cards) for i in decree[2]],
+            DecreeAction.BUILD: [get_card(i, cards) for i in decree[3]]
+        }
+
+    def get_active_leader(self) -> EyrieLeader | None:
         for leader in self.leaders.keys():
             if self.leaders[leader] == LeaderStatus.ACTIVE:
                 return leader
 
-        return "None"
+        return None
 
     def get_inactive_leader(self) -> list[EyrieLeader]:
         inactive_leaders: list[EyrieLeader] = []
