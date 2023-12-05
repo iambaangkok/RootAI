@@ -71,10 +71,10 @@ class Game:
 
         # Game Data
         self.turn_count: int = 0
-        self.ui_turn_player: Faction = Faction.MARQUISE
-        self.turn_player: Faction = Faction.MARQUISE
+        self.ui_turn_player: Faction = Faction.EYRIE
+        self.turn_player: Faction = Faction.EYRIE
         self.phase: Phase = Phase.BIRDSONG
-        self.sub_phase = 0
+        self.sub_phase = 20001
         self.is_in_action_sub_phase: bool = False
 
         # Board Game Components
@@ -155,7 +155,7 @@ class Game:
         }
         self.eyrie_base_actions: {Phase: [[Action]]} = {
             Phase.BIRDSONG: [
-                [Action('Next', perform(self.eyrie_start))],
+                [],
                 [],
                 []
             ],
@@ -167,8 +167,11 @@ class Game:
         }
         self.actions: list[Action] = []
         self.agent_actions: list[Action] = []
-        self.set_actions()
+        # self.set_actions()
+        # self.set_agent_actions(self.actions)
+        self.set_actions(self.get_legal_actions())
         self.set_agent_actions(self.actions)
+
 
         # Marquise variables
         self.marquise_action_count = 3
@@ -421,6 +424,22 @@ class Game:
 
     #####
     # Actions
+
+    def get_legal_actions(self) -> list[Action]:
+        """
+        Returns list of legal actions for agent from the current state of the game.
+
+        :return: list of legal actions
+        """
+        actions: list[Action] = []
+        # prompt: str = ""
+
+        match self.sub_phase:
+            case 20001:
+                actions.append(Action('Next', perform(self.eyrie_start)))
+
+        return actions
+
     def get_actions(self) -> list[Action]:
         return self.actions
 

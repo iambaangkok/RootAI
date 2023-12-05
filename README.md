@@ -37,4 +37,13 @@
 - Press N in game-end state --- new game
 - Press Q in game-end state --- quit game
 
+## Technical
+### Action generation
+Each action generation sequence corresponds to a 5 digit-number.
+- Digit 0: faction = 1 (Marquise) | 2 (Eyrie) | 9 (Neutral)
+- Digit 1-4: distinct id for that method
+
+e.g.
+- 10001 = action generation sequence 1 for Marquise
+
 

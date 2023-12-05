@@ -32,7 +32,6 @@ class RootTrainer:
 
         # Game
         self.game: Game = Game()
-        self.print_game_state()
 
         # Action Board
         self.action_arrow_pos = Vector2(0, 0)
