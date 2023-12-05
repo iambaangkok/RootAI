@@ -117,6 +117,10 @@ class EyrieBoard(FactionBoard):
             DecreeAction.BUILD: [get_card(i, cards) for i in decree[3]]
         }
 
+    def set_crafting_piece_count(self,
+                                 crafting_pieces_count: {Suit: int}):
+        self.crafting_pieces_count = crafting_pieces_count
+
     def get_active_leader(self) -> EyrieLeader | None:
         for leader in self.leaders.keys():
             if self.leaders[leader] == LeaderStatus.ACTIVE:

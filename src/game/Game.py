@@ -434,7 +434,7 @@ class Game:
 
         match self.sub_phase:
             case 20001:  # start as eyrie
-                actions.append(Action('Next', perform(self.eyrie_start)))
+                actions.append(Action('Next, Eyrie start', perform(self.eyrie_start)))
             case 20002:  # eyrie_start -> eyrie_start_to_add_to_decree
                 if self.addable_count == 2:
                     actions += self.generate_actions_agent_add_card_to_decree() \
@@ -448,6 +448,26 @@ class Game:
                                ] \
                                + self.generate_actions_agent_cards_birdsong(Faction.EYRIE,
                                                                             self.eyrie_start_to_add_to_decree)
+            case 20003:
+                actions += self.generate_actions_place_roost_and_3_warriors() \
+                           + self.generate_actions_agent_cards_birdsong(Faction.EYRIE,
+                                                                        self.eyrie_start_to_add_to_decree)
+            case 20004:
+                actions.append(Action('Next, to Daylight', perform(self.eyrie_birdsong_to_daylight)))
+            case 20005:
+                actions += self.generate_actions_command_warren(Faction.EYRIE, self.eyrie_daylight_craft) \
+                           + [Action('Next, to Craft', self.eyrie_daylight_craft)]
+            case 20006:
+                actions += self.generate_actions_craft_cards(Faction.EYRIE) \
+                           + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_daylight_craft) \
+                           + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_daylight_craft) \
+                           + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_daylight_craft) \
+                           + [Action('Next, to Resolve Decree', perform(self.eyrie_daylight_craft_to_resolve_the_decree))]
+            case 20007:
+                actions += self.generate_actions_eyrie_recruit() \
+                           + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_recruit) \
+                           + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_recruit) \
+                           + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_pre_recruit)
 
         return actions
 
@@ -1179,44 +1199,37 @@ class Game:
             "{}:{}:{}:eyrie_add_to_the_decree_additional_skip".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.eyrie_a_new_roost()
 
-    def eyrie_a_new_roost(self):
+    def eyrie_a_new_roost(self):  # 20003
         LOGGER.info(
             "{}:{}:{}:eyrie_a_new_roost".format(self.ui_turn_player, self.phase, self.sub_phase))
 
-        self.sub_phase = 2
+        self.sub_phase = 20003
 
-        if self.eyrie.roost_tracker == 0:
+        if self.eyrie.roost_tracker == 0 and len(self.get_areas_with_min_warrior_and_empty_building()) > 0:
             self.prompt = "If you have no roost, place a roost and 3 warriors in the clearing with the fewest total warriors. (Select Clearing)"
-            actions: list[Action] = self.generate_actions_place_roost_and_3_warriors()
-            if len(actions) == 0:
-                self.eyrie_birdsong_to_daylight()
-            else:
-                self.set_actions(
-                    actions + self.generate_actions_cards_birdsong(Faction.EYRIE, self.eyrie_start_to_add_to_decree))
-                self.set_agent_actions(
-                    actions + self.generate_actions_agent_cards_birdsong(Faction.EYRIE,
-                                                                         self.eyrie_start_to_add_to_decree)
-                )
         else:
             self.eyrie_birdsong_to_daylight()
 
+    def get_areas_with_min_warrior_and_empty_building(self) -> list[Area]:
+        min_warrior_areas: list[Area] = self.board.get_min_warrior_areas()
+        return [area for area in min_warrior_areas if Building.EMPTY in area.buildings]
+
     def generate_actions_place_roost_and_3_warriors(self) -> list[Action]:
         actions: list[Action] = []
-        min_token_areas = [area for area in self.board.get_min_warrior_areas() if Building.EMPTY in area.buildings]
+        min_token_areas = self.get_areas_with_min_warrior_and_empty_building()
         for area in min_token_areas:
             actions.append(Action("Area {}".format(area.area_index), perform(self.place_roost_and_3_warriors, area)))
 
         return actions
 
-    def place_roost_and_3_warriors(self, area: Area):
+    def place_roost_and_3_warriors(self, area: Area):  # 20004
+        self.sub_phase = 20004
         LOGGER.info(
             "{}:{}:{}:place_roost_and_3_warriors at area#{}".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                                     area.area_index))
+
         self.add_warrior(Faction.EYRIE, area, 3)
         self.build_roost(area)
-
-        self.set_actions([Action('Next, to Daylight', perform(self.eyrie_birdsong_to_daylight))])
-        self.set_agent_actions(self.get_actions())
 
     def build_roost(self, clearing: Area):
         building_slot_index = clearing.buildings.index(Building.EMPTY)
@@ -1227,34 +1240,19 @@ class Game:
             "{}:{}:{}:build_roost built {} in clearing #{}".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                                    Building.ROOST, clearing.area_index))
 
-    def eyrie_birdsong_to_daylight(self):
+    def eyrie_birdsong_to_daylight(self):  # 20005
+        self.sub_phase = 20005
         LOGGER.info("{}:{}:{}:eyrie_birdsong_to_daylight".format(self.ui_turn_player, self.phase, self.sub_phase))
 
         self.phase = Phase.DAYLIGHT
-        self.sub_phase = 0
 
-        self.eyrie.crafting_pieces_count = self.get_building_count_by_suit(Building.ROOST)
+        self.eyrie.set_crafting_piece_count(self.get_building_count_by_suit(Building.ROOST))
 
-        actions = self.generate_actions_command_warren(Faction.EYRIE, self.eyrie_daylight_craft)
-        if not actions:
-            self.eyrie_daylight_craft()
-        else:
-            self.prompt = 'Want to use Command Warren card effect?'
-            self.set_actions(actions + [Action('Next', self.eyrie_daylight_craft)])
-            self.set_agent_actions(self.get_actions())
+        self.prompt = 'Use Command Warren / Craft'
 
-    def eyrie_daylight_craft(self):
+    def eyrie_daylight_craft(self):  # 20006
+        self.sub_phase = 20006
         self.prompt = "Craft Cards"
-        self.set_actions(self.generate_actions_craft_cards(Faction.EYRIE)
-                         + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_daylight_craft)
-                         + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_daylight_craft)
-                         + self.generate_actions_cards_daylight(Faction.EYRIE, self.eyrie_daylight_craft)
-                         + [Action('Next', perform(self.eyrie_daylight_craft_to_resolve_the_decree))])
-        self.set_agent_actions(self.generate_actions_craft_cards(Faction.EYRIE)
-                               + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_daylight_craft)
-                               + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_daylight_craft)
-                               + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_daylight_craft)
-                               + [Action('Next', perform(self.eyrie_daylight_craft_to_resolve_the_decree))])
 
     def get_roost_count_by_suit(self) -> {Suit: int}:
         roost_count: {Suit: int} = {
@@ -1275,24 +1273,15 @@ class Game:
             "{}:{}:{}:eyrie_daylight_craft_to_resolve_the_decree".format(self.ui_turn_player, self.phase,
                                                                          self.sub_phase))
 
-        self.sub_phase = 1
-
         self.decree_counter = deepcopy(self.eyrie.decree)
         self.eyrie_pre_recruit()
 
-    def eyrie_pre_recruit(self):
+    def eyrie_pre_recruit(self):  # 20007
+        self.sub_phase = 20007
         LOGGER.info("{}:{}:{}:eyrie_pre_recruit".format(self.ui_turn_player, self.phase, self.sub_phase))
 
         self.update_prompt_eyrie_decree(DecreeAction.RECRUIT)
         self.prompt += " Recruit in Area:"
-        self.set_actions(self.generate_actions_eyrie_recruit()
-                         + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_recruit)
-                         + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_recruit)
-                         + self.generate_actions_cards_daylight(Faction.EYRIE, self.eyrie_pre_recruit))
-        self.set_agent_actions(self.generate_actions_eyrie_recruit()
-                               + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_recruit)
-                               + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_recruit)
-                               + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_pre_recruit))
 
     def eyrie_turmoil(self):
         # humiliate
