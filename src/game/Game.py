@@ -172,7 +172,6 @@ class Game:
         self.set_actions(self.get_legal_actions())
         self.set_agent_actions(self.actions)
 
-
         # Marquise variables
         self.marquise_action_count = 3
         self.marquise_march_count = 2
@@ -432,19 +431,31 @@ class Game:
         :return: list of legal actions
         """
         actions: list[Action] = []
-        # prompt: str = ""
 
         match self.sub_phase:
-            case 20001:
+            case 20001:  # start as eyrie
                 actions.append(Action('Next', perform(self.eyrie_start)))
+            case 20002:  # eyrie_start -> eyrie_start_to_add_to_decree
+                if self.addable_count == 2:
+                    actions += self.generate_actions_agent_add_card_to_decree() \
+                               + self.generate_actions_agent_cards_birdsong(Faction.EYRIE,
+                                                                            self.eyrie_start_to_add_to_decree)
+
+                elif self.addable_count == 1:
+                    actions += self.generate_actions_agent_add_card_to_decree() \
+                               + [
+                                   Action("Skip", perform(self.eyrie_add_to_the_decree_additional_skip))
+                               ] \
+                               + self.generate_actions_agent_cards_birdsong(Faction.EYRIE,
+                                                                            self.eyrie_start_to_add_to_decree)
 
         return actions
 
     def get_actions(self) -> list[Action]:
-        return self.actions
+        return self.get_legal_actions()
 
     def get_agent_actions(self) -> list[Action]:
-        return self.agent_actions
+        return self.get_legal_actions()
 
     def set_actions(self, actions: list[Action] = None):
         if actions is not None:
@@ -1072,7 +1083,7 @@ class Game:
 
     #####
     # Eyrie
-    def eyrie_start(self):
+    def eyrie_start(self):  # 20001
         LOGGER.info("{}:{}:{}:eyrie turn begins".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.turn_count += 1
 
@@ -1087,43 +1098,21 @@ class Game:
         self.ui_turn_player = Faction.EYRIE
         self.turn_player = Faction.EYRIE
         self.phase = Phase.BIRDSONG
-        self.sub_phase = 1
+        self.sub_phase = 20001
 
         self.added_bird_card = False
         self.addable_count = 2
         self.eyrie_start_to_add_to_decree()
 
-    def eyrie_start_to_add_to_decree(self):
+    def eyrie_start_to_add_to_decree(self):  # 20002
         LOGGER.info(
             "{}:{}:{}:eyrie_start_to_add_to_decree addable_count = {}".format(self.ui_turn_player, self.phase,
                                                                               self.sub_phase, self.addable_count))
+        self.sub_phase = 20002
         if self.addable_count == 2:
             self.prompt = "Select Card To Add To Decree"
-            self.set_actions(
-                self.generate_actions_add_to_the_decree_first() +
-                self.generate_actions_cards_birdsong(Faction.EYRIE, self.eyrie_start_to_add_to_decree)
-            )
-            self.set_agent_actions(
-                self.generate_actions_agent_add_card_to_decree() +
-                self.generate_actions_agent_cards_birdsong(Faction.EYRIE, self.eyrie_start_to_add_to_decree)
-            )
         elif self.addable_count == 1:
             self.prompt = "Select ANOTHER card to add to the Decree"
-            self.set_actions(
-                self.generate_actions_add_to_the_decree_first() +
-                [
-                    Action("Skip", perform(self.eyrie_add_to_the_decree_additional_skip))
-                ] +
-                self.generate_actions_cards_birdsong(Faction.EYRIE, self.eyrie_start_to_add_to_decree)
-            )
-            self.set_agent_actions(
-                self.generate_actions_agent_add_card_to_decree() +
-                [
-                    Action("Skip", perform(self.eyrie_add_to_the_decree_additional_skip))
-                ] +
-                self.generate_actions_agent_cards_birdsong(Faction.EYRIE, self.eyrie_start_to_add_to_decree)
-            )
-
         else:
             self.eyrie_a_new_roost()
 
@@ -1137,10 +1126,7 @@ class Game:
             for decree_action in DecreeAction:
                 actions.append(Action('{} ({}) to {}'.format(card.name, card.suit, decree_action),
                                       perform(self.agent_add_card_to_decree, card, decree_action)))
-        LOGGER.info(
-            "{}:{}:{}:generate_actions_agent_add_card_to_decree {}".format(self.ui_turn_player, self.phase,
-                                                                           self.sub_phase,
-                                                                           len(actions)))
+
         return actions
 
     def agent_add_card_to_decree(self, card: Card, decree_action: DecreeAction | str):
