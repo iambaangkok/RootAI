@@ -244,7 +244,8 @@ class Game:
         arr[17] = self.selected_clearing.area_index if self.selected_clearing is not None else -1
 
         arr[18] = [1 if self.sappers_enable[Faction.MARQUISE] else 0, 1 if self.sappers_enable[Faction.EYRIE] else 0]
-        arr[19] = [1 if self.brutal_tactics_enable[Faction.MARQUISE] else 0, 1 if self.brutal_tactics_enable[Faction.EYRIE] else 0]
+        arr[19] = [1 if self.brutal_tactics_enable[Faction.MARQUISE] else 0,
+                   1 if self.brutal_tactics_enable[Faction.EYRIE] else 0]
 
         arr[20] = self.selected_card.card_id if self.selected_card is not None else -1
         arr[21] = 1 if self.added_bird_card else 0
@@ -433,6 +434,68 @@ class Game:
         actions: list[Action] = []
 
         match self.sub_phase:
+
+            # Marquise
+            case 10001:  # marquise_birdsong
+                actions.extend(
+                    self.generate_actions_cards_birdsong(Faction.MARQUISE, self.marquise_birdsong_cards)
+                    + [Action('Next', perform(self.marquise_pre_daylight))]
+                )
+            case 10002:  # marquise_pre_daylight
+                actions.extend(
+                    self.generate_actions_command_warren(Faction.MARQUISE, self.marquise_daylight)
+                    + [Action('Next', self.marquise_daylight)]
+                )
+            case 10003:  # marquise_daylight
+                actions.extend(
+                    self.generate_actions_craft_cards(Faction.MARQUISE) +
+                    self.generate_actions_agent_cards_daylight(Faction.MARQUISE,
+                                                               self.marquise_daylight)
+                    + [Action('Next', perform(self.marquise_daylight_2))]
+                )
+            case 10004:  # marquise_daylight_2
+                agent_actions = []
+                if self.marquise_action_count == 0:
+                    if self.marquise_hawks_for_hire_check():
+                        agent_actions.append(Action('Hawks for hire (discard BIRD suit card to gain extra action)',
+                                                    perform(self.marquise_daylight_hawks_for_hire_select_card)))
+                else:
+                    agent_actions += (self.generate_actions_agent_marquise_march() +
+                                      self.generate_actions_agent_marquise_build() +
+                                      self.generate_actions_agent_marquise_recruit() +
+                                      self.generate_actions_agent_marquise_overwork() +
+                                      self.generate_actions_agent_marquise_battle())
+                actions.extend(
+                    agent_actions + self.generate_actions_activate_dominance_card(Faction.MARQUISE,
+                                                                                  self.marquise_daylight_2)
+                    + self.generate_actions_take_dominance_card(Faction.MARQUISE,
+                                                                self.marquise_daylight_2)
+                    + self.generate_actions_cards_daylight(Faction.MARQUISE,
+                                                           self.marquise_daylight_2)
+                    + [Action('Next', perform(self.marquise_pre_evening))]
+                )
+            case 10005:  # marquise_pre_evening
+                actions.extend(
+                    self.generate_actions_cobbler(Faction.MARQUISE, self.marquise_evening_draw_card)
+                    + [Action('Next', self.marquise_evening_draw_card)]
+                )
+
+            case 10006:  # marquise_evening_draw_card
+                actions.extend(
+                    [Action('Next', perform(self.marquise_evening_discard_card))]
+                )
+
+            case 10007:  # marquise_evening_discard_card
+                card_in_hand_count = len(self.marquise.cards_in_hand)
+                if card_in_hand_count > 5:
+                    actions.extend(
+                        self.generate_actions_select_card_to_discard(Faction.MARQUISE)
+                    )
+                else:
+                    actions.extend(
+                        [Action('End turn', perform(self.eyrie_start))]
+                    )
+
             case 20001:  # start as eyrie
                 actions.append(Action('Next', perform(self.eyrie_start)))
             case 20002:  # eyrie_start -> eyrie_start_to_add_to_decree
@@ -561,9 +624,9 @@ class Game:
 
     #####
     # MARQUISE
-    def marquise_birdsong_start(self):
+    def marquise_birdsong_start(self):  # 10001
         self.phase = Phase.BIRDSONG
-        self.sub_phase = 0
+        self.sub_phase = 10001
 
         LOGGER.info("{}:{}:{}:MARQUISE's turn begins".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.turn_count += 1
@@ -594,8 +657,9 @@ class Game:
                 self.generate_actions_agent_cards_birdsong(Faction.MARQUISE, self.marquise_birdsong_cards) + [
                     Action('Next', perform(self.marquise_pre_daylight))])
 
-    def marquise_pre_daylight(self):
+    def marquise_pre_daylight(self):  # 10002
         self.phase = Phase.DAYLIGHT
+        self.sub_phase = 10002
 
         LOGGER.info("{}:{}:{}:Enter marquise_pre_daylight".format(self.ui_turn_player, self.phase, self.sub_phase))
 
@@ -607,8 +671,9 @@ class Game:
             self.set_actions(actions + [Action('Next', self.marquise_daylight)])
             self.set_agent_actions(actions + [Action('Next', self.marquise_daylight)])
 
-    def marquise_daylight(self):
+    def marquise_daylight(self):  # 10003
         LOGGER.info("{}:{}:{}:Enter marquise_daylight".format(self.ui_turn_player, self.phase, self.sub_phase))
+        self.sub_phase = 10003
 
         craftable_cards = self.generate_actions_craft_cards(Faction.MARQUISE)
         action_cards = self.generate_actions_cards_daylight(Faction.MARQUISE, self.marquise_daylight)
@@ -625,14 +690,14 @@ class Game:
                                                                               self.marquise_daylight) + [
                                        Action('Next', perform(self.marquise_daylight_2))])
 
-    def marquise_daylight_2(self):
+    def marquise_daylight_2(self):  # 10004
         LOGGER.info("{}:{}:{}:Enter marquise_daylight_2".format(self.ui_turn_player, self.phase, self.sub_phase))
         actions = []
         agent_actions = []
         self.prompt = "Select Actions (Remaining Action: {})".format(self.marquise_action_count)
         self.ui_turn_player = Faction.MARQUISE
         self.phase = Phase.DAYLIGHT
-        self.sub_phase = 1
+        self.sub_phase = 10004
 
         if self.marquise_action_count == 0:
             self.prompt = "No action remaining. Proceed to next phase.".format(self.marquise_action_count)
@@ -931,9 +996,9 @@ class Game:
 
         return actions
 
-    def marquise_pre_evening(self):
+    def marquise_pre_evening(self):  # 10005
         self.phase = Phase.EVENING
-        self.sub_phase = 0
+        self.sub_phase = 10005
         LOGGER.info("{}:{}:{}:Enter marquise_pre_evening".format(self.ui_turn_player, self.phase, self.sub_phase))
         actions = self.generate_actions_cobbler(Faction.MARQUISE, self.marquise_evening_draw_card)
 
@@ -944,8 +1009,9 @@ class Game:
             self.set_actions(actions + [Action('Next', self.marquise_evening_draw_card)])
             self.set_agent_actions(self.get_actions())
 
-    def marquise_evening_draw_card(self):
+    def marquise_evening_draw_card(self):  # 10006
         LOGGER.info("{}:{}:{}:Enter marquise_evening_draw_card".format(self.ui_turn_player, self.phase, self.sub_phase))
+        self.sub_phase = 10006
 
         self.prompt = "Draw one card, plus one card per draw bonus"
         number_of_card_to_be_drawn = self.marquise.get_reward_card() + 1
@@ -954,8 +1020,8 @@ class Game:
         self.set_actions()
         self.set_agent_actions(self.get_actions())
 
-    def marquise_evening_discard_card(self):
-        self.sub_phase = 1
+    def marquise_evening_discard_card(self):  # 10007
+        self.sub_phase = 10007
 
         LOGGER.info(
             "{}:{}:{}:Enter marquise_evening_discard_card".format(self.ui_turn_player, self.phase, self.sub_phase))
