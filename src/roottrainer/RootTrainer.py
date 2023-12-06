@@ -89,7 +89,7 @@ class RootTrainer:
     #####
     # Init
     def init(self):
-        self.get_actions()
+        pass
 
     #####
     # Update
