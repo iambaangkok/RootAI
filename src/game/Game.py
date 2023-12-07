@@ -483,7 +483,7 @@ class Game:
 
             case 10005:  # marquise_pre_evening
                 actions.extend(
-                    self.generate_actions_cobbler(Faction.MARQUISE, self.marquise_evening_draw_card)
+                    self.generate_actions_agent_cobbler(Faction.MARQUISE, self.marquise_evening_draw_card)
                     + [Action('Next', self.marquise_evening_draw_card)]
                 )
 
@@ -557,7 +557,7 @@ class Game:
                            + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_build) \
                            + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_pre_build)
             case 20011:
-                actions += self.generate_actions_cobbler(Faction.EYRIE, self.eyrie_evening) \
+                actions += self.generate_actions_agent_cobbler(Faction.EYRIE, self.eyrie_evening) \
                            + [Action('Next, to Evening', self.eyrie_evening)]
             # TURMOIL
             case 21001:
@@ -569,6 +569,16 @@ class Game:
                     self.eyrie_evening_to_marquise()
             case 21003:
                 actions += [Action('Next, to Marquise', perform(self.marquise_birdsong_start))]
+
+            case 30001:  # cobbler_agent
+                if self.turn_player == Faction.MARQUISE:
+                    actions.extend(
+                        self.generate_actions_agent_move_with_cont_func(Faction.MARQUISE, self.marquise_evening_draw_card)
+                    )
+                else:
+                    actions.extend(
+                        self.generate_actions_agent_move_with_cont_func(Faction.EYRIE, self.eyrie_evening)
+                    )
 
         return actions
 
@@ -778,7 +788,8 @@ class Game:
                 actions.append(Action('Overwork', perform(self.marquise_daylight_overwork_select_clearing)))
             if self.marquise_battle_check():
                 actions.append(Action('Battle', perform(self.marquise_daylight_battle)))
-            agent_actions += (self.generate_actions_agent_marquise_march(self.marquise_daylight_agent_resolve_march) +
+            agent_actions += (
+                    # self.generate_actions_agent_marquise_march(self.marquise_daylight_agent_resolve_march) +
                               self.generate_actions_agent_marquise_build() +
                               self.generate_actions_agent_marquise_recruit() +
                               self.generate_actions_agent_marquise_overwork()
@@ -1817,6 +1828,21 @@ class Game:
                         perform(self.move_warriors,
                                 faction, src, dest,
                                 num_of_warriors, self.eyrie_resolve_move)))
+        return actions
+
+    def generate_actions_agent_move_with_cont_func(self, faction: Faction, cont_func) -> list[Action]:
+        actions: list[Action] = []
+
+        can_move_from_clearing = self.find_available_source_clearings(faction, decree=(faction == Faction.EYRIE))
+        for src in can_move_from_clearing:
+            dests = self.find_available_destination_clearings(faction, src)
+            for dest in dests:
+                for num_of_warriors in range(1, src.warrior_count[faction_to_warrior(faction)] + 1):
+                    actions.append(Action("Move {} warriors from {} to {}".format(
+                        num_of_warriors, src.area_index, dest.area_index),
+                        perform(self.move_warriors,
+                                faction, src, dest,
+                                num_of_warriors, cont_func)))
         return actions
 
     def select_clearing_src_move(self, faction, continuation_func, decree=False):
@@ -2968,11 +2994,33 @@ class Game:
 
         return actions
 
-    # TODO: make this agent friendly
+    def generate_actions_agent_cobbler(self, faction, continuation_func):
+        actions = []
+        faction_board = self.faction_to_faction_board(faction)
+
+        for card in faction_board.crafted_cards:
+            if card.name == CardName.COBBLER and len(
+                    self.generate_actions_select_src_clearing(faction, continuation_func, False)) != 0:
+                actions.append(
+                    Action('Use {} card'.format(card.name),
+                           perform(self.cobbler_agent, card, faction, continuation_func)))
+
+        return actions
+
     def cobbler(self, card, faction, continuation_func):
         faction_board = self.faction_to_faction_board(faction)
         faction_board.activated_card.append(card)
         self.select_clearing_src_move(faction, continuation_func)
+
+    def cobbler_agent(self, card, faction, continuation_func):
+        self.sub_phase = 30001
+
+        faction_board = self.faction_to_faction_board(faction)
+        faction_board.activated_card.append(card)
+
+        print(len(self.generate_actions_agent_marquise_march(self.marquise_evening_draw_card)))
+        self.set_agent_actions(self.generate_actions_agent_marquise_march(self.marquise_evening_draw_card))
+        self.set_actions(self.generate_actions_agent_marquise_march(self.marquise_evening_draw_card))
 
     #####
     # DRAW
