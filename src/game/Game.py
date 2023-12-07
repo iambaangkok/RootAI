@@ -473,7 +473,7 @@ class Game:
                                                            self.marquise_daylight_2)
                     + [Action('Next', perform(self.marquise_pre_evening))]
                 )
-                
+
             case 10014:  # marquise_daylight_agent_resolve_march
                 actions += (self.generate_actions_agent_marquise_march(self.marquise_daylight_2) + [
                     Action('Next', perform(self.marquise_daylight_2))])
@@ -541,6 +541,25 @@ class Game:
                            + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_recruit) \
                            + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_recruit) \
                            + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_pre_recruit)
+            case 20008:
+                actions += self.generate_actions_agent_eyrie_move() \
+                           + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_move) \
+                           + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_move) \
+                           + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_pre_move)
+            case 20009:
+                actions += self.generate_actions_agent_eyrie_battle() \
+                           + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_battle) \
+                           + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_battle) \
+                           + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_pre_battle)
+            case 20010:
+                actions += self.generate_actions_eyrie_build() \
+                           + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_build) \
+                           + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_build) \
+                           + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_pre_build)
+            case 20011:
+                actions += self.generate_actions_cobbler(Faction.EYRIE, self.eyrie_evening) \
+                           + [Action('Next, to Evening', self.eyrie_evening)]
+            # TURMOIL
             case 21001:
                 actions += self.generate_actions_eyrie_select_new_leader(self.eyrie.get_inactive_leader())
             case 21002:
@@ -1462,20 +1481,12 @@ class Game:
 
         self.eyrie_pre_recruit()
 
-    def eyrie_pre_move(self):
+    def eyrie_pre_move(self):  # 20008
+        self.sub_phase = 20008
+
         LOGGER.info("{}:{}:{}:eyrie_pre_move".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.update_prompt_eyrie_decree(DecreeAction.MOVE)
         self.prompt += " Choose area to move from."
-        self.set_actions(self.generate_actions_eyrie_move()
-                         + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_move)
-                         + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_move)
-                         + self.generate_actions_cards_daylight(Faction.EYRIE, self.eyrie_pre_move)
-                         )
-        self.set_agent_actions(self.generate_actions_agent_eyrie_move()
-                               + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_move)
-                               + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_move)
-                               + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_pre_move)
-                               )
 
     def generate_actions_agent_eyrie_move(self) -> list[Action]:
         decree_action = DecreeAction.MOVE
@@ -1508,19 +1519,12 @@ class Game:
         self.update_prompt_eyrie_decree(decree_action)
         self.eyrie_pre_move()
 
-    def eyrie_pre_battle(self):
+    def eyrie_pre_battle(self):  # 20009
+        self.sub_phase = 20009
+
         LOGGER.info("{}:{}:{}:eyrie_pre_battle".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.update_prompt_eyrie_decree(DecreeAction.BATTLE)
         self.prompt += " Choose area to battle in."
-
-        self.set_actions(self.generate_actions_eyrie_battle()
-                         + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_battle) \
-                         + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_battle) \
-                         + self.generate_actions_cards_daylight(Faction.EYRIE, self.eyrie_pre_battle))
-        self.set_agent_actions(self.generate_actions_agent_eyrie_battle()
-                               + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_battle) \
-                               + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_battle) \
-                               + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_pre_battle))
 
     def generate_actions_agent_eyrie_battle(self) -> list[Action]:
         actions: list[Action] = self.generate_actions_agent_battle(Faction.EYRIE, self.eyrie_resolve_battle,
@@ -1556,20 +1560,14 @@ class Game:
         self.update_prompt_eyrie_decree(decree_action)
         self.eyrie_pre_battle()
 
-    def eyrie_pre_build(self):
+    def eyrie_pre_build(self):  # 20010
+        self.sub_phase = 20010
+
         LOGGER.info("{}:{}:{}:eyrie_pre_battle".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.update_prompt_eyrie_decree(DecreeAction.BUILD)
 
         self.ui_turn_player = Faction.EYRIE
         self.prompt += " Choose area to build roost in."
-        self.set_actions(self.generate_actions_eyrie_build()
-                         + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_build)
-                         + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_build)
-                         + self.generate_actions_cards_daylight(Faction.EYRIE, self.eyrie_pre_build))
-        self.set_agent_actions(self.generate_actions_eyrie_build()
-                               + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_build)
-                               + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_build)
-                               + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_pre_build))
 
     def generate_actions_eyrie_build(self):
         actions: list[Action] = self.generate_actions_select_buildable_clearing(Faction.EYRIE)
@@ -1589,18 +1587,11 @@ class Game:
         self.remove_decree_counter(DecreeAction.BUILD, clearing.suit)
 
         self.update_prompt_eyrie_decree(DecreeAction.BUILD)
-        self.set_actions(self.generate_actions_eyrie_build())
-        self.set_agent_actions(self.get_actions())
+        self.eyrie_pre_build()
 
-    def eyrie_build_to_evening(self):
-        actions = self.generate_actions_cobbler(Faction.EYRIE, self.eyrie_evening)
-
-        if not actions:
-            self.eyrie_evening()
-        else:
-            self.prompt = 'Want to move your warriors?'
-            self.set_actions(actions + [Action('Next', self.eyrie_evening)])
-            self.set_agent_actions(self.get_actions())
+    def eyrie_build_to_evening(self):  # 20011
+        self.sub_phase = 20011
+        self.prompt = 'Want to move your warriors?'
 
     def eyrie_evening(self):
         # score points
@@ -2977,6 +2968,7 @@ class Game:
 
         return actions
 
+    # TODO: make this agent friendly
     def cobbler(self, card, faction, continuation_func):
         faction_board = self.faction_to_faction_board(faction)
         faction_board.activated_card.append(card)
