@@ -399,9 +399,6 @@ class Game:
             DecreeAction.BUILD: [get_card(i, CARDS) for i in decree_counter[3]]
         }
 
-        if len(CARDS) != 0:
-            LOGGER.warning("Missing card. There are {} cards unassigned.".format(CARDS))
-
     #####
     # Setup Board
     def setup_board(self):
