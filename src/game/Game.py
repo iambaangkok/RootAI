@@ -71,10 +71,10 @@ class Game:
 
         # Game Data
         self.turn_count: int = 0
-        self.ui_turn_player: Faction = Faction.EYRIE
-        self.turn_player: Faction = Faction.EYRIE
+        self.ui_turn_player: Faction = Faction.MARQUISE
+        self.turn_player: Faction = Faction.MARQUISE
         self.phase: Phase = Phase.BIRDSONG
-        self.sub_phase = 20001
+        self.sub_phase = 10001
         self.is_in_action_sub_phase: bool = False
 
         # Board Game Components
@@ -457,11 +457,13 @@ class Game:
                         agent_actions.append(Action('Hawks for hire (discard BIRD suit card to gain extra action)',
                                                     perform(self.marquise_daylight_hawks_for_hire_select_card)))
                 else:
-                    agent_actions += (self.generate_actions_agent_marquise_march() +
-                                      self.generate_actions_agent_marquise_build() +
-                                      self.generate_actions_agent_marquise_recruit() +
-                                      self.generate_actions_agent_marquise_overwork() +
-                                      self.generate_actions_agent_marquise_battle())
+                    agent_actions += (
+                            self.generate_actions_agent_marquise_march(self.marquise_daylight_agent_resolve_march) +
+                            self.generate_actions_agent_marquise_build() +
+                            self.generate_actions_agent_marquise_recruit() +
+                            self.generate_actions_agent_marquise_overwork() +
+                            self.generate_actions_agent_marquise_battle()
+                    )
                 actions.extend(
                     agent_actions + self.generate_actions_activate_dominance_card(Faction.MARQUISE,
                                                                                   self.marquise_daylight_2)
@@ -471,6 +473,14 @@ class Game:
                                                            self.marquise_daylight_2)
                     + [Action('Next', perform(self.marquise_pre_evening))]
                 )
+                
+            case 10014:  # marquise_daylight_agent_resolve_march
+                actions += (self.generate_actions_agent_marquise_march(self.marquise_daylight_2) + [
+                    Action('Next', perform(self.marquise_daylight_2))])
+
+            case 10024:  # marquise_daylight_hawks_for_hire_select_card
+                actions += (self.generate_actions_select_card_hawks_for_hire())
+
             case 10005:  # marquise_pre_evening
                 actions.extend(
                     self.generate_actions_cobbler(Faction.MARQUISE, self.marquise_evening_draw_card)
@@ -490,8 +500,10 @@ class Game:
                     )
                 else:
                     actions.extend(
-                        [Action('End turn', perform(self.eyrie_start))]
+                        [Action('End turn', perform(self.marquise_birdsong_start))]
                     )
+            case 10017:  # select_card_to_discard
+                actions.extend(self.generate_actions_select_card_to_discard(Faction.MARQUISE))
 
             case 20001:  # start as eyrie
                 actions.append(Action('Next, Eyrie start', perform(self.eyrie_start)))
@@ -522,7 +534,8 @@ class Game:
                            + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_daylight_craft) \
                            + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_daylight_craft) \
                            + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_daylight_craft) \
-                           + [Action('Next, to Resolve Decree', perform(self.eyrie_daylight_craft_to_resolve_the_decree))]
+                           + [Action('Next, to Resolve Decree',
+                                     perform(self.eyrie_daylight_craft_to_resolve_the_decree))]
             case 20007:
                 actions += self.generate_actions_eyrie_recruit() \
                            + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_recruit) \
@@ -737,11 +750,12 @@ class Game:
                 actions.append(Action('Overwork', perform(self.marquise_daylight_overwork_select_clearing)))
             if self.marquise_battle_check():
                 actions.append(Action('Battle', perform(self.marquise_daylight_battle)))
-            agent_actions += (self.generate_actions_agent_marquise_march() +
+            agent_actions += (self.generate_actions_agent_marquise_march(self.marquise_daylight_agent_resolve_march) +
                               self.generate_actions_agent_marquise_build() +
                               self.generate_actions_agent_marquise_recruit() +
-                              self.generate_actions_agent_marquise_overwork() +
-                              self.generate_actions_agent_marquise_battle())
+                              self.generate_actions_agent_marquise_overwork()
+                              # self.generate_actions_agent_marquise_battle()
+                              )
 
         self.set_actions(actions
                          + self.generate_actions_activate_dominance_card(Faction.MARQUISE,
@@ -780,7 +794,8 @@ class Game:
     def marquise_battle_check(self):
         return len(self.generate_actions_select_clearing_battle(Faction.MARQUISE, None, True)) > 0
 
-    def marquise_daylight_hawks_for_hire_select_card(self):
+    def marquise_daylight_hawks_for_hire_select_card(self):  # 10024
+        self.sub_phase = 10024
         LOGGER.info(
             "{}:{}:{}:Enter marquise_daylight_hawks_for_hire_select_card".format(self.ui_turn_player, self.phase,
                                                                                  self.sub_phase))
@@ -808,10 +823,7 @@ class Game:
                 self.marquise_march_count)
             self.set_actions([Action('Next', perform(self.marquise_daylight_2))])
 
-    def marquise_daylight_agent_march(self):
-        self.set_agent_actions(self.generate_actions_agent_marquise_march())
-
-    def generate_actions_agent_marquise_march(self):
+    def generate_actions_agent_marquise_march(self, cont_func):
         actions: list[Action] = []
 
         can_move_from_clearing = self.find_available_source_clearings(Faction.MARQUISE, False)
@@ -823,25 +835,17 @@ class Game:
                         num_of_warriors, src.area_index, dest.area_index),
                         perform(self.move_warriors,
                                 Faction.MARQUISE, src, dest,
-                                num_of_warriors, self.marquise_daylight_agent_resolve_march)))
+                                num_of_warriors, cont_func)))
         return actions
 
-    def marquise_daylight_agent_resolve_march(self):
-        self.marquise_march_count -= 1
+    def marquise_daylight_agent_resolve_march(self):  # 10014
+        self.marquise_action_count -= 1
+        self.sub_phase = 10014
         LOGGER.info(
             "{}:{}:{}:MARQUISE's remaining march action: {}".format(self.ui_turn_player, self.phase,
-                                                                    self.sub_phase, self.marquise_march_count))
-        if self.marquise_march_count > 0 and len(
-                self.generate_actions_select_src_clearing(Faction.MARQUISE, None, False)) > 0:
-            self.prompt = "The warriors has been moved. (Remaining march action: {})".format(
-                self.marquise_march_count)
-            self.set_agent_actions(
-                [Action('Next', perform(self.marquise_daylight_agent_march))])
-        else:
-            self.marquise_action_count -= 1
-            self.prompt = "The warriors has been moved. (Remaining march action: {})".format(
-                self.marquise_march_count)
-            self.set_agent_actions([Action('Next', perform(self.marquise_daylight_2))])
+                                                                    self.sub_phase, 1))
+        self.set_agent_actions((self.generate_actions_agent_marquise_march(self.marquise_daylight_2))
+                               + [Action('Next', perform(self.marquise_daylight_2))])
 
     def marquise_daylight_build_select_clearing(self):
         LOGGER.info("{}:{}:{}:Enter marquise_daylight_build_select_clearing".format(self.ui_turn_player, self.phase,
@@ -1034,7 +1038,7 @@ class Game:
         number_of_card_to_be_drawn = self.marquise.get_reward_card() + 1
         self.take_card_from_draw_pile(Faction.MARQUISE, number_of_card_to_be_drawn)
 
-        self.set_actions()
+        self.set_actions([Action('Next', perform(self.marquise_evening_discard_card))])
         self.set_agent_actions(self.get_actions())
 
     def marquise_evening_discard_card(self):  # 10007
@@ -1050,12 +1054,8 @@ class Game:
             self.set_actions(self.generate_actions_select_card_to_discard(Faction.MARQUISE))
             self.set_agent_actions(self.get_actions())
         else:
-            self.ui_turn_player = Faction.EYRIE
-            self.turn_player = Faction.EYRIE
-            self.phase = Phase.BIRDSONG
-            self.sub_phase = 0
-            self.prompt = "Eyrie's Turn"
-            self.set_actions()
+            self.prompt = "End Turn"
+            self.set_actions([Action('Next', perform(self.eyrie_start))])
             self.set_agent_actions(self.get_actions())
 
     def get_workshop_count_by_suit(self) -> {Suit: int}:
@@ -1160,9 +1160,7 @@ class Game:
         self.discard_card(self.marquise.cards_in_hand, card)
         self.marquise_action_count += 1
 
-        self.prompt = "Gained 1 extra action."
-        self.set_actions([Action('Next', self.marquise_daylight_2)])
-        self.set_agent_actions([Action('Next', self.marquise_daylight_2)])
+        self.marquise_daylight_2()
 
     #####
     # Eyrie
@@ -2646,7 +2644,7 @@ class Game:
 
         return actions
 
-    def select_card_to_discard(self, faction: Faction, card: Card):
+    def select_card_to_discard(self, faction: Faction, card: Card):  # 10017
         faction_board = self.faction_to_faction_board(faction)
         LOGGER.info(
             "{}:{}:{}:{}:{} ({}) discarded".format(self.ui_turn_player, self.phase, self.sub_phase, faction,
@@ -2658,6 +2656,8 @@ class Game:
                 card_in_hand_count)
             self.set_actions(self.generate_actions_select_card_to_discard(faction))
             self.set_agent_actions(self.get_actions())
+            if faction == Faction.MARQUISE:
+                self.sub_phase = 10017
         else:
             if faction == Faction.MARQUISE:
                 self.marquise_evening_discard_card()
