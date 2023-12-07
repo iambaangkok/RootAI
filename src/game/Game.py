@@ -500,7 +500,7 @@ class Game:
                     )
                 else:
                     actions.extend(
-                        [Action('End turn', perform(self.marquise_birdsong_start))]
+                        [Action('End turn', perform(self.eyrie_start))]
                     )
             case 10017:  # select_card_to_discard
                 actions.extend(self.generate_actions_select_card_to_discard(Faction.MARQUISE))
@@ -541,6 +541,15 @@ class Game:
                            + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_recruit) \
                            + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_recruit) \
                            + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_pre_recruit)
+            case 21001:
+                actions += self.generate_actions_eyrie_select_new_leader(self.eyrie.get_inactive_leader())
+            case 21002:
+                if len(self.eyrie.cards_in_hand) > 5:
+                    actions += self.generate_actions_select_card_to_discard(Faction.EYRIE)
+                else:
+                    self.eyrie_evening_to_marquise()
+            case 21003:
+                actions += [Action('Next, to Marquise', perform(self.marquise_birdsong_start))]
 
         return actions
 
@@ -1375,7 +1384,8 @@ class Game:
                                                                                              self.phase,
                                                                                              self.sub_phase))
 
-    def eyrie_turmoil_depose(self):
+    def eyrie_turmoil_depose(self):  # 21001
+        self.sub_phase = 21001
         current_leader = self.eyrie.get_active_leader()
 
         self.eyrie.deactivate_current_leader()
@@ -1383,14 +1393,11 @@ class Game:
 
         if len(inactive_leaders) == 0:
             self.eyrie.a_new_generation()
-            inactive_leaders = self.eyrie.get_inactive_leader()
 
         LOGGER.info(
             "{}:{}:{}:turmoil:depose: {} deposed".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                          current_leader))
         self.prompt = "Select New Eyrie Leader:"
-        self.set_actions(self.generate_actions_eyrie_select_new_leader(inactive_leaders))
-        self.set_agent_actions(self.get_actions())
 
     def generate_actions_eyrie_select_new_leader(self, inactive_leaders: list[EyrieLeader]) -> list[Action]:
         actions: list[Action] = []
@@ -1411,7 +1418,6 @@ class Game:
     def eyrie_turmoil_rest(self):
         LOGGER.info("{}:{}:{}:turmoil:rest".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.phase = Phase.EVENING
-        self.sub_phase = 1
         self.eyrie_evening()
 
     def update_prompt_eyrie_decree(self, decree_action: DecreeAction):
@@ -1606,26 +1612,26 @@ class Game:
             "{}:{}:{}:eyrie_evening: roost tracker {}, scored {} vps".format(self.ui_turn_player, self.phase,
                                                                              self.sub_phase, self.eyrie.roost_tracker,
                                                                              vp))
-        # draw and discard
         self.take_card_from_draw_pile(Faction.EYRIE, card_to_draw)
+        self.eyrie_evening_discard()
+
+    def eyrie_evening_discard(self):  # 21002
+        self.sub_phase = 21002
+
         card_in_hand_count = len(self.eyrie.cards_in_hand)
         if card_in_hand_count > 5:
             self.prompt = "Select card to discard down to 5 cards (currently {} cards in hand)".format(
                 card_in_hand_count)
-            self.set_actions(self.generate_actions_select_card_to_discard(Faction.EYRIE))
-            self.set_agent_actions(self.get_actions())
         else:
             self.eyrie_evening_to_marquise()
 
-    def eyrie_evening_to_marquise(self):
+    def eyrie_evening_to_marquise(self):  # 21003
+        self.sub_phase = 21003
         LOGGER.info("{}:{}:{}:eyrie_evening_to_marquise".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.ui_turn_player = Faction.MARQUISE
         self.turn_player = Faction.MARQUISE
         self.phase = Phase.BIRDSONG
-        self.sub_phase = 0
         self.prompt = "Marquise's Turn"
-        self.set_actions()  # to marquise
-        self.set_agent_actions(self.get_actions())
 
     def get_decree_card_to_use(self, decree_action: DecreeAction, suit: Suit) -> Card:
         eligible_cards = [card for card in self.decree_counter[decree_action] if card.suit == suit]
