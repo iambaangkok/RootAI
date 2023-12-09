@@ -1648,7 +1648,7 @@ class Game:
     def eyrie_pre_build(self):  # 20010
         self.sub_phase = 20010
 
-        LOGGER.info("{}:{}:{}:eyrie_pre_battle".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.info("{}:{}:{}:eyrie_pre_build".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.update_prompt_eyrie_decree(DecreeAction.BUILD)
 
         self.ui_turn_player = Faction.EYRIE
@@ -3033,7 +3033,7 @@ class Game:
                     self.generate_actions_select_src_clearing(faction, continuation_func, False)) != 0:
                 actions.append(
                     Action('Use {} card'.format(card.name),
-                           perform(self.cobbler_agent, card, faction, continuation_func)))
+                           perform(self.cobbler_agent, card, faction)))
 
         return actions
 
@@ -3042,13 +3042,11 @@ class Game:
         faction_board.activated_card.append(card)
         self.select_clearing_src_move(faction, continuation_func)
 
-    def cobbler_agent(self, card, faction, continuation_func):
+    def cobbler_agent(self, card, faction):
         self.sub_phase = 30001
 
         faction_board = self.faction_to_faction_board(faction)
         faction_board.activated_card.append(card)
-
-        self.set_actions(self.generate_actions_agent_marquise_march(self.marquise_evening_draw_card))
 
     #####
     # DRAW
