@@ -71,10 +71,10 @@ class Game:
 
         # Game Data
         self.turn_count: int = 0
-        self.ui_turn_player: Faction = Faction.MARQUISE
-        self.turn_player: Faction = Faction.MARQUISE
+        self.ui_turn_player: Faction = Faction.EYRIE
+        self.turn_player: Faction = Faction.EYRIE
         self.phase: Phase = Phase.BIRDSONG
-        self.sub_phase = 10001
+        self.sub_phase = 20001
         self.is_in_action_sub_phase: bool = False
 
         # Board Game Components
@@ -819,9 +819,6 @@ class Game:
             self.prompt = "Do you want to use Birdsong card's action?"
             self.set_actions(self.generate_actions_cards_birdsong(Faction.MARQUISE, self.marquise_birdsong_cards) + [
                 Action('Next', perform(self.marquise_pre_daylight))])
-            self.set_agent_actions(
-                self.generate_actions_agent_cards_birdsong(Faction.MARQUISE, self.marquise_birdsong_cards) + [
-                    Action('Next', perform(self.marquise_pre_daylight))])
 
     def marquise_pre_daylight(self):  # 10002
         self.phase = Phase.DAYLIGHT
@@ -835,7 +832,6 @@ class Game:
         else:
             self.prompt = 'Want to use Command Warren card effect?'
             self.set_actions(actions + [Action('Next', self.marquise_daylight)])
-            self.set_agent_actions(actions + [Action('Next', self.marquise_daylight)])
 
     def marquise_daylight(self):  # 10003
         LOGGER.info("{}:{}:{}:Enter marquise_daylight".format(self.ui_turn_player, self.phase, self.sub_phase))
@@ -851,10 +847,6 @@ class Game:
                              self.generate_actions_cards_daylight(Faction.MARQUISE
                                                                   , self.marquise_daylight) + [
                                  Action('Next', perform(self.marquise_daylight_2))])
-            self.set_agent_actions(self.generate_actions_craft_cards(Faction.MARQUISE) +
-                                   self.generate_actions_agent_cards_daylight(Faction.MARQUISE,
-                                                                              self.marquise_daylight) + [
-                                       Action('Next', perform(self.marquise_daylight_2))])
 
     def marquise_daylight_2(self):  # 10004
         LOGGER.info("{}:{}:{}:Enter marquise_daylight_2".format(self.ui_turn_player, self.phase, self.sub_phase))
@@ -887,12 +879,12 @@ class Game:
             if self.marquise_battle_check():
                 actions.append(Action('Battle', perform(self.marquise_daylight_battle)))
             agent_actions += (
-                    # self.generate_actions_agent_marquise_march(self.marquise_daylight_agent_resolve_march) +
-                              self.generate_actions_agent_marquise_build() +
-                              self.generate_actions_agent_marquise_recruit() +
-                              self.generate_actions_agent_marquise_overwork()
-                              # self.generate_actions_agent_marquise_battle()
-                              )
+                # self.generate_actions_agent_marquise_march(self.marquise_daylight_agent_resolve_march) +
+                    self.generate_actions_agent_marquise_build() +
+                    self.generate_actions_agent_marquise_recruit() +
+                    self.generate_actions_agent_marquise_overwork()
+                # self.generate_actions_agent_marquise_battle()
+            )
 
         self.set_actions(actions
                          + self.generate_actions_activate_dominance_card(Faction.MARQUISE,
@@ -903,15 +895,6 @@ class Game:
                                                                 self.marquise_daylight_2)
                          + [Action('Next', perform(self.marquise_pre_evening))]
                          )
-        self.set_agent_actions(
-            agent_actions + self.generate_actions_activate_dominance_card(Faction.MARQUISE,
-                                                                          self.marquise_daylight_2)
-            + self.generate_actions_take_dominance_card(Faction.MARQUISE,
-                                                        self.marquise_daylight_2)
-            + self.generate_actions_cards_daylight(Faction.MARQUISE,
-                                                   self.marquise_daylight_2)
-            + [Action('Next', perform(self.marquise_pre_evening))]
-        )
 
     def marquise_hawks_for_hire_check(self):
         return len([card for card in self.marquise.cards_in_hand if card.suit == Suit.BIRD]) > 0
@@ -939,7 +922,6 @@ class Game:
 
         self.prompt = "Select card to discard"
         self.set_actions(self.generate_actions_select_card_hawks_for_hire())
-        self.set_agent_actions(self.generate_actions_select_card_hawks_for_hire())
 
     def marquise_daylight_march(self):
         self.select_clearing_src_move(Faction.MARQUISE, self.marquise_daylight_resolve_march)
@@ -981,8 +963,6 @@ class Game:
         LOGGER.info(
             "{}:{}:{}:MARQUISE's remaining march action: {}".format(self.ui_turn_player, self.phase,
                                                                     self.sub_phase, 1))
-        self.set_agent_actions((self.generate_actions_agent_marquise_march(self.marquise_daylight_2))
-                               + [Action('Next', perform(self.marquise_daylight_2))])
 
     def marquise_daylight_build_select_clearing(self):
         LOGGER.info("{}:{}:{}:Enter marquise_daylight_build_select_clearing".format(self.ui_turn_player, self.phase,
@@ -1140,7 +1120,6 @@ class Game:
         self.prompt = "Overwork complete"
         self.marquise_action_count -= 1
         self.set_actions([Action('Next', self.marquise_daylight_2)])
-        self.set_agent_actions(self.get_actions())
 
     def generate_actions_agent_marquise_overwork(self):
         available_clearing = self.find_available_overwork_clearings()
@@ -1166,7 +1145,6 @@ class Game:
         else:
             self.prompt = 'Want to move your warriors?'
             self.set_actions(actions + [Action('Next', self.marquise_evening_draw_card)])
-            self.set_agent_actions(self.get_actions())
 
     def marquise_evening_draw_card(self):  # 10006
         LOGGER.info("{}:{}:{}:Enter marquise_evening_draw_card".format(self.ui_turn_player, self.phase, self.sub_phase))
@@ -1177,7 +1155,6 @@ class Game:
         self.take_card_from_draw_pile(Faction.MARQUISE, number_of_card_to_be_drawn)
 
         self.set_actions([Action('Next', perform(self.marquise_evening_discard_card))])
-        self.set_agent_actions(self.get_actions())
 
     def marquise_evening_discard_card(self):  # 10007
         self.sub_phase = 10007
@@ -1190,11 +1167,9 @@ class Game:
             self.prompt = "Select card to discard down to 5 cards (currently {} cards in hand)".format(
                 card_in_hand_count)
             self.set_actions(self.generate_actions_select_card_to_discard(Faction.MARQUISE))
-            self.set_agent_actions(self.get_actions())
         else:
             self.prompt = "End Turn"
             self.set_actions([Action('Next', perform(self.eyrie_start))])
-            self.set_agent_actions(self.get_actions())
 
     def get_workshop_count_by_suit(self) -> {Suit: int}:
         return self.get_building_count_by_suit(Building.WORKSHOP)
@@ -1803,7 +1778,6 @@ class Game:
 
             self.prompt = "{} has been crafted.".format(card.name)
             self.set_actions([Action("Next", self.marquise_daylight)])
-            self.set_agent_actions([Action("Next", self.marquise_daylight)])
 
         elif faction == Faction.EYRIE:
             if card.phase == CardPhase.IMMEDIATE:
@@ -2123,7 +2097,6 @@ class Game:
             self.prompt = "The {} has been build at clearing #{}.".format(building, clearing.area_index)
             self.marquise_action_count -= 1
             self.set_actions([Action('Next', perform(self.marquise_daylight_2))])
-            self.set_agent_actions([Action('Next', perform(self.marquise_daylight_2))])
         elif faction == Faction.EYRIE:
             self.eyrie_build(clearing)
 
@@ -2737,7 +2710,6 @@ class Game:
             self.prompt = "Select card to discard down to 5 cards (currently {} cards in hand)".format(
                 card_in_hand_count)
             self.set_actions(self.generate_actions_select_card_to_discard(faction))
-            self.set_agent_actions(self.get_actions())
             if faction == Faction.MARQUISE:
                 self.sub_phase = 10017
         else:
@@ -3038,7 +3010,6 @@ class Game:
 
         self.prompt = prompt_str
         self.set_actions([Action('Next', continuation_func)])
-        self.set_agent_actions(self.get_actions())
 
     def generate_actions_cobbler(self, faction, continuation_func):
         actions = []
@@ -3077,8 +3048,6 @@ class Game:
         faction_board = self.faction_to_faction_board(faction)
         faction_board.activated_card.append(card)
 
-        print(len(self.generate_actions_agent_marquise_march(self.marquise_evening_draw_card)))
-        self.set_agent_actions(self.generate_actions_agent_marquise_march(self.marquise_evening_draw_card))
         self.set_actions(self.generate_actions_agent_marquise_march(self.marquise_evening_draw_card))
 
     #####
