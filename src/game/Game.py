@@ -204,6 +204,11 @@ class Game:
 
         self.selecting_piece_to_remove_faction = None
 
+        # Cards
+        self.codebreakers_continuation_func = None
+        self.cards_daylight_continuation_func = None
+        self.cards_birdsong_continuation_func = None
+
         # # Add Card To Decree variables
         self.selected_card: Card | None = None
         self.added_bird_card: bool = False
@@ -491,7 +496,7 @@ class Game:
 
             case 10005:  # marquise_pre_evening
                 actions.extend(
-                    self.generate_actions_agent_cobbler(Faction.MARQUISE, self.marquise_evening_draw_card)
+                    self.generate_actions_agent_cobbler(Faction.MARQUISE)
                     + [Action('Next', self.marquise_evening_draw_card)]
                 )
 
@@ -565,7 +570,7 @@ class Game:
                            + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_build) \
                            + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_pre_build)
             case 20011:
-                actions += self.generate_actions_agent_cobbler(Faction.EYRIE, self.eyrie_evening) \
+                actions += self.generate_actions_agent_cobbler(Faction.EYRIE) \
                            + [Action('Next, to Evening', self.eyrie_evening)]
             # TURMOIL
             case 21001:
@@ -588,6 +593,11 @@ class Game:
                     actions.extend(
                         self.generate_actions_agent_move_with_cont_func(Faction.EYRIE, self.eyrie_evening)
                     )
+
+            case 30002:  # codebreakers
+                actions.extend(
+                    [Action('Next', self.cards_daylight_continuation_func)]
+                )
 
             case 40001:  # defender_use_ambush
                 def_ambush_actions = []
@@ -2268,7 +2278,6 @@ class Game:
 
         self.selecting_piece_to_remove_faction = None
 
-
     def initiate_battle(self, attacker, defender, clearing: Area, continuation_func):
         self.reset_battle_variables()
         self.selected_clearing = clearing
@@ -2783,6 +2792,7 @@ class Game:
         continuation_func()
 
     def generate_actions_cards_birdsong(self, faction, continuation_func):
+        self.cards_birdsong_continuation_func = continuation_func
         actions = []
         faction_board = self.faction_to_faction_board(faction)
         for card in faction_board.crafted_cards:
@@ -2790,14 +2800,15 @@ class Game:
                 continue
             if card.name == CardName.ROYAL_CLAIM:
                 actions.append(Action('Discard {}'.format(card.name),
-                                      perform(self.royal_claim, faction, card, continuation_func)))
+                                      perform(self.royal_claim, faction, card)))
             if card.name == CardName.STAND_AND_DELIVER and self.stand_and_deliver_check(faction):
                 actions.append(
                     Action('Use {} effect'.format(card.name),
-                           perform(self.stand_and_deliver_select_faction, faction, card, continuation_func)))
+                           perform(self.stand_and_deliver_select_faction, faction, card)))
         return actions
 
     def generate_actions_agent_cards_birdsong(self, faction, continuation_func):
+        self.cards_birdsong_continuation_func = continuation_func
         actions = []
         faction_board = self.faction_to_faction_board(faction)
         for card in faction_board.crafted_cards:
@@ -2805,12 +2816,12 @@ class Game:
                 continue
             if card.name == CardName.ROYAL_CLAIM:
                 actions.append(Action('Discard {}'.format(card.name),
-                                      perform(self.royal_claim, faction, card, continuation_func)))
+                                      perform(self.royal_claim, faction, card)))
             if card.name == CardName.STAND_AND_DELIVER and self.stand_and_deliver_check(faction):
-                actions = actions + self.generate_actions_agent_stand_and_deliver(faction, card, continuation_func)
+                actions = actions + self.generate_actions_agent_stand_and_deliver(faction, card)
         return actions
 
-    def royal_claim(self, faction, card, continuation_func):
+    def royal_claim(self, faction, card):
         LOGGER.info("{}:{}:{}:Enter royal_claim".format(self.ui_turn_player, self.phase, self.sub_phase))
         faction_board = self.faction_to_faction_board(faction)
 
@@ -2826,7 +2837,7 @@ class Game:
             "{}:{}:{}:{} discard ROYAL_CLAIM, {} vp gained".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                                    faction, gained_vp))
 
-        continuation_func()
+        self.cards_daylight_continuation_func()
 
     def stand_and_deliver_check(self, faction):
         LOGGER.info("{}:{}:{}:Enter stand_and_deliver_check".format(self.ui_turn_player, self.phase, self.sub_phase))
@@ -2840,14 +2851,14 @@ class Game:
                 available = True
         return available
 
-    def stand_and_deliver_select_faction(self, faction, card, continuation_func):
+    def stand_and_deliver_select_faction(self, faction, card):
         LOGGER.info(
             "{}:{}:{}:Enter stand_and_deliver_select_faction".format(self.ui_turn_player, self.phase, self.sub_phase))
 
         self.prompt = "Select Faction"
-        self.set_actions(self.generate_actions_stand_and_deliver_select_faction(faction, card, continuation_func))
+        self.set_actions(self.generate_actions_stand_and_deliver_select_faction(faction, card))
 
-    def generate_actions_agent_stand_and_deliver(self, faction, card, continuation_func) -> list[Action]:
+    def generate_actions_agent_stand_and_deliver(self, faction, card) -> list[Action]:
         LOGGER.info(
             "{}:{}:{}:Enter generate_actions_agent_stand_and_deliver".format(self.ui_turn_player, self.phase,
                                                                              self.sub_phase))
@@ -2860,10 +2871,10 @@ class Game:
             if len(self.faction_to_faction_board(enemy_faction).cards_in_hand) > 0:
                 actions.append(
                     Action('Use {} card on {}'.format(card.name, enemy_faction),
-                           perform(self.stand_and_deliver, faction, enemy_faction, card, continuation_func)))
+                           perform(self.stand_and_deliver, faction, enemy_faction, card)))
         return actions
 
-    def generate_actions_stand_and_deliver_select_faction(self, faction, card, continuation_func) -> list[Action]:
+    def generate_actions_stand_and_deliver_select_faction(self, faction, card) -> list[Action]:
         LOGGER.info(
             "{}:{}:{}:Enter generate_actions_stand_and_deliver_select_faction".format(self.ui_turn_player, self.phase,
                                                                                       self.sub_phase))
@@ -2876,10 +2887,10 @@ class Game:
             if len(self.faction_to_faction_board(enemy_faction).cards_in_hand) > 0:
                 actions.append(
                     Action('{}'.format(enemy_faction),
-                           perform(self.stand_and_deliver, faction, enemy_faction, card, continuation_func)))
+                           perform(self.stand_and_deliver, faction, enemy_faction, card)))
         return actions
 
-    def stand_and_deliver(self, faction, stolen_faction, card, continuation_func):
+    def stand_and_deliver(self, faction, stolen_faction, card):
         LOGGER.info("{}:{}:{}:Enter stand_and_deliver".format(self.ui_turn_player, self.phase, self.sub_phase))
 
         faction_board = self.faction_to_faction_board(faction)
@@ -2894,7 +2905,7 @@ class Game:
 
         self.gain_vp(stolen_faction, 1)
 
-        continuation_func()
+        self.cards_birdsong_continuation_func()
 
     def better_burrow_bank(self,
                            faction):  # There is only 2 faction. So when this effect activate, both faction draws a card.
@@ -2905,20 +2916,22 @@ class Game:
                 self.take_card_from_draw_pile(faction)
 
     def generate_actions_agent_cards_daylight(self, faction, continuation_func):
+        self.cards_daylight_continuation_func = continuation_func
         actions = []
         faction_board = self.faction_to_faction_board(faction)
         for card in faction_board.crafted_cards:
             if faction_board.activated_card.count(card) > 0:
                 continue
             if card.name == CardName.TAX_COLLECTOR and self.tax_collector_check(faction):
-                actions = actions + self.generate_actions_agent_tax_collector(faction, card, continuation_func)
+                actions += self.generate_actions_agent_tax_collector(faction, card)
             if card.name == CardName.CODEBREAKERS:
                 actions.append(Action('* Use {} card'.format(card.name),
-                                      perform(self.codebreakers, faction, card, continuation_func)))
+                                      perform(self.codebreakers, faction, card)))
 
         return actions
 
     def generate_actions_cards_daylight(self, faction, continuation_func):
+        self.cards_daylight_continuation_func = continuation_func
         actions = []
         faction_board = self.faction_to_faction_board(faction)
         for card in faction_board.crafted_cards:
@@ -2926,10 +2939,10 @@ class Game:
                 continue
             if card.name == CardName.TAX_COLLECTOR and self.tax_collector_check(faction):
                 actions.append(Action('* Use {} card'.format(card.name),
-                                      perform(self.tax_collector_select_clearing, faction, card, continuation_func)))
+                                      perform(self.tax_collector_select_clearing, faction, card)))
             if card.name == CardName.CODEBREAKERS:
                 actions.append(Action('* Use {} card'.format(card.name),
-                                      perform(self.codebreakers, faction, card, continuation_func)))
+                                      perform(self.codebreakers, faction, card)))
 
         return actions
 
@@ -2958,31 +2971,32 @@ class Game:
                 available = True
         return available
 
-    def tax_collector_select_clearing(self, faction, card, continuation_func):
+    def tax_collector_select_clearing(self, faction, card):
         self.prompt = "Select Clearing"
-        self.set_actions(self.generate_actions_tax_collector_select_clearing(faction, card, continuation_func))
+        self.set_actions(self.generate_actions_tax_collector_select_clearing(faction, card))
 
-    def generate_actions_agent_tax_collector(self, faction, card, continuation_func) -> list[Action]:
+    def generate_actions_agent_tax_collector(self, faction, card) -> list[Action]:
         actions: list[Action] = []
 
         for clearing in self.board.areas:
             if clearing.warrior_count[faction_to_warrior(faction)] > 0:
                 actions.append(Action('* Use Tax Collector: remove 1 warrior from {}'.format(clearing.area_index),
-                                      perform(self.tax_collector, faction, clearing, card, continuation_func)))
+                                      perform(self.tax_collector, faction, clearing, card)))
 
         return actions
 
-    def generate_actions_tax_collector_select_clearing(self, faction, card, continuation_func) -> list[Action]:
+    def generate_actions_tax_collector_select_clearing(self, faction, card) -> list[Action]:
         actions: list[Action] = []
 
         for clearing in self.board.areas:
             if clearing.warrior_count[faction_to_warrior(faction)] > 0:
                 actions.append(Action('{}'.format(clearing.area_index),
-                                      perform(self.tax_collector, faction, clearing, card, continuation_func)))
+                                      perform(self.tax_collector, faction, clearing, card)))
 
         return actions
 
-    def tax_collector(self, faction, clearing, card, continuation_func):
+    def tax_collector(self, faction, clearing, card):
+        LOGGER.info("{}:{}:{}:Enter tax_collector".format(self.ui_turn_player, self.phase, self.sub_phase))
         faction_board = self.faction_to_faction_board(faction)
         warrior = faction_to_warrior(faction)
 
@@ -2992,9 +3006,12 @@ class Game:
         self.take_card_from_draw_pile(faction, 1)
         faction_board.activated_card.append(card)
 
-        continuation_func()
+        self.cards_daylight_continuation_func()
 
-    def codebreakers(self, faction, card, continuation_func):
+    def codebreakers(self, faction, card):  # 30002
+        self.sub_phase = 30002
+        LOGGER.info("{}:{}:{}:Enter codebreakers".format(self.ui_turn_player, self.phase, self.sub_phase))
+
         if faction == Faction.MARQUISE:
             enemy_faction = Faction.EYRIE
         else:
@@ -3009,7 +3026,7 @@ class Game:
         faction_board.activated_card.append(card)
 
         self.prompt = prompt_str
-        self.set_actions([Action('Next', continuation_func)])
+        self.set_actions([Action('Next', self.cards_daylight_continuation_func)])
 
     def generate_actions_cobbler(self, faction, continuation_func):
         actions = []
@@ -3024,13 +3041,13 @@ class Game:
 
         return actions
 
-    def generate_actions_agent_cobbler(self, faction, continuation_func):
+    def generate_actions_agent_cobbler(self, faction):
         actions = []
         faction_board = self.faction_to_faction_board(faction)
 
         for card in faction_board.crafted_cards:
             if card.name == CardName.COBBLER and len(
-                    self.generate_actions_select_src_clearing(faction, continuation_func, False)) != 0:
+                    self.generate_actions_select_src_clearing(faction, None, False)) != 0:
                 actions.append(
                     Action('Use {} card'.format(card.name),
                            perform(self.cobbler_agent, card, faction)))
