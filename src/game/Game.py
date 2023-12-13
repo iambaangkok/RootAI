@@ -71,10 +71,10 @@ class Game:
 
         # Game Data
         self.turn_count: int = 0
-        self.ui_turn_player: Faction = Faction.EYRIE
-        self.turn_player: Faction = Faction.EYRIE
+        self.ui_turn_player: Faction = Faction.MARQUISE
+        self.turn_player: Faction = Faction.MARQUISE
         self.phase: Phase = Phase.BIRDSONG
-        self.sub_phase = 20001
+        self.sub_phase = 10001
         self.is_in_action_sub_phase: bool = False
 
         # Board Game Components
@@ -140,35 +140,8 @@ class Game:
         self.eyrie = EyrieBoard("Eyrie Dynasties", Colors.BLUE, 20 - 6, Vector2(0, 0.5 * Config.SCREEN_HEIGHT))
 
         # Actions
-        self.marquise_base_actions: {Phase: [[Action]]} = {
-            Phase.BIRDSONG: [[Action('Next', perform(self.marquise_birdsong_start))]],
-            Phase.DAYLIGHT: [
-                [Action('Craft', perform(self.marquise_daylight)),
-                 Action('Next', perform(self.marquise_daylight_2))],
-                [Action('Battle'), Action('March', perform(self.marquise_daylight_march)), Action('Recruit'),
-                 Action('Build'),
-                 Action('Overwork'),
-                 Action('Next', perform(self.marquise_pre_evening))]
-            ],
-            Phase.EVENING: [[Action('Next', perform(self.marquise_evening_discard_card))],
-                            [Action('End turn', perform(self.eyrie_start))]]
-        }
-        self.eyrie_base_actions: {Phase: [[Action]]} = {
-            Phase.BIRDSONG: [
-                [],
-                [],
-                []
-            ],
-            Phase.DAYLIGHT: [
-                [],
-                []
-            ],
-            Phase.EVENING: [[Action('Next')]]
-        }
         self.actions: list[Action] = []
         self.agent_actions: list[Action] = []
-        # self.set_actions()
-        # self.set_agent_actions(self.actions)
         self.set_actions(self.get_legal_actions())
         self.set_agent_actions(self.actions)
 
@@ -188,7 +161,7 @@ class Game:
         # Battle variables
         self.attacker = None
         self.defender = None
-        self.attacking_clearing = None
+        self.attacking_clearing: Area | None = None
         self.continuation_func = None
 
         self.attacker_roll: int = 0
@@ -205,7 +178,6 @@ class Game:
         self.selecting_piece_to_remove_faction = None
 
         # Cards
-        self.codebreakers_continuation_func = None
         self.cards_daylight_continuation_func = None
         self.cards_birdsong_continuation_func = None
 
@@ -228,7 +200,7 @@ class Game:
         self.setup_board()
 
     def get_state_as_num_array(self) -> list:
-        n_features: int = 24
+        n_features: int = 37
         arr: list = [[]] * n_features
 
         arr[0] = 1 if self.running else 0
@@ -252,20 +224,56 @@ class Game:
         arr[13] = self.marquise_action_count
         arr[14] = self.marquise_march_count
         arr[15] = self.marquise_recruit_count
-        arr[16] = 1 if self.marquise_recruit_action_used else 0
 
-        arr[17] = self.selected_clearing.area_index if self.selected_clearing is not None else -1
+        arr[16] = self.selected_clearing.area_index if self.selected_clearing is not None else -1
 
-        arr[18] = [1 if self.sappers_enable[Faction.MARQUISE] else 0, 1 if self.sappers_enable[Faction.EYRIE] else 0]
-        arr[19] = [1 if self.brutal_tactics_enable[Faction.MARQUISE] else 0,
-                   1 if self.brutal_tactics_enable[Faction.EYRIE] else 0]
-
-        arr[20] = self.selected_card.card_id if self.selected_card is not None else -1
-        arr[21] = 1 if self.added_bird_card else 0
-        arr[22] = self.addable_count
-        arr[23] = [
+        arr[17] = self.selected_card.card_id if self.selected_card is not None else -1
+        arr[18] = 1 if self.added_bird_card else 0
+        arr[19] = self.addable_count
+        arr[20] = [
             [card.card_id for card in self.decree_counter[decree_action]] for decree_action in self.decree_counter
         ]
+
+        arr[21] = 1 if self.attacker == Faction.MARQUISE else 0
+        arr[22] = 1 if self.defender == Faction.MARQUISE else 0
+        arr[23] = self.attacking_clearing.area_index
+
+        continuation_func_map = {
+            self.marquise_daylight_2: 0,
+            self.eyrie_resolve_battle: 1,
+            self.marquise_daylight: 2,
+            self.eyrie_daylight_craft: 3
+        }
+
+        arr[24] = continuation_func_map[self.continuation_func]
+        arr[25] = self.attacker_roll
+        arr[26] = self.defender_roll
+        arr[27] = self.defender_defenseless_extra_hits
+        arr[28] = self.attacker_extra_hits
+        arr[29] = self.defender_extra_hits
+        arr[30] = 0 if self.redirect_func is None else 1
+        arr[31] = self.attacker_remaining_hits
+        arr[32] = self.defender_remaining_hits
+        arr[33] = self.marquise_removed_warrior
+        arr[34] = 1 if self.selecting_piece_to_remove_faction == Faction.MARQUISE else 0
+
+        cards_birdsong_continuation_func_map = {
+            self.marquise_birdsong_cards: 0,
+            self.eyrie_start_to_add_to_decree: 1
+        }
+
+        arr[35] = cards_birdsong_continuation_func_map[self.cards_birdsong_continuation_func]
+
+        cards_daylight_continuation_func_map = {
+            self.marquise_daylight: 0,
+            self.eyrie_daylight_craft: 1,
+            self.eyrie_pre_move: 2,
+            self.eyrie_pre_recruit: 3,
+            self.eyrie_pre_battle: 4,
+            self.eyrie_pre_build: 5
+        }
+
+        arr[36] = cards_daylight_continuation_func_map[self.cards_daylight_continuation_func]
 
         return arr
 
@@ -274,7 +282,9 @@ class Game:
         self.set_state_from_num_arrays(
             arr[0], arr[1], arr[2], arr[3], arr[4], arr[5], arr[6], arr[7], arr[8],
             arr[9], arr[10], arr[11], arr[12], arr[13], arr[14], arr[15], arr[16],
-            arr[17], arr[18], arr[19], arr[20], arr[21], arr[22], arr[23]
+            arr[17], arr[18], arr[19], arr[20], arr[21], arr[22], arr[23], arr[24],
+            arr[25], arr[26], arr[27], arr[28], arr[29], arr[30], arr[31], arr[32],
+            arr[33], arr[34], arr[35], arr[36]
         )
 
     def set_state_from_num_arrays(self,
@@ -294,14 +304,50 @@ class Game:
                                   marquise_action_count: int = 3,
                                   marquise_march_count: int = 2,
                                   marquise_recruit_count: int = 1,
-                                  marquise_recruit_action_used: int = 0,
                                   selected_clearing_area_index: int = 0,
-                                  sappers_enable: list[int] = None,
-                                  brutal_tactics_enable: list[int] = None,
                                   selected_card_id: int = 0,
                                   added_bird_card: int = 0,
                                   addable_count: int = 2,
-                                  decree_counter: list[list[int]] = None):
+                                  decree_counter: list[list[int]] = None,
+                                  attacker: int = 0,
+                                  defender: int = 0,
+                                  attacking_clearing: int = 0,
+                                  continuation_func: int = 0,
+                                  attacker_roll: int = 0,
+                                  defender_roll: int = 0,
+                                  defender_defenseless_extra_hits: int = 0,
+                                  attacker_extra_hits: int = 0,
+                                  defender_extra_hits: int = 0,
+                                  redirect_func: int = 0,
+                                  attacker_remaining_hits: int = 0,
+                                  defender_remaining_hits: int = 0,
+                                  marquise_removed_warrior: int = 0,
+                                  selecting_piece_to_remove_faction: int = 0,
+                                  cards_birdsong_continuation_func=None,
+                                  cards_daylight_continuation_func=None,
+                                  ):
+
+        continuation_func_remap = {
+            0: self.marquise_daylight_2,
+            1: self.eyrie_resolve_battle,
+            2: self.marquise_daylight,
+            3: self.eyrie_daylight_craft
+        }
+
+        cards_daylight_continuation_func_remap = {
+            0: self.marquise_daylight,
+            1: self.eyrie_daylight_craft,
+            2: self.eyrie_pre_move,
+            3: self.eyrie_pre_recruit,
+            4: self.eyrie_pre_battle,
+            5: self.eyrie_pre_build
+        }
+
+        cards_birdsong_continuation_func_remap = {
+            0: self.marquise_birdsong_cards,
+            1: self.eyrie_start_to_add_to_decree
+        }
+
         self.set_state(
             running == 1,
             turn_count,
@@ -319,14 +365,27 @@ class Game:
             marquise_action_count,
             marquise_march_count,
             marquise_recruit_count,
-            marquise_recruit_action_used == 1,
             selected_clearing_area_index == 1,
-            [i == 1 for i in sappers_enable],
-            [i == 1 for i in brutal_tactics_enable],
             selected_card_id,
             added_bird_card == 1,
             addable_count,
-            decree_counter
+            decree_counter,
+            Faction.MARQUISE if attacker == 1 else Faction.EYRIE,
+            Faction.MARQUISE if defender == 1 else Faction.EYRIE,
+            attacking_clearing,
+            continuation_func_remap[continuation_func],
+            attacker_roll,
+            defender_roll,
+            defender_defenseless_extra_hits,
+            attacker_extra_hits,
+            defender_extra_hits,
+            None if redirect_func == 0 else self.roll_dice,
+            attacker_remaining_hits,
+            defender_remaining_hits,
+            marquise_removed_warrior,
+            Faction.MARQUISE if selecting_piece_to_remove_faction == 1 else Faction.EYRIE,
+            cards_birdsong_continuation_func_remap[cards_birdsong_continuation_func],
+            cards_daylight_continuation_func_remap[cards_daylight_continuation_func]
         )
 
     def set_state(self,
@@ -346,14 +405,27 @@ class Game:
                   marquise_action_count: int = 3,
                   marquise_march_count: int = 2,
                   marquise_recruit_count: int = 1,
-                  marquise_recruit_action_used: bool = False,
                   selected_clearing_area_index: int = 0,
-                  sappers_enable: list[bool] = None,
-                  brutal_tactics_enable: list[bool] = None,
                   selected_card_id: int = 0,
                   added_bird_card: bool = False,
                   addable_count: int = 2,
-                  decree_counter: list[list[int]] = None
+                  decree_counter: list[list[int]] = None,
+                  attacker: Faction = Faction.MARQUISE,
+                  defender: Faction = Faction.EYRIE,
+                  attacking_clearing: int = 0,
+                  continuation_func=None,
+                  attacker_roll: int = 0,
+                  defender_roll: int = 0,
+                  defender_defenseless_extra_hits: int = 0,
+                  attacker_extra_hits: int = 0,
+                  defender_extra_hits: int = 0,
+                  redirect_func=None,
+                  attacker_remaining_hits: int = 0,
+                  defender_remaining_hits: int = 0,
+                  marquise_removed_warrior: int = 0,
+                  selecting_piece_to_remove_faction: Faction = Faction.MARQUISE,
+                  cards_birdsong_continuation_func=None,
+                  cards_daylight_continuation_func=None,
                   ):
 
         CARDS: list[Card] = [build_card(i) for i in range(0, 54)]
@@ -384,20 +456,32 @@ class Game:
         self.marquise_action_count = marquise_action_count
         self.marquise_march_count = marquise_march_count
         self.marquise_recruit_count = marquise_recruit_count
-        self.marquise_recruit_action_used = marquise_recruit_action_used
 
         # Eyrie variables
         self.selected_clearing = self.get_area(selected_clearing_area_index)
 
         # Battle variables
-        self.sappers_enable = {
-            Faction.MARQUISE: sappers_enable[0],
-            Faction.EYRIE: sappers_enable[1]
-        }
-        self.brutal_tactics_enable = {
-            Faction.MARQUISE: brutal_tactics_enable[0],
-            Faction.EYRIE: brutal_tactics_enable[1]
-        }
+        self.attacker = attacker
+        self.defender = defender
+        self.attacking_clearing: Area | None = self.board.areas[attacking_clearing]
+        self.continuation_func = continuation_func
+
+        self.attacker_roll: int = attacker_roll
+        self.defender_roll: int = defender_roll
+        self.defender_defenseless_extra_hits: int = defender_defenseless_extra_hits
+        self.attacker_extra_hits: int = attacker_extra_hits
+        self.defender_extra_hits: int = defender_extra_hits
+
+        self.redirect_func = redirect_func
+        self.attacker_remaining_hits: int = attacker_remaining_hits
+        self.defender_remaining_hits: int = defender_remaining_hits
+        self.marquise_removed_warrior: int = marquise_removed_warrior
+
+        self.selecting_piece_to_remove_faction = selecting_piece_to_remove_faction
+
+        # Cards
+        self.cards_daylight_continuation_func = cards_daylight_continuation_func
+        self.cards_birdsong_continuation_func = cards_birdsong_continuation_func
 
         # # Add Card To Decree variables
         self.selected_card = get_card(selected_card_id, CARDS)
@@ -448,7 +532,7 @@ class Game:
             # Marquise
             case 10001:  # marquise_birdsong
                 actions.extend(
-                    self.generate_actions_cards_birdsong(Faction.MARQUISE, self.marquise_birdsong_cards)
+                    self.generate_actions_agent_cards_birdsong(Faction.MARQUISE, self.marquise_birdsong_cards)
                     + [Action('Next', perform(self.marquise_pre_daylight))]
                 )
             case 10002:  # marquise_pre_daylight
@@ -697,13 +781,7 @@ class Game:
         return self.get_legal_actions()
 
     def set_actions(self, actions: list[Action] = None):
-        if actions is not None:
-            self.actions = actions
-        else:
-            if self.ui_turn_player == Faction.MARQUISE:
-                self.actions = self.marquise_base_actions[self.phase][self.sub_phase]
-            elif self.ui_turn_player == Faction.EYRIE:
-                self.actions = self.eyrie_base_actions[self.phase][self.sub_phase]
+        self.actions = actions
 
     def set_agent_actions(self, actions: list[Action] = None):
         if actions is not None:
@@ -1666,7 +1744,6 @@ class Game:
 
     def generate_actions_eyrie_build(self):
         actions: list[Action] = self.generate_actions_select_buildable_clearing(Faction.EYRIE)
-
         decree_action: DecreeAction = DecreeAction.BUILD
 
         if len(actions) == 0:
