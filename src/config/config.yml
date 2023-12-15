@@ -29,4 +29,4 @@ game:
   rendering:
     enable: true # true | false
   victory-point-limit: 30
-  allow-dominance-card: true # true | false
+  allow-dominance-card: false # true | false

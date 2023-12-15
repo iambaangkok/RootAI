@@ -67,6 +67,9 @@ class RootTrainer:
             self.output_writer.open()
             self.output_writer.write(['winner', 'condition', 'turn', 'current_player', 'vp_marquise', 'vp_eyrie', 'winning_dominance'])
 
+    def __del__(self):
+        self.print_game_state()
+
     def init_agent(self, faction: Faction) -> Agent:
         match config['agent'][faction.lower()]['type']:
             case "random":
