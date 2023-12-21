@@ -170,7 +170,7 @@ class RootTrainer:
                         self.random_arrow()
 
                     if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
-                        self.current_action.function()
+                        self.execute_action()
                         self.get_actions()
                         self.reset_arrow()
 
@@ -228,6 +228,9 @@ class RootTrainer:
         self.action_arrow_pos.y = 0
         self.current_action = self.actions[int(self.action_arrow_pos.y)]
 
+    def get_arrow_index(self) -> int:
+        return int(self.action_arrow_pos.y)
+
     ###
     # Actions
     def execute_agent_action(self, faction: Faction):
@@ -283,6 +286,8 @@ class RootTrainer:
         arr: list = self.get_game_state()
         self.new_game()
         self.set_game_state(arr)
+        self.get_actions()
+        self.reset_arrow()
 
     ###
     # Utils

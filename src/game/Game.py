@@ -236,9 +236,10 @@ class Game:
 
         arr[21] = 1 if self.attacker == Faction.MARQUISE else 0
         arr[22] = 1 if self.defender == Faction.MARQUISE else 0
-        arr[23] = self.attacking_clearing.area_index
+        arr[23] = 0 if self.attacking_clearing is None else self.attacking_clearing.area_index
 
         continuation_func_map = {
+            None: -1,
             self.marquise_daylight_2: 0,
             self.eyrie_resolve_battle: 1,
             self.marquise_daylight: 2,
@@ -258,6 +259,7 @@ class Game:
         arr[34] = 1 if self.selecting_piece_to_remove_faction == Faction.MARQUISE else 0
 
         cards_birdsong_continuation_func_map = {
+            None: -1,
             self.marquise_birdsong_cards: 0,
             self.eyrie_start_to_add_to_decree: 1
         }
@@ -265,12 +267,14 @@ class Game:
         arr[35] = cards_birdsong_continuation_func_map[self.cards_birdsong_continuation_func]
 
         cards_daylight_continuation_func_map = {
+            None: -1,
             self.marquise_daylight: 0,
             self.eyrie_daylight_craft: 1,
             self.eyrie_pre_move: 2,
             self.eyrie_pre_recruit: 3,
             self.eyrie_pre_battle: 4,
-            self.eyrie_pre_build: 5
+            self.eyrie_pre_build: 5,
+            self.marquise_daylight_2: 6
         }
 
         arr[36] = cards_daylight_continuation_func_map[self.cards_daylight_continuation_func]
@@ -328,24 +332,28 @@ class Game:
                                   ):
 
         continuation_func_remap = {
+            -1: None,
             0: self.marquise_daylight_2,
             1: self.eyrie_resolve_battle,
             2: self.marquise_daylight,
             3: self.eyrie_daylight_craft
         }
 
+        cards_birdsong_continuation_func_remap = {
+            -1: None,
+            0: self.marquise_birdsong_cards,
+            1: self.eyrie_start_to_add_to_decree
+        }
+
         cards_daylight_continuation_func_remap = {
+            -1: None,
             0: self.marquise_daylight,
             1: self.eyrie_daylight_craft,
             2: self.eyrie_pre_move,
             3: self.eyrie_pre_recruit,
             4: self.eyrie_pre_battle,
-            5: self.eyrie_pre_build
-        }
-
-        cards_birdsong_continuation_func_remap = {
-            0: self.marquise_birdsong_cards,
-            1: self.eyrie_start_to_add_to_decree
+            5: self.eyrie_pre_build,
+            6: self.marquise_daylight_2
         }
 
         self.set_state(
