@@ -689,10 +689,8 @@ class Game:
                                                                         self.marquise_evening_draw_card)
                     )
                 else:
-                    aas = self.generate_actions_agent_move_with_cont_func(Faction.EYRIE, self.eyrie_evening)
-                    LOGGER.warning(len(aas))
                     actions.extend(
-                        aas
+                        self.generate_actions_agent_move_with_cont_func(Faction.EYRIE, self.eyrie_evening)
                     )
 
             case 30002:  # codebreakers
