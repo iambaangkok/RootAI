@@ -93,7 +93,7 @@ class MCTSOneDepth:
             self.backpropagation(node.parent, reward)
 
     def run_mcts(self):
-        LOGGER.info("run_mcts".format())
+        LOGGER.info("run_mcts, rollout_no {}".format(self.rollout_no))
 
         game: Game = Game()
         game.set_state_from_num_array(self.root_state)
