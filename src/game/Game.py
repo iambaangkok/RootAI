@@ -28,7 +28,7 @@ import yaml
 
 config = yaml.safe_load(open("config/config.yml"))
 
-LOGGER = logging.getLogger('logger')
+LOGGER = logging.getLogger('game_logger')
 
 phase_mapping: dict[str, int] = {
     "BIRDSONG": 0,
@@ -63,6 +63,9 @@ class Action:
 
     def get(self):
         return self.name, self.function
+
+    def __eq__(self, other: Action):
+        return self.name == other.name
 
 
 class Game:
@@ -657,10 +660,14 @@ class Game:
                            + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_battle) \
                            + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_pre_battle)
             case 20010:
-                actions += self.generate_actions_eyrie_build() \
-                           + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_build) \
-                           + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_build) \
-                           + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_pre_build)
+
+                actions.extend(
+                    self.generate_actions_eyrie_build() +
+                    self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_build) +
+                    self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_build) +
+                    self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_pre_build)
+                )
+
             case 20011:
                 actions += self.generate_actions_agent_cobbler(Faction.EYRIE) \
                            + [Action('Next, to Evening', self.eyrie_evening)]
@@ -682,8 +689,10 @@ class Game:
                                                                         self.marquise_evening_draw_card)
                     )
                 else:
+                    aas = self.generate_actions_agent_move_with_cont_func(Faction.EYRIE, self.eyrie_evening)
+                    LOGGER.warning(len(aas))
                     actions.extend(
-                        self.generate_actions_agent_move_with_cont_func(Faction.EYRIE, self.eyrie_evening)
+                        aas
                     )
 
             case 30002:  # codebreakers
@@ -779,7 +788,7 @@ class Game:
                 actions.extend(
                     self.generate_actions_select_piece_to_remove()
                 )
-
+        LOGGER.debug("get_legal_actions:{}: len(actions) {}, actions {}".format(self.sub_phase, len(actions), [a.name for a in actions]))
         return actions
 
     def get_actions(self) -> list[Action]:
@@ -816,7 +825,7 @@ class Game:
     def check_win_condition_vp(self, faction: Faction, no_end_action: bool = False) -> tuple[int, int] | None:
         if self.board.faction_points[faction] >= config['game']['victory-point-limit']:
             if not no_end_action:
-                LOGGER.info(
+                LOGGER.debug(
                     "GAME_END:VP:MARQUISE {} vs EYRIE {}".format(self.board.faction_points[Faction.MARQUISE],
                                                                  self.board.faction_points[Faction.EYRIE]))
                 self.end_game()
@@ -839,7 +848,7 @@ class Game:
 
         if not no_end_action:
             if winning_dominance is not None:
-                LOGGER.info(
+                LOGGER.debug(
                     "GAME_END:DOMINANCE:{}, {} Wins".format(winning_dominance.name,
                                                             faction))
                 self.end_game()
@@ -890,7 +899,7 @@ class Game:
         self.phase = Phase.BIRDSONG
         self.sub_phase = 10001
 
-        LOGGER.info("{}:{}:{}:MARQUISE's turn begins".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug("{}:{}:{}:MARQUISE's turn begins".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.turn_count += 1
 
         self.check_win_condition(Faction.MARQUISE)
@@ -908,7 +917,7 @@ class Game:
         self.marquise_birdsong_cards()
 
     def marquise_birdsong_cards(self):
-        LOGGER.info("{}:{}:{}:Enter marquise_birdsong_cards".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug("{}:{}:{}:Enter marquise_birdsong_cards".format(self.ui_turn_player, self.phase, self.sub_phase))
         if len(self.generate_actions_cards_birdsong(Faction.MARQUISE, self.marquise_birdsong_cards)) == 0:
             self.marquise_pre_daylight()
         else:
@@ -920,7 +929,7 @@ class Game:
         self.phase = Phase.DAYLIGHT
         self.sub_phase = 10002
 
-        LOGGER.info("{}:{}:{}:Enter marquise_pre_daylight".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug("{}:{}:{}:Enter marquise_pre_daylight".format(self.ui_turn_player, self.phase, self.sub_phase))
 
         actions = self.generate_actions_command_warren(Faction.MARQUISE, self.marquise_daylight)
         if not actions:
@@ -930,7 +939,7 @@ class Game:
             self.set_actions(actions + [Action('Next', self.marquise_daylight)])
 
     def marquise_daylight(self):  # 10003
-        LOGGER.info("{}:{}:{}:Enter marquise_daylight".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug("{}:{}:{}:Enter marquise_daylight".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.sub_phase = 10003
 
         craftable_cards = self.generate_actions_craft_cards(Faction.MARQUISE)
@@ -945,7 +954,7 @@ class Game:
                                  Action('Next', perform(self.marquise_daylight_2))])
 
     def marquise_daylight_2(self):  # 10004
-        LOGGER.info("{}:{}:{}:Enter marquise_daylight_2".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug("{}:{}:{}:Enter marquise_daylight_2".format(self.ui_turn_player, self.phase, self.sub_phase))
         actions = []
         agent_actions = []
         self.prompt = "Select Actions (Remaining Action: {})".format(self.marquise_action_count)
@@ -1012,7 +1021,7 @@ class Game:
 
     def marquise_daylight_hawks_for_hire_select_card(self):  # 10024
         self.sub_phase = 10024
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:Enter marquise_daylight_hawks_for_hire_select_card".format(self.ui_turn_player, self.phase,
                                                                                  self.sub_phase))
 
@@ -1024,7 +1033,7 @@ class Game:
 
     def marquise_daylight_resolve_march(self):
         self.marquise_march_count -= 1
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:MARQUISE's remaining march action: {}".format(self.ui_turn_player, self.phase,
                                                                     self.sub_phase, self.marquise_march_count))
         if self.marquise_march_count > 0 and len(
@@ -1056,20 +1065,20 @@ class Game:
     def marquise_daylight_agent_resolve_march(self):  # 10014
         self.marquise_action_count -= 1
         self.sub_phase = 10014
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:MARQUISE's remaining march action: {}".format(self.ui_turn_player, self.phase,
                                                                     self.sub_phase, 1))
 
     def marquise_daylight_build_select_clearing(self):
-        LOGGER.info("{}:{}:{}:Enter marquise_daylight_build_select_clearing".format(self.ui_turn_player, self.phase,
-                                                                                    self.sub_phase))
+        LOGGER.debug("{}:{}:{}:Enter marquise_daylight_build_select_clearing".format(self.ui_turn_player, self.phase,
+                                                                                     self.sub_phase))
 
         self.prompt = "Let's build. Select clearing"
         self.set_actions(self.generate_actions_select_buildable_clearing(Faction.MARQUISE))
 
     def marquise_daylight_build_select_building(self, clearing):
-        LOGGER.info("{}:{}:{}:Enter marquise_daylight_build_select_building".format(self.ui_turn_player, self.phase,
-                                                                                    self.sub_phase))
+        LOGGER.debug("{}:{}:{}:Enter marquise_daylight_build_select_building".format(self.ui_turn_player, self.phase,
+                                                                                     self.sub_phase))
 
         self.prompt = "Select Building"
         self.set_actions(self.generate_actions_select_building(Faction.MARQUISE, clearing))
@@ -1088,9 +1097,9 @@ class Game:
         return actions
 
     def marquise_daylight_recruit(self):
-        LOGGER.info("{}:{}:{}:Enter marquise_daylight_recruit".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug("{}:{}:{}:Enter marquise_daylight_recruit".format(self.ui_turn_player, self.phase, self.sub_phase))
 
-        LOGGER.info("{}:{}:{}:MARQUISE recruit.".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug("{}:{}:{}:MARQUISE recruit.".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.prompt = "Recruit warrior"
 
         if self.marquise.reserved_warriors >= self.marquise.building_trackers[Building.RECRUITER]:
@@ -1102,8 +1111,8 @@ class Game:
             self.marquise_daylight_recruit_some_clearings(clearing_with_recruiter)
 
     def marquise_daylight_recruit_some_clearings(self, clearing_with_recruiter):
-        LOGGER.info("{}:{}:{}:Enter marquise_daylight_recruit_some_clearings".format(self.ui_turn_player, self.phase,
-                                                                                     self.sub_phase))
+        LOGGER.debug("{}:{}:{}:Enter marquise_daylight_recruit_some_clearings".format(self.ui_turn_player, self.phase,
+                                                                                      self.sub_phase))
 
         if clearing_with_recruiter is [] or self.marquise.reserved_warriors == 0:
             self.marquise_recruit_count -= 1
@@ -1126,10 +1135,10 @@ class Game:
         return actions
 
     def recruit_single_clearing(self, clearing, remaining_clearing_with_recruiter):
-        LOGGER.info("{}:{}:{}:Enter recruit_single_clearing".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug("{}:{}:{}:Enter recruit_single_clearing".format(self.ui_turn_player, self.phase, self.sub_phase))
 
         self.add_warrior(Faction.MARQUISE, clearing, 1)
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:MARQUISE adds warrior in clearing #{}".format(self.ui_turn_player, self.phase,
                                                                     self.sub_phase,
                                                                     clearing.area_index))
@@ -1157,14 +1166,14 @@ class Game:
         self.marquise_action_count -= 1
         for clearing in clearings:
             self.add_warrior(Faction.MARQUISE, clearing, 1)
-            LOGGER.info(
+            LOGGER.debug(
                 "{}:{}:{}:MARQUISE adds warrior in clearing #{}".format(self.ui_turn_player, self.phase,
                                                                         self.sub_phase,
                                                                         clearing.area_index))
         self.marquise_daylight_2()
 
     def marquise_daylight_battle(self):
-        LOGGER.info("{}:{}:{}:Enter marquise_daylight_battle".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug("{}:{}:{}:Enter marquise_daylight_battle".format(self.ui_turn_player, self.phase, self.sub_phase))
 
         self.marquise_action_count -= 1
         self.select_clearing_battle(Faction.MARQUISE, self.marquise_daylight_2)
@@ -1191,14 +1200,14 @@ class Game:
         self.initiate_battle(attacker, defender, clearing, continuation_func)
 
     def marquise_daylight_overwork_select_clearing(self):
-        LOGGER.info("{}:{}:{}:Enter marquise_daylight_overwork_select_clearing".format(self.ui_turn_player, self.phase,
-                                                                                       self.sub_phase))
+        LOGGER.debug("{}:{}:{}:Enter marquise_daylight_overwork_select_clearing".format(self.ui_turn_player, self.phase,
+                                                                                        self.sub_phase))
 
         self.prompt = "Select Clearing"
         self.set_actions(self.generate_actions_overwork_select_clearing())
 
     def marquise_daylight_overwork_select_card_to_discard(self, clearing):
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:Enter marquise_daylight_overwork_select_card_to_discard".format(self.ui_turn_player, self.phase,
                                                                                       self.sub_phase))
 
@@ -1206,10 +1215,10 @@ class Game:
         self.set_actions(self.generate_actions_overwork_select_card(clearing))
 
     def marquise_overwork(self, clearing: Area, card):
-        LOGGER.info("{}:{}:{}:Enter marquise_overwork".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug("{}:{}:{}:Enter marquise_overwork".format(self.ui_turn_player, self.phase, self.sub_phase))
 
-        LOGGER.info("{}:{}:{}:MARQUISE overwork on clearing #{}".format(self.ui_turn_player, self.phase, self.sub_phase,
-                                                                        clearing.area_index))
+        LOGGER.debug("{}:{}:{}:MARQUISE overwork on clearing #{}".format(self.ui_turn_player, self.phase, self.sub_phase,
+                                                                         clearing.area_index))
         self.discard_card(self.marquise.cards_in_hand, card)
         clearing.token_count[Token.WOOD] += 1
 
@@ -1233,7 +1242,7 @@ class Game:
     def marquise_pre_evening(self):  # 10005
         self.phase = Phase.EVENING
         self.sub_phase = 10005
-        LOGGER.info("{}:{}:{}:Enter marquise_pre_evening".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug("{}:{}:{}:Enter marquise_pre_evening".format(self.ui_turn_player, self.phase, self.sub_phase))
         actions = self.generate_actions_cobbler(Faction.MARQUISE, self.marquise_evening_draw_card)
 
         if not actions:
@@ -1243,7 +1252,7 @@ class Game:
             self.set_actions(actions + [Action('Next', self.marquise_evening_draw_card)])
 
     def marquise_evening_draw_card(self):  # 10006
-        LOGGER.info("{}:{}:{}:Enter marquise_evening_draw_card".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug("{}:{}:{}:Enter marquise_evening_draw_card".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.sub_phase = 10006
 
         self.prompt = "Draw one card, plus one card per draw bonus"
@@ -1255,7 +1264,7 @@ class Game:
     def marquise_evening_discard_card(self):  # 10007
         self.sub_phase = 10007
 
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:Enter marquise_evening_discard_card".format(self.ui_turn_player, self.phase, self.sub_phase))
 
         card_in_hand_count = len(self.marquise.cards_in_hand)
@@ -1374,7 +1383,7 @@ class Game:
     #####
     # Eyrie
     def eyrie_start(self):  # 20001
-        LOGGER.info("{}:{}:{}:eyrie turn begins".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug("{}:{}:{}:eyrie turn begins".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.turn_count += 1
 
         self.check_win_condition(Faction.EYRIE)
@@ -1382,7 +1391,7 @@ class Game:
         self.better_burrow_bank(Faction.EYRIE)
 
         if len(self.eyrie.cards_in_hand) == 0:
-            LOGGER.info("{}:{}:{}:eyrie_emergency_orders".format(self.ui_turn_player, self.phase, self.sub_phase))
+            LOGGER.debug("{}:{}:{}:eyrie_emergency_orders".format(self.ui_turn_player, self.phase, self.sub_phase))
             self.take_card_from_draw_pile(Faction.EYRIE)
 
         self.ui_turn_player = Faction.EYRIE
@@ -1395,7 +1404,7 @@ class Game:
         self.eyrie_start_to_add_to_decree()
 
     def eyrie_start_to_add_to_decree(self):  # 20002
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:eyrie_start_to_add_to_decree addable_count = {}".format(self.ui_turn_player, self.phase,
                                                                               self.sub_phase, self.addable_count))
         self.sub_phase = 20002
@@ -1431,7 +1440,7 @@ class Game:
                     continue
                 actions.append(Action('{} ({})'.format(card.name, card.suit),
                                       perform(self.select_card_to_add_to_the_decree, card)))
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:generate_actions_add_to_the_decree_first {}".format(self.ui_turn_player, self.phase,
                                                                           self.sub_phase,
                                                                           len(actions)))
@@ -1459,18 +1468,18 @@ class Game:
         if self.selected_card.suit == Suit.BIRD:
             self.added_bird_card = True
 
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:Added card '{}' to {} decree".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                            self.selected_card.name, decree_action))
         self.eyrie_start_to_add_to_decree()
 
     def eyrie_add_to_the_decree_additional_skip(self):
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:eyrie_add_to_the_decree_additional_skip".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.eyrie_a_new_roost()
 
     def eyrie_a_new_roost(self):  # 20003
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:eyrie_a_new_roost".format(self.ui_turn_player, self.phase, self.sub_phase))
 
         self.sub_phase = 20003
@@ -1494,7 +1503,7 @@ class Game:
 
     def place_roost_and_3_warriors(self, area: Area):  # 20004
         self.sub_phase = 20004
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:place_roost_and_3_warriors at area#{}".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                                     area.area_index))
 
@@ -1506,13 +1515,13 @@ class Game:
         clearing.buildings[building_slot_index] = Building.ROOST
         self.eyrie.roost_tracker += 1
 
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:build_roost built {} in clearing #{}".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                                    Building.ROOST, clearing.area_index))
 
     def eyrie_birdsong_to_daylight(self):  # 20005
         self.sub_phase = 20005
-        LOGGER.info("{}:{}:{}:eyrie_birdsong_to_daylight".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug("{}:{}:{}:eyrie_birdsong_to_daylight".format(self.ui_turn_player, self.phase, self.sub_phase))
 
         self.phase = Phase.DAYLIGHT
 
@@ -1539,7 +1548,7 @@ class Game:
         return roost_count
 
     def eyrie_daylight_craft_to_resolve_the_decree(self):
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:eyrie_daylight_craft_to_resolve_the_decree".format(self.ui_turn_player, self.phase,
                                                                          self.sub_phase))
 
@@ -1548,7 +1557,7 @@ class Game:
 
     def eyrie_pre_recruit(self):  # 20007
         self.sub_phase = 20007
-        LOGGER.info("{}:{}:{}:eyrie_pre_recruit".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug("{}:{}:{}:eyrie_pre_recruit".format(self.ui_turn_player, self.phase, self.sub_phase))
 
         self.update_prompt_eyrie_decree(DecreeAction.RECRUIT)
         self.prompt += " Recruit in Area:"
@@ -1566,11 +1575,11 @@ class Game:
         vp_lost = min(self.board.faction_points[Faction.EYRIE],
                       bird_card_in_decree_count)
         self.board.lose_vp(Faction.EYRIE, vp_lost)
-        LOGGER.info("{}:{}:{}:turmoil:humiliate: {} bird cards in the decree, lost {} vp(s)".format(self.ui_turn_player,
-                                                                                                    self.phase,
-                                                                                                    self.sub_phase,
-                                                                                                    bird_card_in_decree_count,
-                                                                                                    vp_lost))
+        LOGGER.debug("{}:{}:{}:turmoil:humiliate: {} bird cards in the decree, lost {} vp(s)".format(self.ui_turn_player,
+                                                                                                     self.phase,
+                                                                                                     self.sub_phase,
+                                                                                                     bird_card_in_decree_count,
+                                                                                                     vp_lost))
 
     def eyrie_turmoil_purge(self):
         for decree in DecreeAction:
@@ -1579,7 +1588,7 @@ class Game:
                     self.discard_card(self.eyrie.decree[decree], card)
 
         self.eyrie.reset_decree()
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:turmoil:purge: discarded all decree cards except loyal viziers".format(self.ui_turn_player,
                                                                                              self.phase,
                                                                                              self.sub_phase))
@@ -1594,7 +1603,7 @@ class Game:
         if len(inactive_leaders) == 0:
             self.eyrie.a_new_generation()
 
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:turmoil:depose: {} deposed".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                          current_leader))
         self.prompt = "Select New Eyrie Leader:"
@@ -1610,13 +1619,13 @@ class Game:
 
     def eyrie_select_new_leader(self, leader: EyrieLeader):
         self.eyrie.activate_leader(leader)
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:turmoil:depose: {} selected as new leader".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                                         leader))
         self.eyrie_turmoil_rest()
 
     def eyrie_turmoil_rest(self):
-        LOGGER.info("{}:{}:{}:turmoil:rest".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug("{}:{}:{}:turmoil:rest".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.phase = Phase.EVENING
         self.eyrie_evening()
 
@@ -1656,7 +1665,7 @@ class Game:
         # remove decree counter
         self.remove_decree_counter(decree_action, area.suit)
 
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:{} recruited in area {}".format(self.ui_turn_player, self.phase, self.sub_phase, Faction.EYRIE,
                                                       area.area_index))
 
@@ -1665,7 +1674,7 @@ class Game:
     def eyrie_pre_move(self):  # 20008
         self.sub_phase = 20008
 
-        LOGGER.info("{}:{}:{}:eyrie_pre_move".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug("{}:{}:{}:eyrie_pre_move".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.update_prompt_eyrie_decree(DecreeAction.MOVE)
         self.prompt += " Choose area to move from."
 
@@ -1703,7 +1712,7 @@ class Game:
     def eyrie_pre_battle(self):  # 20009
         self.sub_phase = 20009
 
-        LOGGER.info("{}:{}:{}:eyrie_pre_battle".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug("{}:{}:{}:eyrie_pre_battle".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.update_prompt_eyrie_decree(DecreeAction.BATTLE)
         self.prompt += " Choose area to battle in."
 
@@ -1744,7 +1753,7 @@ class Game:
     def eyrie_pre_build(self):  # 20010
         self.sub_phase = 20010
 
-        LOGGER.info("{}:{}:{}:eyrie_pre_build".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug("{}:{}:{}:eyrie_pre_build".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.update_prompt_eyrie_decree(DecreeAction.BUILD)
 
         self.ui_turn_player = Faction.EYRIE
@@ -1779,7 +1788,7 @@ class Game:
         vp = EyrieBoard.ROOST_REWARD_VP[roost_tracker]
         card_to_draw = 1 + EyrieBoard.ROOST_REWARD_CARD[roost_tracker]
         self.gain_vp(Faction.EYRIE, vp)
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:eyrie_evening: roost tracker {}, scored {} vps".format(self.ui_turn_player, self.phase,
                                                                              self.sub_phase, self.eyrie.roost_tracker,
                                                                              vp))
@@ -1798,7 +1807,7 @@ class Game:
 
     def eyrie_evening_to_marquise(self):  # 21003
         self.sub_phase = 21003
-        LOGGER.info("{}:{}:{}:eyrie_evening_to_marquise".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug("{}:{}:{}:eyrie_evening_to_marquise".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.ui_turn_player = Faction.MARQUISE
         self.turn_player = Faction.MARQUISE
         self.phase = Phase.BIRDSONG
@@ -1807,7 +1816,7 @@ class Game:
     def get_decree_card_to_use(self, decree_action: DecreeAction, suit: Suit) -> Card:
         eligible_cards = [card for card in self.decree_counter[decree_action] if card.suit == suit]
         bird_cards = [card for card in self.decree_counter[decree_action] if card.suit == Suit.BIRD]
-        LOGGER.info("after {} {}".format(len(eligible_cards), len(bird_cards)))
+        LOGGER.debug("after {} {}".format(len(eligible_cards), len(bird_cards)))
         if len(eligible_cards) > 0:
             return eligible_cards[0]
         else:
@@ -1815,7 +1824,7 @@ class Game:
 
     def activate_leader(self, leader: EyrieLeader):
         if self.eyrie.activate_leader(leader):
-            LOGGER.info(
+            LOGGER.debug(
                 "{}:{}:{}:{} selected as new leader".format(self.ui_turn_player, self.phase, self.sub_phase, leader))
 
     def remove_decree_counter(self, decree_action: DecreeAction | str, suit: Suit | str):
@@ -1850,7 +1859,7 @@ class Game:
         return actions
 
     def craft_card(self, faction: Faction, card: Card):
-        LOGGER.info("{}:{}:{}:Crafted {} card".format(self.ui_turn_player, self.phase, self.sub_phase, card.name))
+        LOGGER.debug("{}:{}:{}:Crafted {} card".format(self.ui_turn_player, self.phase, self.sub_phase, card.name))
         if faction == Faction.MARQUISE:
             if card.phase == CardPhase.IMMEDIATE:
                 self.gain_vp(faction, card.reward_vp)
@@ -1952,13 +1961,13 @@ class Game:
         if self.can_take_card_from_draw_pile(amount):
             faction_board.cards_in_hand.extend(self.draw_pile[0:amount])
             self.draw_pile = self.draw_pile[amount:]
-            LOGGER.info(
+            LOGGER.debug(
                 "{}:{}:{}:{} drawn {} card(s)".format(self.ui_turn_player, self.phase, self.sub_phase, faction, amount))
         else:
             lesser_amount = min(len(self.draw_pile), amount)
             faction_board.cards_in_hand.extend(self.draw_pile[0:lesser_amount])
             self.draw_pile = self.draw_pile[lesser_amount:]
-            LOGGER.info(
+            LOGGER.debug(
                 "{}:{}:{}:{} drawn {} card(s)".format(self.ui_turn_player, self.phase, self.sub_phase, faction,
                                                       lesser_amount))
 
@@ -1967,7 +1976,7 @@ class Game:
             remaining_amount = amount - lesser_amount
             faction_board.cards_in_hand.extend(self.draw_pile[0:remaining_amount])
             self.draw_pile = self.draw_pile[remaining_amount:]
-            LOGGER.info(
+            LOGGER.debug(
                 "{}:{}:{}:{} drawn {} card(s)".format(self.ui_turn_player, self.phase, self.sub_phase, faction,
                                                       remaining_amount))
 
@@ -2001,7 +2010,7 @@ class Game:
     def generate_actions_agent_move_with_cont_func(self, faction: Faction, cont_func) -> list[Action]:
         actions: list[Action] = []
 
-        can_move_from_clearing = self.find_available_source_clearings(faction, decree=(faction == Faction.EYRIE))
+        can_move_from_clearing = self.find_available_source_clearings(faction, decree=False)  # TODO: investigate this generating 0 actions
         for src in can_move_from_clearing:
             dests = self.find_available_destination_clearings(faction, src)
             for dest in dests:
@@ -2061,7 +2070,7 @@ class Game:
         return actions
 
     def move_warriors(self, faction, src: Area, dest: Area, num, continuation_func):
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:{} move {} warrior(s) from Clearing #{} to Clearing #{}".format(self.ui_turn_player, self.phase,
                                                                                       self.sub_phase, faction,
                                                                                       num, src,
@@ -2133,7 +2142,7 @@ class Game:
                 total_recruiters = area.buildings.count(Building.RECRUITER)
                 if total_recruiters > 0:
                     self.add_warrior(faction, area, min(total_recruiters, self.marquise.reserved_warriors))
-                    LOGGER.info(
+                    LOGGER.debug(
                         "{}:{}:{}:MARQUISE adds warrior in clearing #{}".format(self.ui_turn_player, self.phase,
                                                                                 self.sub_phase,
                                                                                 area.area_index))
@@ -2186,7 +2195,7 @@ class Game:
 
             self.remove_wood(wood_cost, self.count_woods_from_clearing(clearing)[0])
 
-            LOGGER.info(
+            LOGGER.debug(
                 "{}:{}:{}:MARQUISE builds {} in clearing #{}".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                                      building, clearing.area_index))
             self.prompt = "The {} has been build at clearing #{}.".format(building, clearing.area_index)
@@ -2372,7 +2381,7 @@ class Game:
         self.attacking_clearing = clearing
         self.continuation_func = continuation_func
 
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:battle:{} initiate battle on {} in clearing #{}".format(self.ui_turn_player, self.phase,
                                                                               self.sub_phase,
                                                                               attacker, defender, clearing.area_index))
@@ -2407,7 +2416,7 @@ class Game:
                 Action('Skip', perform(self.roll_dice))])
 
     def attacker_use_ambush(self, ambush_discarded):  # 40002
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:battle:{} discard AMBUSH".format(self.ui_turn_player, self.phase, self.sub_phase, self.defender))
         defender_board = self.faction_to_faction_board(self.defender)
         self.discard_card(defender_board.cards_in_hand, ambush_discarded)
@@ -2435,7 +2444,7 @@ class Game:
             )
 
     def foil_ambush(self, ambush_discarded):
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:battle:{} discard AMBUSH".format(self.ui_turn_player, self.phase, self.sub_phase, self.attacker))
         self.defender_extra_hits -= 2
         attacker_board = self.faction_to_faction_board(self.attacker)
@@ -2460,7 +2469,7 @@ class Game:
                                         + self.defender_defenseless_extra_hits)
             self.defender_extra_hits = 0
 
-            LOGGER.info(
+            LOGGER.debug(
                 "{}:{}:{}:battle:{} rolls {}, {} rolls {}".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                                   self.attacker, self.attacker_roll, self.defender,
                                                                   self.defender_roll))
@@ -2468,7 +2477,7 @@ class Game:
             self.attacker_activate_battle_ability_card()
 
     def attacker_activate_battle_ability_card(self):  # 40003
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:battle: Total hits: {}: ({}+{}) hits, {}: ({}+{}) hits".format(self.ui_turn_player, self.phase,
                                                                                      self.sub_phase,
                                                                                      self.attacker,
@@ -2508,7 +2517,7 @@ class Game:
             self.defender_activate_battle_ability_card()
 
     def defender_activate_battle_ability_card(self):  # 40004
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:battle: Total hits: {}: ({}+{}) hits, {}: ({}+{}) hits".format(self.ui_turn_player, self.phase,
                                                                                      self.sub_phase,
                                                                                      self.attacker,
@@ -2547,7 +2556,7 @@ class Game:
             self.resolve_hits()
 
     def brutal_tactics(self, brutal_tactics_card):
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:battle:{} use BRUTAL TACTICS".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                            self.attacker))
         attacker_faction_board = self.faction_to_faction_board(self.attacker)
@@ -2557,7 +2566,7 @@ class Game:
         self.attacker_activate_battle_ability_card()
 
     def armorers(self, faction, armorers_card):
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:battle:{} discard ARMORERS".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                          faction))
 
@@ -2573,7 +2582,7 @@ class Game:
             self.defender_activate_battle_ability_card()
 
     def sappers(self, sappers_card):
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:battle:{} discard BRUTAL TACTICS".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                                self.defender))
 
@@ -2617,7 +2626,7 @@ class Game:
         self.gain_vp(self.attacker, attacker_total_vp)
         self.gain_vp(self.defender, defender_total_vp)
 
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:battle: {} vs {}, total hits {}:{}, vps gained {}:{}".format(self.ui_turn_player, self.phase,
                                                                                    self.sub_phase,
                                                                                    self.attacker, self.defender,
@@ -2665,7 +2674,7 @@ class Game:
         return actions
 
     def marquise_field_hospital(self, card):
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:battle:{} use field hospital, discarding {} ({})".format(self.ui_turn_player, self.phase,
                                                                                self.sub_phase,
                                                                                Faction.MARQUISE,
@@ -2680,7 +2689,7 @@ class Game:
         self.resolve_remaining_hits()
 
     def resolve_remaining_hits(self):
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:battle: {} vs {}, remaining hits {}:{}".format(self.ui_turn_player, self.phase,
                                                                      self.sub_phase,
                                                                      self.attacker, self.defender,
@@ -2755,14 +2764,14 @@ class Game:
             self.attacking_clearing.remove_token(piece)
 
         if self.selecting_piece_to_remove_faction == self.attacker:
-            LOGGER.info(
+            LOGGER.debug(
                 "{}:{}:{}:battle:{} remove {}'s {}".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                            self.defender, self.attacker, piece))
             self.gain_vp(self.defender, 1)
             self.defender_remaining_hits -= 1
             self.resolve_remaining_hits()
         else:
-            LOGGER.info(
+            LOGGER.debug(
                 "{}:{}:{}:battle:{} remove {}'s {}".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                            self.attacker, self.defender, piece))
             self.gain_vp(self.attacker, 1)
@@ -2795,7 +2804,7 @@ class Game:
 
     def select_card_to_discard(self, faction: Faction, card: Card):  # 10017
         faction_board = self.faction_to_faction_board(faction)
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:{}:{} ({}) discarded".format(self.ui_turn_player, self.phase, self.sub_phase, faction,
                                                    card.name, card.suit))
         self.discard_card(faction_board.cards_in_hand, card)
@@ -2832,7 +2841,7 @@ class Game:
 
     def activate_dominance_card(self, faction: Faction, card: Card, continuation_func: any):
         if config['game']['allow-dominance-card']:
-            LOGGER.info(
+            LOGGER.debug(
                 "{}:{}:{}:{}:activate_dominance_card {} ".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                                  faction,
                                                                  card.name))
@@ -2862,7 +2871,7 @@ class Game:
 
     def take_dominance_card(self, faction: Faction, dominance_card: Card, card_to_spend: Card,
                             continuation_func: any):
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:{}:take_dominance_card {} by spending {}".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                                        faction,
                                                                        dominance_card.name, card_to_spend.name))
@@ -2907,7 +2916,7 @@ class Game:
         return actions
 
     def royal_claim(self, faction, card):
-        LOGGER.info("{}:{}:{}:Enter royal_claim".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug("{}:{}:{}:Enter royal_claim".format(self.ui_turn_player, self.phase, self.sub_phase))
         faction_board = self.faction_to_faction_board(faction)
 
         self.discard_card(faction_board.crafted_cards, card)
@@ -2918,14 +2927,14 @@ class Game:
                 gained_vp += 1
         self.gain_vp(faction, gained_vp)
 
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:{} discard ROYAL_CLAIM, {} vp gained".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                                    faction, gained_vp))
 
         self.cards_daylight_continuation_func()
 
     def stand_and_deliver_check(self, faction):
-        LOGGER.info("{}:{}:{}:Enter stand_and_deliver_check".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug("{}:{}:{}:Enter stand_and_deliver_check".format(self.ui_turn_player, self.phase, self.sub_phase))
 
         available = False
         available_faction = [Faction.MARQUISE, Faction.EYRIE]
@@ -2937,14 +2946,14 @@ class Game:
         return available
 
     def stand_and_deliver_select_faction(self, faction, card):
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:Enter stand_and_deliver_select_faction".format(self.ui_turn_player, self.phase, self.sub_phase))
 
         self.prompt = "Select Faction"
         self.set_actions(self.generate_actions_stand_and_deliver_select_faction(faction, card))
 
     def generate_actions_agent_stand_and_deliver(self, faction, card) -> list[Action]:
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:Enter generate_actions_agent_stand_and_deliver".format(self.ui_turn_player, self.phase,
                                                                              self.sub_phase))
 
@@ -2960,7 +2969,7 @@ class Game:
         return actions
 
     def generate_actions_stand_and_deliver_select_faction(self, faction, card) -> list[Action]:
-        LOGGER.info(
+        LOGGER.debug(
             "{}:{}:{}:Enter generate_actions_stand_and_deliver_select_faction".format(self.ui_turn_player, self.phase,
                                                                                       self.sub_phase))
 
@@ -2976,7 +2985,7 @@ class Game:
         return actions
 
     def stand_and_deliver(self, faction, stolen_faction, card):
-        LOGGER.info("{}:{}:{}:Enter stand_and_deliver".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug("{}:{}:{}:Enter stand_and_deliver".format(self.ui_turn_player, self.phase, self.sub_phase))
 
         faction_board = self.faction_to_faction_board(faction)
         stolen_faction_board = self.faction_to_faction_board(stolen_faction)
@@ -3081,7 +3090,7 @@ class Game:
         return actions
 
     def tax_collector(self, faction, clearing, card):
-        LOGGER.info("{}:{}:{}:Enter tax_collector".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug("{}:{}:{}:Enter tax_collector".format(self.ui_turn_player, self.phase, self.sub_phase))
         faction_board = self.faction_to_faction_board(faction)
         warrior = faction_to_warrior(faction)
 
@@ -3095,7 +3104,7 @@ class Game:
 
     def codebreakers(self, faction, card):  # 30002
         self.sub_phase = 30002
-        LOGGER.info("{}:{}:{}:Enter codebreakers".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug("{}:{}:{}:Enter codebreakers".format(self.ui_turn_player, self.phase, self.sub_phase))
 
         if faction == Faction.MARQUISE:
             enemy_faction = Faction.EYRIE

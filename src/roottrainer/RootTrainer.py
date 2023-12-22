@@ -7,17 +7,17 @@ from pygame import Surface, Vector2, Rect
 from pygame.time import Clock
 
 from src.config import Config, Colors
-from src.game.EyrieBoard import DecreeAction
 from src.game.Faction import Faction
 from src.game.Game import Action, Game
-from src.roottrainer.Agent import Agent
+from src.roottrainer.agents.Agent import Agent
 from src.roottrainer.CSVOutputWriter import CSVOutputWriter
-from src.roottrainer.RandomDecisionAgent import RandomDecisionAgent
+from src.roottrainer.agents.MCTSAgent import MCTSAgent
+from src.roottrainer.agents.RandomDecisionAgent import RandomDecisionAgent
 from src.utils.draw_utils import draw_text_in_rect
 
 config = yaml.safe_load(open("config/config.yml"))
 
-LOGGER = logging.getLogger('logger')
+LOGGER = logging.getLogger('trainer_logger')
 
 
 class RootTrainer:
@@ -68,12 +68,16 @@ class RootTrainer:
             self.output_writer.write(['winner', 'condition', 'turn', 'current_player', 'vp_marquise', 'vp_eyrie', 'winning_dominance'])
 
     def __del__(self):
-        self.print_game_state()
+        # self.print_game_state()
+        pass
 
     def init_agent(self, faction: Faction) -> Agent:
         match config['agent'][faction.lower()]['type']:
             case "random":
                 return RandomDecisionAgent(faction)
+            case "mcts":
+                mcts_type = config['agent'][faction.lower()]['mcts-type']
+                return MCTSAgent(faction, mcts_type)
 
     def run(self):
         while self.running:
@@ -235,7 +239,7 @@ class RootTrainer:
     # Actions
     def execute_agent_action(self, faction: Faction):
         agent = self.faction_to_agent(faction)
-        action = agent.choose_action(self.get_game(), self.actions)
+        action = agent.choose_action(self.get_game_state(), self.actions)
         action_index = self.actions.index(action)
         self.set_arrow(action_index)
         decree_counter = self.get_game().decree_counter

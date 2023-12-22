@@ -46,10 +46,25 @@ class EyrieLeader(StrEnum):
         return EyrieLeader[eyrie_leader_mapping_reversed[leader_id]]
 
 
+leader_status_mapping: dict[str, int] = {
+    "ACTIVE": 0,
+    "INACTIVE": 1,
+    "USED": 2,
+}
+
+leader_status_mapping_reversed = [key for key in leader_status_mapping]
+
+
 class LeaderStatus(StrEnum):
     ACTIVE = "ACTIVE"
     INACTIVE = "INACTIVE"
     USED = "USED"
+
+    def to_number(self) -> int:
+        return leader_status_mapping[self.name]
+
+    def to_leader_status(status_id: int) -> LeaderStatus:
+        return LeaderStatus[leader_status_mapping_reversed[status_id]]
 
 
 LOYAL_VIZIER = Card(0, "Loyal Vizier", Suit.BIRD, CardPhase.IMMEDIATE)
@@ -86,7 +101,10 @@ class EyrieBoard(FactionBoard):
         arr: list = prev_arr + [[]] * n_features
 
         arr[7] = self.roost_tracker
-        arr[8] = self.get_active_leader().to_number() if self.get_active_leader() is not None else -1
+        # arr[8] = self.get_active_leader().to_number() if self.get_active_leader() else -1
+        arr[8] = [
+            self.leaders[leader].to_number() for leader in self.leaders
+        ]
         arr[9] = [
             [card.card_id for card in self.decree[decree_action]] for decree_action in self.decree
         ]
@@ -101,14 +119,16 @@ class EyrieBoard(FactionBoard):
 
     def __set_state_from_num_arrays(self,
                                     roost_tracker: list[int] = None,
-                                    active_leader_id: int = -1,
+                                    leader_statuses: list[int] = None,
                                     decree: list = None,
                                     cards: list[Card] = None):
 
         self.roost_tracker = roost_tracker
 
         self.a_new_generation()
-        self.activate_leader(EyrieLeader.to_eyrie_leader(active_leader_id))
+        for i, leader in enumerate(self.leaders):
+            self.leaders[leader] = LeaderStatus.to_leader_status(leader_statuses[i])
+        # self.activate_leader(EyrieLeader.to_eyrie_leader(active_leader_id))
 
         self.decree = {
             DecreeAction.RECRUIT: [get_card(i, cards) for i in decree[0]],

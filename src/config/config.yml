@@ -23,7 +23,8 @@ agent:
     type: random # random | mcts | rnn
   eyrie:
     enable: true
-    type: random
+    type: mcts
+    mcts-type: one-depth # one-depth
 
 game:
   rendering:
