@@ -573,10 +573,7 @@ class Game:
                             self.generate_actions_agent_marquise_battle()
                     )
                 actions.extend(
-                    agent_actions + self.generate_actions_activate_dominance_card(Faction.MARQUISE,
-                                                                                  self.marquise_daylight_2)
-                    + self.generate_actions_take_dominance_card(Faction.MARQUISE,
-                                                                self.marquise_daylight_2)
+                    agent_actions
                     + self.generate_actions_cards_daylight(Faction.MARQUISE,
                                                            self.marquise_daylight_2)
                     + [Action('Next', perform(self.marquise_pre_evening))]
