@@ -87,13 +87,13 @@ class MCTSOneDepth:
         node.tries += 1
         node.wins += reward  # TODO for non-one-depth: reward only same turn player as root
 
-        LOGGER.info("backpropagation: reward {}, wins/tries {}/{}".format(reward, node.wins, node.tries))
+        LOGGER.debug("backpropagation: reward {}, wins/tries {}/{}".format(reward, node.wins, node.tries))
 
         if node.parent:
             self.backpropagation(node.parent, reward)
 
     def run_mcts(self):
-        LOGGER.info("run_mcts".format())
+        LOGGER.info("run_mcts, rollout_no {}".format(self.rollout_no))
 
         game: Game = Game()
         game.set_state_from_num_array(self.root_state)
@@ -104,7 +104,7 @@ class MCTSOneDepth:
             self.root.add_child(action, node)
 
             for i in range(self.rollout_no):
-                LOGGER.info("run_mcts: node {}, rollout_no {}/{}".format(action.name, i + 1, self.rollout_no))
+                LOGGER.debug("run_mcts: node {}, rollout_no {}/{}".format(action.name, i + 1, self.rollout_no))
                 reward = self.rollout(node)
                 self.backpropagation(node, reward)
 

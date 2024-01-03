@@ -40,6 +40,7 @@ class MCTSNode:
 
     def choose_best_child(self, c_param=0.1) -> (Action, MCTSNode):
         choices_weights: list[float] = [(c.wins / c.tries + c_param * np.sqrt(np.log(self.tries) / c.tries)) for a, c in self.children]
+        LOGGER.info("choose_best_child: child actions {} {}".format(len(self.children), [a.name for a, c in self.children]))
         LOGGER.info("choose_best_child: choices_weights {}".format(str(choices_weights)))
         return self.children[np.argmax(choices_weights)]
 
