@@ -16,7 +16,7 @@ class MCTSNode:
 
         self.depth: int = depth
         self.tries: int = 0
-        self.wins: int = 0
+        self.score: int = 0
         self.parent = parent
         self.children: list[(Action, MCTSNode)] = []
         self.seq_actions: list[Action] = prev_actions if prev_actions else []
@@ -39,7 +39,7 @@ class MCTSNode:
         # NOTE: seq_actions: action closer to leaf is added at the BACK of the list
 
     def choose_best_child(self, c_param=0.1) -> (Action, MCTSNode):
-        choices_weights: list[float] = [(c.wins / c.tries + c_param * np.sqrt(np.log(self.tries) / c.tries)) for a, c in self.children]
+        choices_weights: list[float] = [(c.score / c.tries + c_param * np.sqrt(np.log(self.tries) / c.tries)) for a, c in self.children]
         LOGGER.info("choose_best_child: child actions {} {}".format(len(self.children), [a.name for a, c in self.children]))
         LOGGER.info("choose_best_child: choices_weights {}".format(str(choices_weights)))
         return self.children[np.argmax(choices_weights)]
@@ -74,7 +74,7 @@ class MCTS:
 
     def backpropagation(self, node, reward):
         node.tries += 1
-        node.wins += reward
+        node.score += reward
         if node.parent:
             self.backpropagation(node.parent, reward)
 

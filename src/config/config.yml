@@ -24,7 +24,10 @@ agent:
   eyrie:
     enable: true
     type: mcts
-    mcts-type: one-depth # one-depth
+    mcts:
+      type: one-depth # one-depth
+      reward-function: vp-difference # win | vp-difference
+      rollout-no: 5 # int
 
 game:
   rendering:

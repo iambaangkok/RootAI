@@ -76,8 +76,10 @@ class RootTrainer:
             case "random":
                 return RandomDecisionAgent(faction)
             case "mcts":
-                mcts_type = config['agent'][faction.lower()]['mcts-type']
-                return MCTSAgent(faction, mcts_type)
+                mcts_type = config['agent'][faction.lower()]['mcts']['type']
+                reward_function = config['agent'][faction.lower()]['mcts']['reward-function']
+                rollout_no = config['agent'][faction.lower()]['mcts']['rollout-no']
+                return MCTSAgent(faction, mcts_type, reward_function, rollout_no)
 
     def run(self):
         while self.running:

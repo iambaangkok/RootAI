@@ -5,6 +5,7 @@ from random import randint
 
 import numpy as np
 
+from src.game.Faction import Faction
 from src.game.Game import Action, Game
 from src.roottrainer.agents.mcts import MCTSNode
 
@@ -12,10 +13,11 @@ LOGGER = logging.getLogger('mcts_logger')
 
 
 class MCTSOneDepth:
-    def __init__(self, state: list, actions: list[Action], roll_out_no: int = 1):
+    def __init__(self, state: list, actions: list[Action], reward_function: str, roll_out_no: int = 1):
         self.root: MCTSNode = MCTSNode(0)
         self.root_state: list = state
         self.rollout_no: int = roll_out_no
+        self.reward_function: str = reward_function
 
     def rollout(self, node: MCTSNode) -> int:
         def execute_random_action(game: Game):
@@ -44,8 +46,17 @@ class MCTSOneDepth:
                 vp_marquise, \
                 vp_eyrie, \
                 winning_dominance = game.get_end_game_data()
-
-            return 1 if root_game.turn_player == winning_faction else 0
+            match self.reward_function:
+                case "win":
+                    return 1 if turn_player == winning_faction else 0
+                case "vp-difference":
+                    if winning_faction == Faction.MARQUISE:
+                        return vp_marquise - vp_eyrie
+                    if winning_faction == Faction.EYRIE:
+                        return vp_eyrie - vp_marquise
+                case _:
+                    LOGGER.error("rollout:reward_function: unknown function, reward set to 0")
+                    return 0
 
         def exec_seq_actions(game: Game):
             LOGGER.debug(
@@ -85,9 +96,9 @@ class MCTSOneDepth:
     def backpropagation(self, node: MCTSNode, reward: int):
 
         node.tries += 1
-        node.wins += reward  # TODO for non-one-depth: reward only same turn player as root
+        node.score += reward  # TODO for non-one-depth: reward only same turn player as root
 
-        LOGGER.debug("backpropagation: reward {}, wins/tries {}/{}".format(reward, node.wins, node.tries))
+        LOGGER.debug("backpropagation: reward {}, wins/tries {}/{}".format(reward, node.score, node.tries))
 
         if node.parent:
             self.backpropagation(node.parent, reward)
