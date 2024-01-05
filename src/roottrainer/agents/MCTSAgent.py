@@ -3,8 +3,8 @@ import logging
 from src.game.Faction import Faction
 from src.game.Game import Action, Game
 from src.roottrainer.agents.Agent import Agent
+from src.roottrainer.agents.MCTS import MCTS
 from src.roottrainer.agents.OneDepthMCTS import MCTSOneDepth
-from src.roottrainer.agents.mcts import MCTSNode, MCTS
 
 LOGGER = logging.getLogger('mcts_logger')
 
@@ -26,7 +26,7 @@ class MCTSAgent(Agent):
                 mcts = MCTSOneDepth(state, actions,
                                     self.reward_function, self.rollout_no, self.time_limit)
             case _:
-                mcts = MCTS(state, actions)
+                mcts = MCTS(state, actions, 100)
 
         mcts.run_mcts()
 

@@ -9,7 +9,7 @@ import yaml
 
 from src.game.Faction import Faction
 from src.game.Game import Action, Game
-from src.roottrainer.agents.mcts import MCTSNode
+from src.roottrainer.agents.MCTSNode import MCTSNode
 
 config = yaml.safe_load(open("config/config.yml"))
 
