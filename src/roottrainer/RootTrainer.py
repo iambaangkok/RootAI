@@ -76,10 +76,24 @@ class RootTrainer:
             case "random":
                 return RandomDecisionAgent(faction)
             case "mcts":
-                mcts_type = config['agent'][faction.lower()]['mcts']['type']
-                reward_function = config['agent'][faction.lower()]['mcts']['reward-function']
-                rollout_no = config['agent'][faction.lower()]['mcts']['rollout-no']
-                return MCTSAgent(faction, mcts_type, reward_function, rollout_no)
+                mcts_type = "one-depth"
+                reward_function = "win"
+                rollout_no = 1
+                time_limit = -1.0
+
+                if config['agent'][faction.lower()]['mcts']['type']:
+                    mcts_type = config['agent'][faction.lower()]['mcts']['type']
+
+                if config['agent'][faction.lower()]['mcts']['reward-function']:
+                    reward_function = config['agent'][faction.lower()]['mcts']['reward-function']
+
+                if config['agent'][faction.lower()]['mcts']['rollout-no']:
+                    rollout_no = config['agent'][faction.lower()]['mcts']['rollout-no']
+
+                if config['agent'][faction.lower()]['mcts']['time-limit']:
+                    time_limit = config['agent'][faction.lower()]['mcts']['time-limit']
+
+                return MCTSAgent(faction, mcts_type, reward_function, rollout_no, time_limit)
 
     def run(self):
         while self.running:

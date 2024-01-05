@@ -4,20 +4,25 @@ import logging
 from random import randint
 
 import numpy as np
+import pygame
+import yaml
 
 from src.game.Faction import Faction
 from src.game.Game import Action, Game
 from src.roottrainer.agents.mcts import MCTSNode
 
+config = yaml.safe_load(open("config/config.yml"))
+
 LOGGER = logging.getLogger('mcts_logger')
 
 
 class MCTSOneDepth:
-    def __init__(self, state: list, actions: list[Action], reward_function: str, roll_out_no: int = 1):
+    def __init__(self, state: list, actions: list[Action], reward_function: str, roll_out_no: int, time_limit: float):
         self.root: MCTSNode = MCTSNode(0)
         self.root_state: list = state
         self.rollout_no: int = roll_out_no
         self.reward_function: str = reward_function
+        self.time_limit: float = time_limit
 
     def rollout(self, node: MCTSNode) -> int:
         def execute_random_action(game: Game):
@@ -35,28 +40,6 @@ class MCTSOneDepth:
 
             LOGGER.debug("rollout:execute_random_action: exec {}".format(actions[rand].name))
             actions[rand].function()
-
-        def reward_function(game: Game) -> int:
-            root_game = Game()
-            root_game.set_state_from_num_array(self.root_state)
-            winning_faction, \
-                winning_condition, \
-                turns_played, \
-                turn_player, \
-                vp_marquise, \
-                vp_eyrie, \
-                winning_dominance = game.get_end_game_data()
-            match self.reward_function:
-                case "win":
-                    return 1 if turn_player == winning_faction else 0
-                case "vp-difference":
-                    if winning_faction == Faction.MARQUISE:
-                        return vp_marquise - vp_eyrie
-                    if winning_faction == Faction.EYRIE:
-                        return vp_eyrie - vp_marquise
-                case _:
-                    LOGGER.error("rollout:reward_function: unknown function, reward set to 0")
-                    return 0
 
         def exec_seq_actions(game: Game):
             LOGGER.debug(
@@ -83,12 +66,46 @@ class MCTSOneDepth:
                     # raise RuntimeError
                     break
 
+        def reward_function(game: Game) -> int:
+            root_game = Game()
+            root_game.set_state_from_num_array(self.root_state)
+            current_player = root_game.turn_player
+
+            winning_faction, \
+                winning_condition, \
+                turns_played, \
+                turn_player, \
+                vp_marquise, \
+                vp_eyrie, \
+                winning_dominance = game.get_end_game_data()
+            match self.reward_function:
+                case "win":
+                    return 1 if current_player == winning_faction else 0
+                case "vp-difference":
+                    if current_player == Faction.MARQUISE:
+                        return vp_marquise - vp_eyrie
+                    if current_player == Faction.EYRIE:
+                        return vp_eyrie - vp_marquise
+                case _:
+                    LOGGER.error("rollout:reward_function: unknown function, reward set to 0")
+                    return 0
+
         game = Game()
         game.set_state_from_num_array(self.root_state)
 
         exec_seq_actions(game)
 
+        acc_time: float = 0
+        clock = pygame.time.Clock()
+        # framerate = config['simulation']['framerate']
+        delta_time = clock.tick()
         while game.running:
+            delta_time = clock.tick()
+            acc_time += delta_time
+            # print(acc_time)
+            if self.time_limit > 0:
+                if acc_time >= self.time_limit:
+                    break
             execute_random_action(game)
 
         return reward_function(game)
@@ -110,6 +127,8 @@ class MCTSOneDepth:
         game.set_state_from_num_array(self.root_state)
         legal_actions: list[Action] = game.get_legal_actions()
 
+        clock = pygame.time.Clock()
+        clock.tick()
         for action in legal_actions:
             node = MCTSNode(1, self.root, self.root.seq_actions[:])
             self.root.add_child(action, node)
@@ -121,7 +140,8 @@ class MCTSOneDepth:
 
             LOGGER.debug("run_mcts: node {}, len(seq_actions) {}".format(action.name, len(node.seq_actions)))
 
-        # return self.root.choose_best_child()
+        total_rollout_time = clock.tick()
+        LOGGER.info("run_mcts: total_rollout_time {} seconds".format(total_rollout_time/1000.0))
 
     def choose_best_action(self, actions: list[Action]) -> Action:
         best_action_sim, best_node = self.root.choose_best_child()

@@ -27,10 +27,11 @@ agent:
     mcts:
       type: one-depth # one-depth
       reward-function: vp-difference # win | vp-difference
-      rollout-no: 5 # int
+      rollout-no: 3 # int
+      time-limit: 100 # float (per-rollout in milliseconds)
 
 game:
   rendering:
-    enable: true # true | false
+    enable: false # true | false
   victory-point-limit: 30
   allow-dominance-card: false # true | false
