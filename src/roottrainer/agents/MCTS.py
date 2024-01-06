@@ -1,16 +1,23 @@
 import logging
 from random import randint
 
+import pygame
+
+from src.game.Faction import Faction
 from src.game.Game import Action, Game, LOGGER
 from src.roottrainer.agents.MCTSNode import MCTSNode
 
 LOGGER = logging.getLogger('mcts_logger')
 
+
 class MCTS:
-    def __init__(self, state: list, actions: list[Action], roll_out_no: int = 1, depth_limit: int = 1):
+    def __init__(self, state: list, actions: list[Action], reward_function: str = None, rollout_no: int = 1,
+                 time_limit: float = 100, depth_limit: int = 1):
         self.root: MCTSNode = MCTSNode(0, None, None, None)
         self.root_state: list = state
-        self.rollout_no: int = roll_out_no
+        self.reward_function = reward_function
+        self.rollout_no: int = rollout_no
+        self.time_limit: float = time_limit
         self.depth_limit: int = depth_limit
 
     def expand_and_select_node(self, round):
@@ -19,7 +26,7 @@ class MCTS:
             # LOGGER.info(current.is_fully_expanded())
             if not current.is_fully_expanded():
                 LOGGER.info("{}:expand_and_select_node:expand {}".format(round, [a.name for a in
-                                                                                    current.seq_actions]))
+                                                                                 current.seq_actions]))
                 if current.untried_actions is None:
                     game: Game = Game()
                     game.set_state_from_num_array(self.root_state)
@@ -29,21 +36,21 @@ class MCTS:
             else:
                 (_, best_child) = current.choose_best_child()
                 LOGGER.info("{}:expand_and_select_node:select best child {}".format(round, [a.name for a in
-                                                                                    best_child.seq_actions]))
+                                                                                            best_child.seq_actions]))
                 current = best_child
         return current
 
     def execute_actions(self, node: MCTSNode, game: Game):
         LOGGER.debug(
             "expand_and_select_node:execute_actions: len(seq_actions) {}, seq_actions {}".format(len(node.seq_actions),
-                                                                                   [a.name for a in
-                                                                                    node.seq_actions]))
+                                                                                                 [a.name for a in
+                                                                                                  node.seq_actions]))
         for seq_action in node.seq_actions:
             actions: list[Action] = game.get_legal_actions()
             LOGGER.debug("expand_and_select_node:execute_actions: seq_action {}".format(seq_action.name))
             LOGGER.debug(
                 "expand_and_select_node:execute_actions: len(actions) {}, actions {}".format(len(actions),
-                                                                               [a.name for a in actions]))
+                                                                                             [a.name for a in actions]))
 
             legal_action: Action | None = None
 
@@ -56,7 +63,8 @@ class MCTS:
                 LOGGER.debug("expand_and_select_node:execute_actions: exec {}".format(legal_action.name))
                 legal_action.function()
             else:  # TODO for non-one-depth
-                LOGGER.warning("expand_and_select_node:execute_actions: no matching legal action for {}".format(seq_action.name))
+                LOGGER.warning(
+                    "expand_and_select_node:execute_actions: no matching legal action for {}".format(seq_action.name))
                 # raise RuntimeError
                 break
 
@@ -80,6 +88,8 @@ class MCTS:
         def reward_function(game: Game) -> int:
             root_game = Game()
             root_game.set_state_from_num_array(self.root_state)
+            current_player = root_game.turn_player
+
             winning_faction, \
                 winning_condition, \
                 turns_played, \
@@ -87,8 +97,17 @@ class MCTS:
                 vp_marquise, \
                 vp_eyrie, \
                 winning_dominance = game.get_end_game_data()
-
-            return 1 if root_game.turn_player == winning_faction else 0
+            match self.reward_function:
+                case "win":
+                    return 1 if current_player == winning_faction else 0
+                case "vp-difference":
+                    if current_player == Faction.MARQUISE:
+                        return vp_marquise - vp_eyrie
+                    if current_player == Faction.EYRIE:
+                        return vp_eyrie - vp_marquise
+                case _:
+                    LOGGER.error("rollout:reward_function: unknown function, reward set to 0")
+                    return 0
 
         def exec_seq_actions(game: Game):
             LOGGER.debug(
@@ -123,7 +142,17 @@ class MCTS:
 
         exec_seq_actions(game)
 
+        acc_time: float = 0
+        clock = pygame.time.Clock()
+        # framerate = config['simulation']['framerate']
+        clock.tick()
         while game.running:
+            delta_time = clock.tick()
+            acc_time += delta_time
+            # print(acc_time)
+            if self.time_limit > 0:
+                if acc_time >= self.time_limit:
+                    break
             execute_random_action(game)
 
         return reward_function(game)
@@ -131,9 +160,9 @@ class MCTS:
     def backpropagation(self, node: MCTSNode, reward: int):
 
         node.tries += 1
-        node.wins += reward  # TODO for non-one-depth: reward only same turn player as root
+        node.score += reward  # TODO for non-one-depth: reward only same turn player as root
 
-        LOGGER.debug("backpropagation: reward {}, wins/tries {}/{}".format(reward, node.wins, node.tries))
+        LOGGER.debug("backpropagation: reward {}, wins/tries {}/{}".format(reward, node.score, node.tries))
 
         if node.parent:
             self.backpropagation(node.parent, reward)

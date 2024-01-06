@@ -26,7 +26,7 @@ class MCTSAgent(Agent):
                 mcts = MCTSOneDepth(state, actions,
                                     self.reward_function, self.rollout_no, self.time_limit)
             case _:
-                mcts = MCTS(state, actions, 100)
+                mcts = MCTS(state, actions, self.reward_function, self.rollout_no, self.time_limit)
 
         mcts.run_mcts()
 
