@@ -22,18 +22,18 @@ agent:
     enable: true # true | false
     type: mcts # random | mcts | rnn
     mcts:
-      type: one-depth # one-depth | mcts
+      type: mcts # one-depth | mcts
       reward-function: vp-difference # win | vp-difference
-      rollout-no: 5 # int
-      time-limit: 100 # float (per-rollout in milliseconds)
+      rollout-no: 10 # int
+      time-limit: 1000 # float (per-rollout in milliseconds)
   eyrie:
     enable: true
     type: mcts
     mcts:
-      type: one-depth # one-depth | mcts
+      type: mcts # one-depth | mcts
       reward-function: vp-difference # win | vp-difference
-      rollout-no: 5 # int
-      time-limit: 100 # float (per-rollout in milliseconds)
+      rollout-no: 20 # int
+      time-limit: 1000 # float (per-rollout in milliseconds)
 
 game:
   rendering:
