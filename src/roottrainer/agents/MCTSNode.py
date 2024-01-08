@@ -29,7 +29,7 @@ class MCTSNode:
         child.seq_actions = self.seq_actions + [action]
         # NOTE: seq_actions: action closer to leaf is added at the BACK of the list
 
-    def choose_best_child(self, c_param=0.1) -> (Action, MCTSNode):
+    def choose_best_child(self, c_param=2) -> (Action, MCTSNode):
         choices_weights: list[float] = [(c.score / c.tries + c_param * np.sqrt(np.log(self.tries) / c.tries)) for a, c in
                                         self.children]
         LOGGER.info(

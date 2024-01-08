@@ -4,7 +4,7 @@ from random import randint
 import pygame
 
 from src.game.Faction import Faction
-from src.game.Game import Action, Game, LOGGER
+from src.game.Game import Action, Game
 from src.roottrainer.agents.MCTSNode import MCTSNode
 
 LOGGER = logging.getLogger('mcts_logger')

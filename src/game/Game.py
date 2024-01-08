@@ -160,6 +160,7 @@ class Game:
 
         # Eyrie variables
         self.selected_clearing = None
+        self.ignore_decree = False
 
         # Battle variables
         self.attacker = None
@@ -184,6 +185,9 @@ class Game:
         self.cards_daylight_continuation_func = None
         self.cards_birdsong_continuation_func = None
 
+        self.command_warren_attacker: Faction | None = None
+        self.command_warren_continuation_func = None
+
         # # Add Card To Decree variables
         self.selected_card: Card | None = None
         self.added_bird_card: bool = False
@@ -203,7 +207,7 @@ class Game:
         self.setup_board()
 
     def get_state_as_num_array(self) -> list:
-        n_features: int = 37
+        n_features: int = 40
         arr: list = [[]] * n_features
 
         arr[0] = 1 if self.running else 0
@@ -281,6 +285,9 @@ class Game:
         }
 
         arr[36] = cards_daylight_continuation_func_map[self.cards_daylight_continuation_func]
+        arr[37] = self.ignore_decree
+        arr[38] = 1 if self.command_warren_attacker == Faction.MARQUISE else 0
+        arr[39] = cards_daylight_continuation_func_map[self.command_warren_continuation_func]
 
         return arr
 
@@ -291,7 +298,7 @@ class Game:
             arr[9], arr[10], arr[11], arr[12], arr[13], arr[14], arr[15], arr[16],
             arr[17], arr[18], arr[19], arr[20], arr[21], arr[22], arr[23], arr[24],
             arr[25], arr[26], arr[27], arr[28], arr[29], arr[30], arr[31], arr[32],
-            arr[33], arr[34], arr[35], arr[36]
+            arr[33], arr[34], arr[35], arr[36], arr[37], arr[38], arr[39]
         )
 
     def set_state_from_num_arrays(self,
@@ -332,6 +339,9 @@ class Game:
                                   selecting_piece_to_remove_faction: int = 0,
                                   cards_birdsong_continuation_func=None,
                                   cards_daylight_continuation_func=None,
+                                  ignore_decree = False,
+                                  command_warren_attacker = None,
+                                  command_warren_continuation_func = None
                                   ):
 
         continuation_func_remap = {
@@ -396,7 +406,10 @@ class Game:
             marquise_removed_warrior,
             Faction.MARQUISE if selecting_piece_to_remove_faction == 1 else Faction.EYRIE,
             cards_birdsong_continuation_func_remap[cards_birdsong_continuation_func],
-            cards_daylight_continuation_func_remap[cards_daylight_continuation_func]
+            cards_daylight_continuation_func_remap[cards_daylight_continuation_func],
+            ignore_decree,
+            Faction.MARQUISE if command_warren_attacker == 1 else Faction.EYRIE,
+            cards_daylight_continuation_func_remap[command_warren_continuation_func]
         )
 
     def set_state(self,
@@ -437,6 +450,9 @@ class Game:
                   selecting_piece_to_remove_faction: Faction = Faction.MARQUISE,
                   cards_birdsong_continuation_func=None,
                   cards_daylight_continuation_func=None,
+                  ignore_decree = False,
+                  command_warren_attacker = None,
+                  command_warren_continuation_func = None
                   ):
 
         CARDS: list[Card] = [build_card(i) for i in range(0, 54)]
@@ -506,6 +522,11 @@ class Game:
             DecreeAction.BATTLE: [get_card(i, CARDS) for i in decree_counter[2]],
             DecreeAction.BUILD: [get_card(i, CARDS) for i in decree_counter[3]]
         }
+
+        self.ignore_decree = ignore_decree
+
+        self.command_warren_attacker = command_warren_attacker
+        self.command_warren_continuation_func = command_warren_continuation_func
 
     #####
     # Setup Board
@@ -636,32 +657,21 @@ class Game:
                            + [Action('Next, to Craft', self.eyrie_daylight_craft)]
             case 20006:
                 actions += self.generate_actions_craft_cards(Faction.EYRIE) \
-                           + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_daylight_craft) \
-                           + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_daylight_craft) \
                            + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_daylight_craft) \
                            + [Action('Next, to Resolve Decree',
                                      perform(self.eyrie_daylight_craft_to_resolve_the_decree))]
             case 20007:
                 actions += self.generate_actions_eyrie_recruit() \
-                           + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_recruit) \
-                           + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_recruit) \
                            + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_pre_recruit)
             case 20008:
                 actions += self.generate_actions_agent_eyrie_move() \
-                           + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_move) \
-                           + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_move) \
                            + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_pre_move)
             case 20009:
                 actions += self.generate_actions_agent_eyrie_battle() \
-                           + self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_battle) \
-                           + self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_battle) \
                            + self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_pre_battle)
             case 20010:
-
                 actions.extend(
                     self.generate_actions_eyrie_build() +
-                    self.generate_actions_activate_dominance_card(Faction.EYRIE, self.eyrie_pre_build) +
-                    self.generate_actions_take_dominance_card(Faction.EYRIE, self.eyrie_pre_build) +
                     self.generate_actions_agent_cards_daylight(Faction.EYRIE, self.eyrie_pre_build)
                 )
 
@@ -679,7 +689,7 @@ class Game:
             case 21003:
                 actions += [Action('Next, to Marquise', perform(self.marquise_birdsong_start))]
 
-            case 30001:  # cobbler_agent
+            case 30001:  # cobbler
                 if self.turn_player == Faction.MARQUISE:
                     actions.extend(
                         self.generate_actions_agent_move_with_cont_func(Faction.MARQUISE,
@@ -693,6 +703,11 @@ class Game:
             case 30002:  # codebreakers
                 actions.extend(
                     [Action('Next', self.cards_daylight_continuation_func)]
+                )
+
+            case 30003:
+                actions.extend(
+                    self.generate_actions_agent_command_warren_battle()
                 )
 
             case 40001:  # defender_use_ambush
@@ -783,7 +798,8 @@ class Game:
                 actions.extend(
                     self.generate_actions_select_piece_to_remove()
                 )
-        LOGGER.debug("get_legal_actions:{}: len(actions) {}, actions {}".format(self.sub_phase, len(actions), [a.name for a in actions]))
+        LOGGER.debug("get_legal_actions:{}: len(actions) {}, actions {}".format(self.sub_phase, len(actions),
+                                                                                [a.name for a in actions]))
         return actions
 
     def get_actions(self) -> list[Action]:
@@ -883,7 +899,7 @@ class Game:
         vp_eyrie: int = self.board.faction_points[Faction.EYRIE]
         winning_dominance: None | Card = None
         if config['game']['allow-dominance-card']:
-            winning_dominance = self.check_win_condition_dominance(winning_faction,True) \
+            winning_dominance = self.check_win_condition_dominance(winning_faction, True) \
                 if self.faction_to_faction_board(winning_faction).dominance_card is not None \
                 else None
 
@@ -1215,8 +1231,9 @@ class Game:
     def marquise_overwork(self, clearing: Area, card):
         LOGGER.debug("{}:{}:{}:Enter marquise_overwork".format(self.ui_turn_player, self.phase, self.sub_phase))
 
-        LOGGER.debug("{}:{}:{}:MARQUISE overwork on clearing #{}".format(self.ui_turn_player, self.phase, self.sub_phase,
-                                                                         clearing.area_index))
+        LOGGER.debug(
+            "{}:{}:{}:MARQUISE overwork on clearing #{}".format(self.ui_turn_player, self.phase, self.sub_phase,
+                                                                clearing.area_index))
         self.discard_card(self.marquise.cards_in_hand, card)
         clearing.token_count[Token.WOOD] += 1
 
@@ -1250,7 +1267,8 @@ class Game:
             self.set_actions(actions + [Action('Next', self.marquise_evening_draw_card)])
 
     def marquise_evening_draw_card(self):  # 10006
-        LOGGER.debug("{}:{}:{}:Enter marquise_evening_draw_card".format(self.ui_turn_player, self.phase, self.sub_phase))
+        LOGGER.debug(
+            "{}:{}:{}:Enter marquise_evening_draw_card".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.sub_phase = 10006
 
         self.prompt = "Draw one card, plus one card per draw bonus"
@@ -1573,11 +1591,12 @@ class Game:
         vp_lost = min(self.board.faction_points[Faction.EYRIE],
                       bird_card_in_decree_count)
         self.board.lose_vp(Faction.EYRIE, vp_lost)
-        LOGGER.debug("{}:{}:{}:turmoil:humiliate: {} bird cards in the decree, lost {} vp(s)".format(self.ui_turn_player,
-                                                                                                     self.phase,
-                                                                                                     self.sub_phase,
-                                                                                                     bird_card_in_decree_count,
-                                                                                                     vp_lost))
+        LOGGER.debug(
+            "{}:{}:{}:turmoil:humiliate: {} bird cards in the decree, lost {} vp(s)".format(self.ui_turn_player,
+                                                                                            self.phase,
+                                                                                            self.sub_phase,
+                                                                                            bird_card_in_decree_count,
+                                                                                            vp_lost))
 
     def eyrie_turmoil_purge(self):
         for decree in DecreeAction:
@@ -1744,8 +1763,10 @@ class Game:
     def eyrie_resolve_battle(self):
         decree_action = DecreeAction.BATTLE
 
-        self.remove_decree_counter(decree_action, self.selected_clearing.suit)
-        self.update_prompt_eyrie_decree(decree_action)
+        if not self.ignore_decree:
+            self.remove_decree_counter(decree_action, self.selected_clearing.suit)
+            self.update_prompt_eyrie_decree(decree_action)
+
         self.eyrie_pre_battle()
 
     def eyrie_pre_build(self):  # 20010
@@ -1818,6 +1839,9 @@ class Game:
         if len(eligible_cards) > 0:
             return eligible_cards[0]
         else:
+            if len(bird_cards) == 0:
+                print(eligible_cards, decree_action.name)
+                print(self.eyrie.decree)
             return bird_cards[0]
 
     def activate_leader(self, leader: EyrieLeader):
@@ -2008,7 +2032,8 @@ class Game:
     def generate_actions_agent_move_with_cont_func(self, faction: Faction, cont_func) -> list[Action]:
         actions: list[Action] = []
 
-        can_move_from_clearing = self.find_available_source_clearings(faction, decree=False)  # TODO: investigate this generating 0 actions
+        can_move_from_clearing = self.find_available_source_clearings(faction,
+                                                                      decree=False)  # TODO: investigate this generating 0 actions
         for src in can_move_from_clearing:
             dests = self.find_available_destination_clearings(faction, src)
             for dest in dests:
@@ -2255,6 +2280,7 @@ class Game:
 
     def generate_actions_agent_battle(self, attacker, continuation_func, decree) -> list[Action]:
         clearings = self.get_battlable_clearing(attacker, decree)
+        self.ignore_decree = False
 
         actions: list[Action] = []
         for clearing in clearings:
@@ -3051,10 +3077,31 @@ class Game:
 
         return actions
 
+    def generate_actions_agent_command_warren_battle(self):
+        clearings = self.get_battlable_clearing(self.command_warren_attacker, False)
+        self.ignore_decree = True
+
+        actions: list[Action] = []
+        for clearing in clearings:
+            enemy_factions: list[Faction] = self.get_available_enemy_tokens_from_clearing(self.command_warren_attacker,
+                                                                                          clearing)
+
+            for enemy_faction in enemy_factions:
+                actions.append(
+                    Action("Attack {} in area {}".format(enemy_faction, clearing.area_index),
+                           perform(self.initiate_battle, self.command_warren_attacker, enemy_faction, clearing,
+                                   self.command_warren_continuation_func)))
+
+        return actions
+
     def command_warren(self, card, faction, continuation_func):
+        self.sub_phase = 30003
         faction_board = self.faction_to_faction_board(faction)
         faction_board.activated_card.append(card)
-        self.select_clearing_battle(faction, continuation_func, False)
+
+        self.command_warren_attacker = faction
+        self.command_warren_continuation_func = continuation_func
+        # self.select_clearing_battle(faction, continuation_func, False)
 
     def tax_collector_check(self, faction):
         available = False
