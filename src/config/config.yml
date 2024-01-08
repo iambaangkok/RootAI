@@ -7,28 +7,33 @@ simulation:
     enable: true # true | false
   actions:
     rendering:
-      enable: true # true | false
+      enable: false # true | false
   f-key-action: random # current | random
-  framerate: 60
+  framerate: 1000
   auto-next-round: true # true | false
-  round: 1000
+  round: 50
   output:
-    enable: false # true | false
+    enable: true # true | false
     dir: output # str
 
 agent:
-  require-key-hold: true # true | false
+  require-key-hold: false # true | false
   marquise:
-    enable: false # true | false
-    type: random # random | mcts | rnn
+    enable: true # true | false
+    type: mcts # random | mcts | rnn
+    mcts:
+      type: mcts # one-depth | mcts
+      reward-function: vp-difference # win | vp-difference
+      rollout-no: 100 # int
+      time-limit: 10 # float (per-rollout in milliseconds)
   eyrie:
     enable: true
-    type: mcts
+    type: random
     mcts:
-      type: one-depth # one-depth
+      type: mcts # one-depth | mcts
       reward-function: vp-difference # win | vp-difference
-      rollout-no: 3 # int
-      time-limit: 100 # float (per-rollout in milliseconds)
+      rollout-no: 100 # int
+      time-limit: 10 # float (per-rollout in milliseconds)
 
 game:
   rendering:
