@@ -7,9 +7,9 @@ simulation:
     enable: true # true | false
   actions:
     rendering:
-      enable: false # true | false
+      enable: true # true | false
   f-key-action: random # current | random
-  framerate: 1000
+  framerate: 60
   auto-next-round: true # true | false
   round: 50
   output:
@@ -17,26 +17,26 @@ simulation:
     dir: output # str
 
 agent:
-  require-key-hold: false # true | false
+  require-key-hold: true # true | false
   marquise:
     enable: true # true | false
     type: mcts # random | mcts | rnn
     mcts:
-      type: mcts # one-depth | mcts
+      type: one-depth # one-depth | mcts
       reward-function: vp-difference # win | vp-difference
-      rollout-no: 100 # int
-      time-limit: 10 # float (per-rollout in milliseconds)
+      rollout-no: 5 # int
+      time-limit: 100 # float (per-rollout in milliseconds)
   eyrie:
     enable: true
-    type: random
+    type: mcts
     mcts:
-      type: mcts # one-depth | mcts
+      type: one-depth # one-depth | mcts
       reward-function: vp-difference # win | vp-difference
-      rollout-no: 100 # int
-      time-limit: 10 # float (per-rollout in milliseconds)
+      rollout-no: 5 # int
+      time-limit: 100 # float (per-rollout in milliseconds)
 
 game:
   rendering:
-    enable: false # true | false
+    enable: true # true | false
   victory-point-limit: 30
   allow-dominance-card: false # true | false

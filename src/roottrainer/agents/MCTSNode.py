@@ -35,6 +35,11 @@ class MCTSNode:
         LOGGER.info(
             "choose_best_child: child actions {} {}".format(len(self.children), [a.name for a, c in self.children]))
         LOGGER.info("choose_best_child: choices_weights {}".format(str(choices_weights)))
+        LOGGER.info("choose_best_child: params <score, tries> {}".format(str(
+            ["<{}, {}>".format(c.score, c.tries) for a, c in
+             self.children] + ["<{}, {}>".format(self.score, self.tries)]
+        )
+        ))
         return self.children[np.argmax(choices_weights)]
 
     def is_fully_expanded(self):

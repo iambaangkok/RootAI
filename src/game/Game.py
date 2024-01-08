@@ -74,10 +74,10 @@ class Game:
 
         # Game Data
         self.turn_count: int = 0
-        self.ui_turn_player: Faction = Faction.MARQUISE
-        self.turn_player: Faction = Faction.MARQUISE
+        self.ui_turn_player: Faction = Faction.EYRIE
+        self.turn_player: Faction = Faction.EYRIE
         self.phase: Phase = Phase.BIRDSONG
-        self.sub_phase = 10001
+        self.sub_phase = 20001
         self.is_in_action_sub_phase: bool = False
 
         # Board Game Components
