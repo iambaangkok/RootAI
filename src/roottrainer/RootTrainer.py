@@ -78,8 +78,10 @@ class RootTrainer:
             case "mcts":
                 mcts_type = "one-depth"
                 reward_function = "win"
+                expand_count = 100
                 rollout_no = 1
                 time_limit = -1.0
+                action_count_limit = -1
 
                 if config['agent'][faction.lower()]['mcts']['type']:
                     mcts_type = config['agent'][faction.lower()]['mcts']['type']
@@ -87,13 +89,19 @@ class RootTrainer:
                 if config['agent'][faction.lower()]['mcts']['reward-function']:
                     reward_function = config['agent'][faction.lower()]['mcts']['reward-function']
 
+                if config['agent'][faction.lower()]['mcts']['expand-count']:
+                    expand_count = config['agent'][faction.lower()]['mcts']['expand-count']
+
                 if config['agent'][faction.lower()]['mcts']['rollout-no']:
                     rollout_no = config['agent'][faction.lower()]['mcts']['rollout-no']
 
                 if config['agent'][faction.lower()]['mcts']['time-limit']:
                     time_limit = config['agent'][faction.lower()]['mcts']['time-limit']
 
-                return MCTSAgent(faction, mcts_type, reward_function, rollout_no, time_limit)
+                if config['agent'][faction.lower()]['mcts']['action-count-limit']:
+                    action_count_limit = config['agent'][faction.lower()]['mcts']['action-count-limit']
+
+                return MCTSAgent(faction, mcts_type, reward_function, expand_count, rollout_no, time_limit, action_count_limit)
 
     def run(self):
         while self.running:

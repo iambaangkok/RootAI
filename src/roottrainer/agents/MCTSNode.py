@@ -58,6 +58,6 @@ class MCTSNode:
         child = MCTSNode(self.depth + 1, self, self.seq_actions + [action], None)
         self.add_child(action, child)
         # LOGGER.info("post-add-children: {}".format([(n[0].name,n[1]) for n in self.children]))
-        LOGGER.info("add child: {}".format([n.name for n in self.seq_actions + [action]]))
+        LOGGER.debug("add child: {}".format([n.name for n in self.seq_actions + [action]]))
 
         return child

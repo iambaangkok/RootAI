@@ -24,16 +24,20 @@ agent:
     mcts:
       type: mcts # one-depth | mcts
       reward-function: vp-difference # win | vp-difference
-      rollout-no: 10 # int
-      time-limit: 1000 # float (per-rollout in milliseconds)
+      expand-count: 10 # int
+      rollout-no: 1 # int
+      time-limit: 1000 # float (per-rollout in milliseconds) (negative for no limit)
+      action-count-limit: 20 # int (negative for no limit)
   eyrie:
     enable: true
     type: mcts
     mcts:
       type: mcts # one-depth | mcts
       reward-function: vp-difference # win | vp-difference
-      rollout-no: 20 # int
-      time-limit: 1000 # float (per-rollout in milliseconds)
+      expand-count: 100 # int
+      rollout-no: 1 # int
+      time-limit: 1000 # float (per-rollout in milliseconds) (negative for no limit)
+      action-count-limit: 20 # int (negative for no limit)
 
 game:
   rendering:
