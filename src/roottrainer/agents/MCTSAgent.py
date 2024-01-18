@@ -1,7 +1,7 @@
 import logging
 
 from src.game.Faction import Faction
-from src.game.Game import Action, Game
+from src.game.GameLogic import Action, GameLogic
 from src.roottrainer.agents.Agent import Agent
 from src.roottrainer.agents.MCTS import MCTS
 from src.roottrainer.agents.OneDepthMCTS import MCTSOneDepth

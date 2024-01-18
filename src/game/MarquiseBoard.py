@@ -1,19 +1,19 @@
 import pygame
-from pygame import Color, Vector2, Surface, Rect
+from pygame import Color, Vector2, Surface
 
 from src.config import Config, Colors
 from src.game.Building import Building
 from src.game.Card import Card
-from src.game.FactionBoard import FactionBoard
-from src.game.Suit import Suit
+from src.game.FactionBoardLogic import FactionBoardLogic, FactionBoard
 from src.utils import text_utils
 
 BUILDING_TRACKER_NAME = [Building.SAWMILL, Building.WORKSHOP, Building.RECRUITER]
 
 
-class MarquiseBoard(FactionBoard):
-    def __init__(self, name: str, color: Color, reserved_warriors: int, starting_point: Vector2):
-        super().__init__(name, color, reserved_warriors, starting_point)
+class MarquiseBoardLogic(FactionBoardLogic):
+
+    def __init__(self, reserved_warriors: int):
+        super().__init__(reserved_warriors)
 
         self.building_trackers: {Building, int} = {
             Building.SAWMILL: 1,
@@ -52,7 +52,6 @@ class MarquiseBoard(FactionBoard):
 
     def __set_state_from_num_arrays(self,
                                     building_trackers: list[int] = None):
-
         for i, building in enumerate(self.building_trackers):
             self.building_trackers[building] = building_trackers[i]
 
@@ -66,6 +65,14 @@ class MarquiseBoard(FactionBoard):
         cost = self.building_cost[self.building_trackers[building]]
         self.building_trackers[building] = self.building_trackers[building] + 1
         return cost
+
+
+class MarquiseBoard(FactionBoard):
+
+    def __init__(self, marquise_board_logic: MarquiseBoardLogic,
+                 name: str, color: Color, starting_point: Vector2):
+        super().__init__(marquise_board_logic, name, color, starting_point)
+        self.logic = marquise_board_logic
 
     def draw(self, screen: Surface):
         super().draw(screen)
@@ -98,21 +105,21 @@ class MarquiseBoard(FactionBoard):
         offset_x = 100
 
         for j in range(6):
-            if j < self.building_trackers[title]:
+            if j < self.logic.building_trackers[title]:
                 draw_img = new_img
             else:
                 draw_img = img
             screen.blit(draw_img,
                         (starting_point.x + (img_size.x + gap) * j + gap + offset_x, starting_point.y))
 
-            if self.building_reward[title][j] > 0:
-                reward = Config.FONT_SM_BOLD.render("+" + str(self.building_reward[title][j]), True, (206, 215, 132))
+            if self.logic.building_reward[title][j] > 0:
+                reward = Config.FONT_SM_BOLD.render("+" + str(self.logic.building_reward[title][j]), True, (206, 215, 132))
                 reward = text_utils.add_outline(reward, 2, Colors.GREY_DARK_2)
 
                 screen.blit(reward, (starting_point.x + (img_size.x + gap) * j + gap + offset_x, starting_point.y))
 
-            if self.building_reward_card[title][j] > 0:
-                reward = Config.FONT_SM_BOLD.render("+" + str(self.building_reward_card[title][j]), True,
+            if self.logic.building_reward_card[title][j] > 0:
+                reward = Config.FONT_SM_BOLD.render("+" + str(self.logic.building_reward_card[title][j]), True,
                                                     (206, 215, 132))
                 reward = text_utils.add_outline(reward, 2, Colors.BLUE)
 

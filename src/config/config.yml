@@ -13,8 +13,11 @@ simulation:
   auto-next-round: true # true | false
   round: 50
   output:
-    enable: true # true | false
+    enable: false # true | false
     dir: output # str
+  multiprocessing:
+    enable: true # true | false
+    core: 12
 
 agent:
   require-key-hold: true # true | false
@@ -34,10 +37,10 @@ agent:
     mcts:
       type: mcts # one-depth | mcts
       reward-function: vp-difference # win | vp-difference
-      expand-count: 100 # int
-      rollout-no: 1 # int
-      time-limit: 1000 # float (per-rollout in milliseconds) (negative for no limit)
-      action-count-limit: 20 # int (negative for no limit)
+      expand-count: 10 # int
+      rollout-no: 10000 # int
+      time-limit: -1 # float (per-rollout in milliseconds) (negative for no limit)
+      action-count-limit: -1 # int (negative for no limit)
 
 game:
   rendering:

@@ -8,7 +8,7 @@ from pygame.time import Clock
 
 from src.config import Config, Colors
 from src.game.Faction import Faction
-from src.game.Game import Action, Game
+from src.game.GameLogic import Action, GameLogic, Game
 from src.roottrainer.agents.Agent import Agent
 from src.roottrainer.CSVOutputWriter import CSVOutputWriter
 from src.roottrainer.agents.MCTSAgent import MCTSAgent
@@ -21,9 +21,8 @@ LOGGER = logging.getLogger('trainer_logger')
 
 
 class RootTrainer:
-    def __init__(self):
-        pygame.init()
-        self.screen: Surface = pygame.display.set_mode((Config.SCREEN_WIDTH, Config.SCREEN_HEIGHT))
+    def __init__(self, screen: Surface):
+        self.screen: Surface = screen
         self.clock: Clock = pygame.time.Clock()
         self.running: bool = True
 
@@ -127,14 +126,14 @@ class RootTrainer:
     def update(self):
         keys = pygame.key.get_pressed()  # Checking pressed (hold) keys
 
-        if not self.get_game().running and not self.collected_end_game_data:
+        if not self.get_game_logic().running and not self.collected_end_game_data:
             self.winning_faction, \
                 self.winning_condition, \
                 self.turns_played, \
                 self.turn_player, \
                 self.vp_marquise, \
                 self.vp_eyrie, \
-                self.winning_dominance = self.get_game().get_end_game_data()
+                self.winning_dominance = self.get_game_logic().get_end_game_data()
 
             if self.winning_dominance is None:
                 self.winning_dominance = "none"
@@ -147,7 +146,7 @@ class RootTrainer:
                     self.winning_faction, self.winning_condition, self.turns_played, self.turn_player,
                     self.vp_marquise, self.vp_eyrie, self.winning_dominance])
 
-        if not self.get_game().running:
+        if not self.get_game_logic().running:
             if self.round + 1 <= self.round_limit:
                 if config['simulation']['auto-next-round']:
                     self.next_round()
@@ -162,11 +161,11 @@ class RootTrainer:
             else:
                 self.running = False
 
-        if self.get_game().running:
+        if self.get_game_logic().running:
             if keys[pygame.K_a] or (not config['agent']['require-key-hold']):
-                if self.get_game().turn_player == Faction.MARQUISE and config['agent']['marquise']['enable']:
+                if self.get_game_logic().turn_player == Faction.MARQUISE and config['agent']['marquise']['enable']:
                     self.execute_agent_action(Faction.MARQUISE)
-                elif self.get_game().turn_player == Faction.EYRIE and config['agent']['eyrie']['enable']:
+                elif self.get_game_logic().turn_player == Faction.EYRIE and config['agent']['eyrie']['enable']:
                     self.execute_agent_action(Faction.EYRIE)
 
             # elif keys[pygame.K_f]:
@@ -176,12 +175,12 @@ class RootTrainer:
             #         self.reset_arrow()
             #
             if keys[pygame.K_f] and config['simulation']['f-key-action'] == 'random':
-                if self.get_game().turn_player == Faction.MARQUISE and not config['agent']['marquise']['enable']:
+                if self.get_game_logic().turn_player == Faction.MARQUISE and not config['agent']['marquise']['enable']:
                     self.random_arrow()
                     self.execute_action()
                     self.get_actions()
                     self.reset_arrow()
-                elif self.get_game().turn_player == Faction.EYRIE and not config['agent']['eyrie']['enable']:
+                elif self.get_game_logic().turn_player == Faction.EYRIE and not config['agent']['eyrie']['enable']:
                     self.random_arrow()
                     self.execute_action()
                     self.get_actions()
@@ -190,7 +189,7 @@ class RootTrainer:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
-            if self.get_game().running:
+            if self.get_game_logic().running:
                 if event.type == pygame.KEYDOWN:
                     self.move_arrow(event.key)
 
@@ -266,18 +265,18 @@ class RootTrainer:
         action = agent.choose_action(self.get_game_state(), self.actions)
         action_index = self.actions.index(action)
         self.set_arrow(action_index)
-        decree_counter = self.get_game().decree_counter
+        decree_counter = self.get_game_logic().decree_counter
         self.execute_action()
         self.get_actions()
         self.reset_arrow()
 
     def get_actions(self):
-        if self.get_game().turn_player == Faction.MARQUISE and config['agent']['marquise']['enable']:
-            self.actions = self.get_game().get_agent_actions()
-        elif self.get_game().turn_player == Faction.EYRIE and config['agent']['eyrie']['enable']:
-            self.actions = self.get_game().get_agent_actions()
+        if self.get_game_logic().turn_player == Faction.MARQUISE and config['agent']['marquise']['enable']:
+            self.actions = self.get_game_logic().get_agent_actions()
+        elif self.get_game_logic().turn_player == Faction.EYRIE and config['agent']['eyrie']['enable']:
+            self.actions = self.get_game_logic().get_agent_actions()
         else:
-            self.actions = self.get_game().get_actions()
+            self.actions = self.get_game_logic().get_actions()
 
     def execute_action(self):
         self.current_action.function()
@@ -294,20 +293,23 @@ class RootTrainer:
 
     def get_game_as_num_array(self):
         arr: list = []
-        arr = self.get_game().get_state_as_num_array()
+        arr = self.get_game_logic().get_state_as_num_array()
         return arr
+
+    def get_game_logic(self) -> GameLogic:
+        return self.get_game().logic
 
     def get_game(self) -> Game:
         return self.game
 
     def new_game(self):
-        self.game = Game()
+        self.game = GameLogic()
 
     def set_game_state(self, arr: list = None):
-        self.game.set_state_from_num_array(arr)
+        self.game.logic.set_state_from_num_array(arr)
 
     def get_game_state(self) -> list:
-        return self.game.get_state_as_num_array()
+        return self.game.logic.get_state_as_num_array()
 
     def new_game_from_current_game_state(self):
         LOGGER.info("new_game_from_current_game_state")
@@ -346,7 +348,7 @@ class RootTrainer:
         if config['simulation']['actions']['rendering']['enable']:
             self.draw_action(self.screen)
 
-            if not self.get_game().running:
+            if not self.get_game_logic().running:
                 self.draw_game_ended(self.screen)
 
     def draw_fps_text(self):
@@ -390,9 +392,9 @@ class RootTrainer:
     def draw_action(self, screen: Surface):
         # Phase
         color = Colors.ORANGE
-        if self.get_game().turn_player == Faction.EYRIE:
+        if self.get_game_logic().turn_player == Faction.EYRIE:
             color = Colors.BLUE
-        phase = Config.FONT_MD_BOLD.render("{} ({})".format(self.get_game().phase, self.get_game().sub_phase), True, color)
+        phase = Config.FONT_MD_BOLD.render("{} ({})".format(self.get_game_logic().phase, self.get_game_logic().sub_phase), True, color)
         phase_rect = phase.get_rect()
         starting_point = Vector2(0.75 * Config.SCREEN_WIDTH, 0.0 * Config.SCREEN_HEIGHT)
         shift = Vector2(10, 0.05 * Config.SCREEN_HEIGHT)
@@ -411,7 +413,7 @@ class RootTrainer:
         shift = Vector2(0, 8)
         prompt_rect.topleft = phase_rect.bottomleft + shift
         # screen.blit(prompt, prompt_rect)
-        draw_text_in_rect(screen, "{}".format(self.get_game().prompt), Colors.WHITE, prompt_rect, Config.FONT_1, True)
+        draw_text_in_rect(screen, "{}".format(self.get_game_logic().prompt), Colors.WHITE, prompt_rect, Config.FONT_1, True)
 
         self.draw_arrow(screen, starting_point)
         self.draw_action_list(screen, starting_point)
