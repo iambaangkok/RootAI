@@ -4,7 +4,7 @@ import pygame
 from pygame import Rect, Color, Surface
 
 from src.config import Config, Colors
-from src.game.Area import Area
+from src.game.AreaLogic import AreaLogic, Area
 from src.game.Faction import Faction
 from src.game.Item import Item
 from src.game.Suit import Suit
@@ -45,15 +45,10 @@ def add_tuple(a, b):
     return tuple(map(lambda i, j: i + j, a, b))
 
 
-class Board:
-    dimension: float = 800
-    rect: Rect = Rect(((Config.SCREEN_WIDTH - dimension) / 2, (Config.SCREEN_HEIGHT - dimension) / 2 - 50),
-                      (dimension, dimension))
+class BoardLogic:
 
-    def __init__(self, areas: list[Area]):
-        self.name: str = "Forest"
-        self.color: Color = Colors.GREEN
-        self.areas: list[Area] = areas
+    def __init__(self, area_logics: list[AreaLogic]):
+        self.areas: list[AreaLogic] = area_logics
         self.paths: list[tuple[int, int]] = []
         self.faction_points = {
             Faction.MARQUISE: 0,
@@ -91,7 +86,7 @@ class Board:
 
         self.item_supply_available = [item_available == 1 for item_available in item_supply_available]
 
-    def get_area(self, area_index: int) -> Area | None:
+    def get_area(self, area_index: int) -> AreaLogic | None:
         for area in self.areas:
             if area.area_index == area_index:
                 return area
@@ -107,7 +102,7 @@ class Board:
         self.areas[area_1].connected_clearings.append(self.areas[area_2])
         self.areas[area_2].connected_clearings.append(self.areas[area_1])
 
-    def get_min_warrior_areas(self) -> list[Area]:
+    def get_min_warrior_areas(self) -> list[AreaLogic]:
         min_warrior = math.inf
         for area in self.areas:
             sum_warrior = area.sum_all_warriors()
@@ -139,10 +134,20 @@ class Board:
 
         return len([area for area in self.areas if area.ruler() == warrior and area.suit == suit])
 
-    #####
-    # Render
+
+class Board:
+    dimension: float = 800
+    rect: Rect = Rect(((Config.NATIVE_SCREEN_WIDTH - dimension) / 2, (Config.NATIVE_SCREEN_HEIGHT - dimension) / 2 - 50),
+                      (dimension, dimension))
+
+    def __init__(self, board_logic: BoardLogic, areas: list[Area]):
+        self.name: str = "Forest"
+        self.color: Color = Colors.GREEN
+        self.logic: BoardLogic = board_logic
+        self.areas: list[Area] = areas
+
     def draw(self, screen: Surface):
-        pygame.draw.rect(screen, self.color, Board.rect, width=1)
+        pygame.draw.rect(screen, self.color, self.rect, width=1)
 
         self.draw_paths_clearing(screen)
         self.draw_areas(screen)
@@ -153,7 +158,7 @@ class Board:
             area.draw(screen)
 
     def draw_paths_clearing(self, screen: Surface):
-        for path in self.paths:
+        for path in self.logic.paths:
             area_a = self.areas[path[0]]
             area_b = self.areas[path[1]]
             additional_shift = 5
@@ -166,7 +171,7 @@ class Board:
         pass
 
     def draw_board_info(self, screen):
-        starting_point = ((Config.SCREEN_WIDTH - self.dimension) / 2, (Config.SCREEN_HEIGHT - 130))
+        starting_point = ((Config.NATIVE_SCREEN_WIDTH - self.dimension) / 2, (Config.NATIVE_SCREEN_HEIGHT - 130))
 
         size = (self.dimension, 130)
         block_one_third = (size[0] / 3, size[1] / 3)
@@ -190,7 +195,7 @@ class Board:
         screen.blit(points_text, add_tuple(starting_point, shift))
 
         faction_pos_ind = 0
-        for (faction, vp) in self.faction_points.items():
+        for (faction, vp) in self.logic.faction_points.items():
             rendered_text = Config.FONT_LG_BOLD.render("{}".format(vp), True, FACTION_COLORS[faction])
             pos = (starting_point[0] + faction_pos_ind * 45 + points_text.get_width() + 20, starting_point[1])
             screen.blit(rendered_text, add_tuple(pos, shift))
@@ -204,12 +209,13 @@ class Board:
         box = Rect(starting_point, size)
         pygame.draw.rect(screen, self.color, box, width=1)
 
-        turn_text = Config.FONT_MD_BOLD.render("Turn {}:".format(self.turn_count), True, Colors.WHITE)
+        turn_text = Config.FONT_MD_BOLD.render("Turn {}:".format(self.logic.turn_count), True, Colors.WHITE)
         shift = (10, size[1] / 2 - turn_text.get_height() / 2)
 
         screen.blit(turn_text, add_tuple(starting_point, shift))
 
-        player_turn_text = Config.FONT_MD_BOLD.render("{}'s turn".format(FACTION_ALIAS[self.turn_player]), True, FACTION_COLORS[self.turn_player])
+        player_turn_text = Config.FONT_MD_BOLD.render("{}'s turn".format(FACTION_ALIAS[self.logic.turn_player]), True,
+                                                      FACTION_COLORS[self.logic.turn_player])
         pos = (starting_point[0] + turn_text.get_width() + 10, starting_point[1])
         screen.blit(player_turn_text, add_tuple(pos, shift))
 
@@ -229,14 +235,14 @@ class Board:
         img_size = (40, 40)
         img_pos = add_tuple(starting_point, (10, item_supply_text.get_height() + 10))
 
-        for i in range(len(self.item_supply_available)):
+        for i in range(len(self.logic.item_supply_available)):
             row = i // 6
             col = i % 6
 
             item_image = pygame.image.load("../assets/images/{}.png".format(ITEM_SUPPLY_RENDER[row][col]))
             item_image = pygame.transform.scale(item_image, img_size)
 
-            if self.item_supply_available[i]:
+            if self.logic.item_supply_available[i]:
                 screen.blit(item_image,
                             (img_pos[0] + img_size[0] * col, img_pos[1] + img_size[0] * row))
             else:

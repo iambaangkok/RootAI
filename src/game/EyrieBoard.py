@@ -7,7 +7,7 @@ import pygame
 from pygame import Color, Vector2, Surface
 
 from src.config import Config, Colors
-from src.game.FactionBoard import FactionBoard
+from src.game.FactionBoardLogic import FactionBoardLogic, FactionBoard
 from src.game.Card import Card, CardPhase
 from src.utils.utils import get_card
 from src.game.Suit import Suit
@@ -74,12 +74,12 @@ def count_decree_action_static(decree: {DecreeAction: list[Card]}, decree_action
     return len([x for x in decree[decree_action] if x.suit == suit])
 
 
-class EyrieBoard(FactionBoard):
+class EyrieBoardLogic(FactionBoardLogic):
     ROOST_REWARD_VP: list[int] = [0, 0, 1, 2, 3, 4, 4, 5]
     ROOST_REWARD_CARD: list[int] = [0, 0, 0, 1, 1, 1, 2, 2]
 
-    def __init__(self, name: str, color: Color, reserved_warriors: int, starting_point: Vector2):
-        super().__init__(name, color, reserved_warriors, starting_point)
+    def __init__(self, reserved_warriors: int):
+        super().__init__(reserved_warriors)
         self.roost_tracker: int = 0
         self.leaders: {EyrieLeader: LeaderStatus} = {
             EyrieLeader.COMMANDER: LeaderStatus.INACTIVE,
@@ -197,6 +197,14 @@ class EyrieBoard(FactionBoard):
     def count_decree_action_with_suit(self, decree_action: DecreeAction | str, suit: Suit | str) -> int:
         return count_decree_action_static(self.decree, decree_action, suit)
 
+
+class EyrieBoard(FactionBoard):
+
+    def __init__(self, eyrie_board_logic: EyrieBoardLogic,
+                 name: str, color: Color, starting_point: Vector2):
+        super().__init__(eyrie_board_logic, name, color, starting_point)
+        self.logic = eyrie_board_logic
+
     def draw(self, screen: Surface):
         super().draw(screen)
 
@@ -226,41 +234,41 @@ class EyrieBoard(FactionBoard):
         offset_x = 75
 
         for j in range(7):
-            if j < self.roost_tracker:
+            if j < self.logic.roost_tracker:
                 draw_img = img_dimmed
             else:
                 draw_img = img
             screen.blit(draw_img,
                         (starting_point.x + (img_size.x + gap) * j + gap + offset_x, starting_point.y))
-            if EyrieBoard.ROOST_REWARD_VP[j] > 0:
-                reward_vp = Config.FONT_SM_BOLD.render("+" + str(EyrieBoard.ROOST_REWARD_VP[j]), True, (206, 215, 132))
+            if EyrieBoardLogic.ROOST_REWARD_VP[j] > 0:
+                reward_vp = Config.FONT_SM_BOLD.render("+" + str(EyrieBoardLogic.ROOST_REWARD_VP[j]), True, (206, 215, 132))
                 reward_vp = text_utils.add_outline(reward_vp, 2, Colors.GREY_DARK_2)
 
                 screen.blit(reward_vp, (starting_point.x + (img_size.x + gap) * j + gap + offset_x, starting_point.y))
 
-            if EyrieBoard.ROOST_REWARD_CARD[j] > 0:
-                reward_card = Config.FONT_SM_BOLD.render("+" + str(EyrieBoard.ROOST_REWARD_CARD[j]), True, (206, 215, 132))
+            if EyrieBoardLogic.ROOST_REWARD_CARD[j] > 0:
+                reward_card = Config.FONT_SM_BOLD.render("+" + str(EyrieBoardLogic.ROOST_REWARD_CARD[j]), True, (206, 215, 132))
                 reward_card = text_utils.add_outline(reward_card, 2, Colors.BLUE)
 
                 screen.blit(reward_card, (starting_point.x + (img_size.x + gap) * j + gap + offset_x,
                                           starting_point.y + img_size.y - Config.FONT_SM_BOLD.get_height()))
 
     def draw_leader(self, screen: Surface, starting_point: Vector2):
-        shift = Vector2(FactionBoard.dimension.x * 0.05, - FactionBoard.dimension.y * 0.04)
+        shift = Vector2(FactionBoardLogic.dimension.x * 0.05, - FactionBoardLogic.dimension.y * 0.04)
         text = Config.FONT_1.render("{}".format("leader"), True, Colors.BLUE)
         screen.blit(text, starting_point + shift)
-        shift = Vector2(FactionBoard.dimension.x * 0.05, 0)
-        text = Config.FONT_1.render("{}".format(self.get_active_leader()), True, Colors.BLUE)
+        shift = Vector2(FactionBoardLogic.dimension.x * 0.05, 0)
+        text = Config.FONT_1.render("{}".format(self.logic.get_active_leader()), True, Colors.BLUE)
         screen.blit(text, starting_point + shift)
 
     def draw_decree(self, screen: Surface, starting_point: Vector2):
 
         # DecreeAction
-        width = FactionBoard.dimension.x / len(self.decree) - FactionBoard.dimension.x * 0.08
-        offset_x = FactionBoard.dimension.x * 0.3
+        width = FactionBoardLogic.dimension.x / len(self.logic.decree) - FactionBoardLogic.dimension.x * 0.08
+        offset_x = FactionBoardLogic.dimension.x * 0.3
         offset_y = Config.FONT_1.get_height()
 
-        for index, decree_action in enumerate(self.decree.keys()):
+        for index, decree_action in enumerate(self.logic.decree.keys()):
             title_text = Config.FONT_1.render(decree_action, True, Colors.BLUE)
             shift: Vector2 = Vector2(index * width + offset_x, offset_y)
 
@@ -277,8 +285,8 @@ class EyrieBoard(FactionBoard):
             elif suit == Suit.RABBIT:
                 color = Colors.RABBIT
 
-            for j, decree_action in enumerate(self.decree.keys()):
-                title_text = Config.FONT_1.render(str(self.count_decree_action_with_suit(decree_action, suit)), True, color)
+            for j, decree_action in enumerate(self.logic.decree.keys()):
+                title_text = Config.FONT_1.render(str(self.logic.count_decree_action_with_suit(decree_action, suit)), True, color)
                 shift: Vector2 = Vector2(j * width + offset_x, (i + 2) * offset_y)
 
                 screen.blit(title_text, starting_point + shift)

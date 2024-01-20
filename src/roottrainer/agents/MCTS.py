@@ -1,18 +1,55 @@
 import logging
-from multiprocessing import Process, Manager
+import time
+from multiprocessing.pool import MapResult
 from random import randint
 from threading import Thread
 
-import pygame
+import pathos.pools
+import yaml
+from pathos.pools import ParallelPool, ProcessPool
+from pathos.serial import SerialPool
+
+# from pathos.multiprocessing import ProcessingPool
 
 from src.game.Faction import Faction
-from src.game.Game import Action, Game
+from src.game.GameLogic import Action, GameLogic
 from src.roottrainer.agents.MCTSNode import MCTSNode
+
+config = yaml.safe_load(open("config/config.yml"))
 
 LOGGER = logging.getLogger('mcts_logger')
 
 
-def execute_random_action(game: Game):
+def exec_seq_actions(node: MCTSNode, game_logic: GameLogic):
+    LOGGER.debug(
+        "expand_and_select_node:execute_actions: len(seq_actions) {}, seq_actions {}".format(len(node.seq_actions),
+                                                                                             [a.name for a in
+                                                                                              node.seq_actions]))
+    for seq_action in node.seq_actions:
+        actions: list[Action] = game_logic.get_legal_actions()
+        LOGGER.debug("expand_and_select_node:execute_actions: seq_action {}".format(seq_action.name))
+        LOGGER.debug(
+            "expand_and_select_node:execute_actions: len(actions) {}, actions {}".format(len(actions),
+                                                                                         [a.name for a in actions]))
+
+        legal_action: Action | None = None
+
+        for action in actions:
+            if seq_action == action:
+                legal_action = action
+                break
+
+        if legal_action:
+            LOGGER.debug("expand_and_select_node:execute_actions: exec {}".format(legal_action.name))
+            legal_action.function()
+        else:  # TODO for non-one-depth
+            LOGGER.warning(
+                "expand_and_select_node:execute_actions: no matching legal action for {}".format(seq_action.name))
+            # raise RuntimeError
+            break
+
+
+def execute_random_action(game: GameLogic):
     actions = game.get_legal_actions()
     # LOGGER.debug("rollout:execute_random_action: actions {} {}".format(len(actions), [a.name for a in actions]))
     if len(actions) > 1:
@@ -26,8 +63,8 @@ def execute_random_action(game: Game):
     actions[rand].function()
 
 
-def reward_function(game: Game, root_state: list, reward_function_type: str) -> int:
-    root_game = Game()
+def reward_function(game: GameLogic, root_state: list, reward_function_type: str) -> int:
+    root_game = GameLogic()
     root_game.set_state_from_num_array(root_state)
     current_player = root_game.turn_player
 
@@ -51,14 +88,15 @@ def reward_function(game: Game, root_state: list, reward_function_type: str) -> 
             return 0
 
 
-def exec_random_actions(process_id: int, game: Game, reward_function_type: str,
-                        time_limit: float, action_count_limit: int, rewards: dict[int]):
+def exec_random_actions(process_id: int, game: GameLogic, reward_function_type: str, root_state: list,
+                        time_limit: float, action_count_limit: int, rewards: dict[int] = None):
     acc_time: float = 0
-    clock = pygame.time.Clock()
+    time_0 = time.time()
     action_count: int = 0
 
     while game.running:
-        delta_time = clock.tick()
+        time_1 = time.time()
+        delta_time = time_0 - time_1
         acc_time += delta_time
         if time_limit > 0:
             if acc_time >= time_limit:
@@ -72,9 +110,10 @@ def exec_random_actions(process_id: int, game: Game, reward_function_type: str,
 
         execute_random_action(game)
         action_count += 1
+        time_0 = time_1
 
-    clock.tick()
-    rewards[process_id] = reward_function(game, reward_function_type)
+    # rewards[process_id] = reward_function(game, root_state, reward_function_type)
+    return reward_function(game, root_state, reward_function_type)
 
 
 class MCTS:
@@ -90,6 +129,16 @@ class MCTS:
         self.depth_limit: int = depth_limit
         self.action_count_limit: int = action_count_limit
 
+    def get_game_logic_at_root_state(self) -> GameLogic:
+        game_logic: GameLogic = GameLogic()
+        game_logic.set_state_from_num_array(self.root_state)
+        return game_logic
+
+    def get_game_logic_at_node(self, node: MCTSNode) -> GameLogic:
+        game_logic: GameLogic = self.get_game_logic_at_root_state()
+        exec_seq_actions(node, game_logic)
+        return game_logic
+
     def expand_and_select_node(self, round):
         current: MCTSNode = self.root
         while not current.terminal_flag:
@@ -98,9 +147,9 @@ class MCTS:
                 LOGGER.info("{}:expand_and_select_node:expand {}".format(round, [a.name for a in
                                                                                  current.seq_actions]))
                 if current.untried_actions is None:
-                    game: Game = Game()
+                    game: GameLogic = GameLogic()
                     game.set_state_from_num_array(self.root_state)
-                    self.exec_seq_actions(current, game)
+                    exec_seq_actions(current, game)
                     current.untried_actions = game.get_legal_actions()
                 return current.expand()
             else:
@@ -110,63 +159,64 @@ class MCTS:
                 current = best_child
         return current
 
-    def exec_seq_actions(self, node: MCTSNode, game: Game):
-        LOGGER.debug(
-            "expand_and_select_node:execute_actions: len(seq_actions) {}, seq_actions {}".format(len(node.seq_actions),
-                                                                                                 [a.name for a in
-                                                                                                  node.seq_actions]))
-        for seq_action in node.seq_actions:
-            actions: list[Action] = game.get_legal_actions()
-            LOGGER.debug("expand_and_select_node:execute_actions: seq_action {}".format(seq_action.name))
-            LOGGER.debug(
-                "expand_and_select_node:execute_actions: len(actions) {}, actions {}".format(len(actions),
-                                                                                             [a.name for a in actions]))
-
-            legal_action: Action | None = None
-
-            for action in actions:
-                if seq_action == action:
-                    legal_action = action
-                    break
-
-            if legal_action:
-                LOGGER.debug("expand_and_select_node:execute_actions: exec {}".format(legal_action.name))
-                legal_action.function()
-            else:  # TODO for non-one-depth
-                LOGGER.warning(
-                    "expand_and_select_node:execute_actions: no matching legal action for {}".format(seq_action.name))
-                # raise RuntimeError
-                break
-
     def rollout(self, node: MCTSNode) -> int:
 
-        game = Game()
-        game.set_state_from_num_array(self.root_state)
+        game_logic = GameLogic()
+        game_logic.set_state_from_num_array(self.root_state)
 
-        self.exec_seq_actions(node, game)
+        exec_seq_actions(node, game_logic)
 
-        processes: list[Process] = []
-        rewards: dict = Manager().dict()
-        for proc_id in range(self.rollout_no):
-            g = Game()
-            g.set_state_from_num_array(game.get_state_as_num_array())
-            processes.append(
-                Process(target=exec_random_actions, args=(proc_id, game, self.reward_function_type,
-                                                          self.time_limit, self.action_count_limit, rewards))
-            )
-        for process in processes:
-            process.start()
-        for process in processes:
-            process.join()
+        # Multicore / Single core Simulation
+        if config['simulation']['multiprocessing']['enable']:
+            start_time = time.time()
 
-        return sum(rewards)
+            core_count: int = config['simulation']['multiprocessing']['core']
+            LOGGER.info("rollout: multiprocessing with {} cores".format(core_count))
+
+            pool: ProcessPool = ProcessPool(core_count)
+            rewards: MapResult = pool.amap(
+                exec_random_actions, [i for i in range(self.rollout_no)],
+                [game_logic] * self.rollout_no,
+                [self.reward_function_type] * self.rollout_no,
+                [self.root_state] * self.rollout_no,
+                [self.time_limit] * self.rollout_no,
+                [self.action_count_limit] * self.rollout_no)
+            while not rewards.ready():
+                time.sleep(0.00001)
+            end_time = time.time()
+            LOGGER.info("rollout: multiprocessing with {} cores: finished in {} s"
+                        .format(core_count, end_time - start_time))
+            return sum(rewards.get(0.00001))
+        else:
+            start_time = time.time()
+
+            LOGGER.info("rollout: running on single process")
+
+            rewards: dict = {}
+            for i in range(self.rollout_no):
+                rewards[i] = exec_random_actions(
+                    i, game_logic, self.reward_function_type, self.root_state,
+                    self.time_limit, self.action_count_limit)
+            end_time = time.time()
+            LOGGER.info("rollout: running on single process: finished in {} s"
+                        .format(end_time - start_time))
+            return sum(rewards)
 
     def backpropagation(self, node: MCTSNode, reward: int):
 
-        node.tries += 1
-        node.score += reward  # TODO for non-one-depth: reward only same turn player as root
+        node.tries += self.rollout_no
 
-        LOGGER.debug("backpropagation: reward {}, wins/tries {}/{}".format(reward, node.score, node.tries))
+        actual_reward: int = reward
+
+        game_logic_root: GameLogic = self.get_game_logic_at_root_state()
+        game_logic: GameLogic = self.get_game_logic_at_node(node)
+
+        if game_logic_root.turn_player != game_logic.turn_player:
+            actual_reward = -reward
+
+        node.score += actual_reward
+
+        LOGGER.debug("backpropagation: actual_reward {}, wins/tries {}/{}".format(actual_reward, node.score, node.tries))
 
         if node.parent:
             self.backpropagation(node.parent, reward)
@@ -174,7 +224,7 @@ class MCTS:
     def run_mcts(self):
         LOGGER.info("run_mcts, rollout_no {}".format(self.rollout_no))
 
-        game: Game = Game()
+        game: GameLogic = GameLogic()
         game.set_state_from_num_array(self.root_state)
 
         for i in range(self.expand_count):

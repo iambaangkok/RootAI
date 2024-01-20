@@ -10,14 +10,14 @@ from random import shuffle, randint
 from pygame import Vector2, Surface
 
 from src.config import Config, Colors
-from src.game.Area import Area
-from src.game.Board import Board
+from src.game.AreaLogic import AreaLogic, Area
+from src.game.BoardLogic import BoardLogic, Board
 from src.game.Building import Building
-from src.game.EyrieBoard import EyrieBoard, DecreeAction, EyrieLeader, LOYAL_VIZIER, \
-    count_decree_action_static
+from src.game.EyrieBoard import EyrieBoardLogic, DecreeAction, EyrieLeader, LOYAL_VIZIER, \
+    count_decree_action_static, EyrieBoard
 from src.game.Faction import Faction
-from src.game.FactionBoard import FactionBoard
-from src.game.MarquiseBoard import MarquiseBoard
+from src.game.FactionBoardLogic import FactionBoardLogic
+from src.game.MarquiseBoard import MarquiseBoardLogic, MarquiseBoard
 from src.game.Card import Card, CardName, CardPhase, build_card
 from src.game.Suit import Suit
 from src.game.Token import Token
@@ -68,7 +68,7 @@ class Action:
         return self.name == other.name
 
 
-class Game:
+class GameLogic:
     def __init__(self):
         self.running: bool = True
 
@@ -86,51 +86,25 @@ class Game:
         self.discard_pile_dominance: list[Card] = []
 
         # Board, Areas (Clearings)
-        areas_offset_y = 0.05
-        areas_radius = Board.rect.width * Area.size_ratio
-        areas: list[Area] = [
-            Area(0, Vector2(Board.rect.x + Board.rect.width * 0.12,
-                            Board.rect.y + Board.rect.height * (0.20 - areas_offset_y)), areas_radius,
-                 Suit.FOX, [Building.EMPTY]),
-            Area(1, Vector2(Board.rect.x + Board.rect.width * 0.55,
-                            Board.rect.y + Board.rect.height * (0.15 - areas_offset_y)), areas_radius,
-                 Suit.RABBIT, [Building.EMPTY, Building.EMPTY]),
-            Area(2, Vector2(Board.rect.x + Board.rect.width * 0.88,
-                            Board.rect.y + Board.rect.height * (0.25 - areas_offset_y)), areas_radius,
-                 Suit.MOUSE, [Building.EMPTY, Building.EMPTY]),
+        area_logics: list[AreaLogic] = [
+            AreaLogic(0, Suit.FOX, [Building.EMPTY]),
+            AreaLogic(1, Suit.RABBIT, [Building.EMPTY, Building.EMPTY]),
+            AreaLogic(2, Suit.MOUSE, [Building.EMPTY, Building.EMPTY]),
 
-            Area(3, Vector2(Board.rect.x + Board.rect.width * 0.43,
-                            Board.rect.y + Board.rect.height * (0.35 - areas_offset_y)), areas_radius,
-                 Suit.RABBIT, [Building.EMPTY]),
+            AreaLogic(3, Suit.RABBIT, [Building.EMPTY]),
 
-            Area(4, Vector2(Board.rect.x + Board.rect.width * 0.10,
-                            Board.rect.y + Board.rect.height * (0.45 - areas_offset_y)), areas_radius,
-                 Suit.MOUSE, [Building.EMPTY, Building.EMPTY]),
-            Area(5, Vector2(Board.rect.x + Board.rect.width * 0.34,
-                            Board.rect.y + Board.rect.height * (0.58 - areas_offset_y)), areas_radius,
-                 Suit.FOX, [Building.EMPTY]),
-            Area(6, Vector2(Board.rect.x + Board.rect.width * 0.66,
-                            Board.rect.y + Board.rect.height * (0.53 - areas_offset_y)), areas_radius,
-                 Suit.MOUSE, [Building.EMPTY, Building.EMPTY]),
-            Area(7, Vector2(Board.rect.x + Board.rect.width * 0.90,
-                            Board.rect.y + Board.rect.height * (0.56 - areas_offset_y)), areas_radius,
-                 Suit.FOX, [Building.WORKSHOP]),
+            AreaLogic(4, Suit.MOUSE, [Building.EMPTY, Building.EMPTY]),
+            AreaLogic(5, Suit.FOX, [Building.EMPTY]),
+            AreaLogic(6, Suit.MOUSE, [Building.EMPTY, Building.EMPTY]),
+            AreaLogic(7, Suit.FOX, [Building.WORKSHOP]),
 
-            Area(8, Vector2(Board.rect.x + Board.rect.width * 0.12,
-                            Board.rect.y + Board.rect.height * (0.83 - areas_offset_y)), areas_radius,
-                 Suit.RABBIT, [Building.EMPTY]),
-            Area(9, Vector2(Board.rect.x + Board.rect.width * 0.39,
-                            Board.rect.y + Board.rect.height * (0.88 - areas_offset_y)), areas_radius,
-                 Suit.FOX, [Building.EMPTY, Building.EMPTY]),
-            Area(10, Vector2(Board.rect.x + Board.rect.width * 0.62,
-                             Board.rect.y + Board.rect.height * (0.80 - areas_offset_y)), areas_radius,
-                 Suit.MOUSE, [Building.RECRUITER, Building.EMPTY]),
-            Area(11, Vector2(Board.rect.x + Board.rect.width * 0.84,
-                             Board.rect.y + Board.rect.height * (0.88 - areas_offset_y)), areas_radius,
-                 Suit.RABBIT, [Building.SAWMILL]),
+            AreaLogic(8, Suit.RABBIT, [Building.EMPTY]),
+            AreaLogic(9, Suit.FOX, [Building.EMPTY, Building.EMPTY]),
+            AreaLogic(10, Suit.MOUSE, [Building.RECRUITER, Building.EMPTY]),
+            AreaLogic(11, Suit.RABBIT, [Building.SAWMILL]),
         ]
 
-        self.board: Board = Board(areas)
+        self.board: BoardLogic = BoardLogic(area_logics)
 
         paths = [(0, 1), (0, 3), (0, 4), (1, 2), (2, 3), (2, 7), (3, 5), (4, 5), (4, 8), (5, 6), (5, 8), (5, 10),
                  (6, 7), (6, 11), (7, 11), (8, 9),
@@ -139,8 +113,8 @@ class Game:
             self.board.add_path(path[0], path[1])
 
         # Faction Board
-        self.marquise = MarquiseBoard("Marquise de Cat", Colors.ORANGE, 25 - 11, Vector2(0, 0.0 * Config.SCREEN_HEIGHT))
-        self.eyrie = EyrieBoard("Eyrie Dynasties", Colors.BLUE, 20 - 6, Vector2(0, 0.5 * Config.SCREEN_HEIGHT))
+        self.marquise_board_logic = MarquiseBoardLogic(25 - 11)
+        self.eyrie_board_logic = EyrieBoardLogic(20 - 6)
 
         # Actions
         self.actions: list[Action] = []
@@ -165,7 +139,7 @@ class Game:
         # Battle variables
         self.attacker = None
         self.defender = None
-        self.attacking_clearing: Area | None = None
+        self.attacking_clearing: AreaLogic | None = None
         self.continuation_func = None
 
         self.attacker_roll: int = 0
@@ -225,8 +199,8 @@ class Game:
 
         arr[10] = self.board.get_state_as_num_array()
 
-        arr[11] = self.marquise.get_state_as_num_array()
-        arr[12] = self.eyrie.get_state_as_num_array()
+        arr[11] = self.marquise_board_logic.get_state_as_num_array()
+        arr[12] = self.eyrie_board_logic.get_state_as_num_array()
 
         arr[13] = self.marquise_action_count
         arr[14] = self.marquise_march_count
@@ -339,9 +313,9 @@ class Game:
                                   selecting_piece_to_remove_faction: int = 0,
                                   cards_birdsong_continuation_func=None,
                                   cards_daylight_continuation_func=None,
-                                  ignore_decree = False,
-                                  command_warren_attacker = None,
-                                  command_warren_continuation_func = None
+                                  ignore_decree=False,
+                                  command_warren_attacker=None,
+                                  command_warren_continuation_func=None
                                   ):
 
         continuation_func_remap = {
@@ -450,9 +424,9 @@ class Game:
                   selecting_piece_to_remove_faction: Faction = Faction.MARQUISE,
                   cards_birdsong_continuation_func=None,
                   cards_daylight_continuation_func=None,
-                  ignore_decree = False,
-                  command_warren_attacker = None,
-                  command_warren_continuation_func = None
+                  ignore_decree=False,
+                  command_warren_attacker=None,
+                  command_warren_continuation_func=None
                   ):
 
         CARDS: list[Card] = [build_card(i) for i in range(0, 54)]
@@ -476,8 +450,8 @@ class Game:
         self.board.set_state_from_num_array(board)
 
         # Faction Board
-        self.marquise.set_state_from_num_array(marquise_board, CARDS)
-        self.eyrie.set_state_from_num_array(eyrie_board, CARDS)
+        self.marquise_board_logic.set_state_from_num_array(marquise_board, CARDS)
+        self.eyrie_board_logic.set_state_from_num_array(eyrie_board, CARDS)
 
         # Marquise variables
         self.marquise_action_count = marquise_action_count
@@ -490,7 +464,7 @@ class Game:
         # Battle variables
         self.attacker = attacker
         self.defender = defender
-        self.attacking_clearing: Area | None = self.board.areas[attacking_clearing]
+        self.attacking_clearing: AreaLogic | None = self.board.areas[attacking_clearing]
         self.continuation_func = continuation_func
 
         self.attacker_roll: int = attacker_roll
@@ -619,7 +593,7 @@ class Game:
                 )
 
             case 10007:  # marquise_evening_discard_card
-                card_in_hand_count = len(self.marquise.cards_in_hand)
+                card_in_hand_count = len(self.marquise_board_logic.cards_in_hand)
                 if card_in_hand_count > 5:
                     actions.extend(
                         self.generate_actions_select_card_to_discard(Faction.MARQUISE)
@@ -680,9 +654,9 @@ class Game:
                            + [Action('Next, to Evening', self.eyrie_evening)]
             # TURMOIL
             case 21001:
-                actions += self.generate_actions_eyrie_select_new_leader(self.eyrie.get_inactive_leader())
+                actions += self.generate_actions_eyrie_select_new_leader(self.eyrie_board_logic.get_inactive_leader())
             case 21002:
-                if len(self.eyrie.cards_in_hand) > 5:
+                if len(self.eyrie_board_logic.cards_in_hand) > 5:
                     actions += self.generate_actions_select_card_to_discard(Faction.EYRIE)
                 else:
                     self.eyrie_evening_to_marquise()
@@ -871,14 +845,14 @@ class Game:
     #####
     # Utils
 
-    def get_area(self, area_index: int) -> Area | None:
+    def get_area(self, area_index: int) -> AreaLogic | None:
         return self.board.get_area(area_index)
 
-    def faction_to_faction_board(self, faction: Faction) -> FactionBoard:
+    def faction_to_faction_board(self, faction: Faction) -> FactionBoardLogic:
         if faction == Faction.MARQUISE:
-            return self.marquise
+            return self.marquise_board_logic
         if faction == Faction.EYRIE:
-            return self.eyrie
+            return self.eyrie_board_logic
 
     def get_end_game_data(self) -> tuple[Faction | None, str, int, Faction, int, int, None | Card] | None:
         """
@@ -917,7 +891,7 @@ class Game:
         self.turn_count += 1
 
         self.check_win_condition(Faction.MARQUISE)
-        self.marquise.clear_activated_cards()
+        self.marquise_board_logic.clear_activated_cards()
         self.better_burrow_bank(Faction.MARQUISE)
 
         self.marquise_action_count = 3
@@ -926,7 +900,7 @@ class Game:
         for area in self.board.areas:
             area.token_count[Token.WOOD] += area.buildings.count(Building.SAWMILL)
 
-        self.marquise.crafting_pieces_count = self.get_workshop_count_by_suit()
+        self.marquise_board_logic.crafting_pieces_count = self.get_workshop_count_by_suit()
 
         self.marquise_birdsong_cards()
 
@@ -1016,7 +990,7 @@ class Game:
                          )
 
     def marquise_hawks_for_hire_check(self):
-        return len([card for card in self.marquise.cards_in_hand if card.suit == Suit.BIRD]) > 0
+        return len([card for card in self.marquise_board_logic.cards_in_hand if card.suit == Suit.BIRD]) > 0
 
     def marquise_march_check(self):
         return len(self.find_available_source_clearings(Faction.MARQUISE)) > 0
@@ -1116,7 +1090,7 @@ class Game:
         LOGGER.debug("{}:{}:{}:MARQUISE recruit.".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.prompt = "Recruit warrior"
 
-        if self.marquise.reserved_warriors >= self.marquise.building_trackers[Building.RECRUITER]:
+        if self.marquise_board_logic.reserved_warriors >= self.marquise_board_logic.building_trackers[Building.RECRUITER]:
             self.recruit(Faction.MARQUISE)
             self.marquise_daylight_2()
         else:
@@ -1128,7 +1102,7 @@ class Game:
         LOGGER.debug("{}:{}:{}:Enter marquise_daylight_recruit_some_clearings".format(self.ui_turn_player, self.phase,
                                                                                       self.sub_phase))
 
-        if clearing_with_recruiter is [] or self.marquise.reserved_warriors == 0:
+        if clearing_with_recruiter is [] or self.marquise_board_logic.reserved_warriors == 0:
             self.marquise_recruit_count -= 1
             self.marquise_action_count -= 1
             self.marquise_daylight_2()
@@ -1163,12 +1137,12 @@ class Game:
         if self.marquise_recruit_count == 0:
             return actions
 
-        if self.marquise.reserved_warriors >= self.marquise.building_trackers[Building.RECRUITER]:
+        if self.marquise_board_logic.reserved_warriors >= self.marquise_board_logic.building_trackers[Building.RECRUITER]:
             actions.append(Action("Recruit", perform(self.marquise_daylight_recruit)))
         else:
             clearing_with_recruiter = [clearing for clearing in self.board.areas for _ in
                                        range(clearing.buildings.count(Building.RECRUITER))]
-            all_possible_clearing_combinations = combinations(clearing_with_recruiter, self.marquise.reserved_warriors)
+            all_possible_clearing_combinations = combinations(clearing_with_recruiter, self.marquise_board_logic.reserved_warriors)
             for combination in list(all_possible_clearing_combinations):
                 actions.append(Action("Recruit in clearing {}".format([c.area_index for c in combination]),
                                       perform(self.recruit_many_clearings, combination)))
@@ -1228,13 +1202,13 @@ class Game:
         self.prompt = "Select Card"
         self.set_actions(self.generate_actions_overwork_select_card(clearing))
 
-    def marquise_overwork(self, clearing: Area, card):
+    def marquise_overwork(self, clearing: AreaLogic, card):
         LOGGER.debug("{}:{}:{}:Enter marquise_overwork".format(self.ui_turn_player, self.phase, self.sub_phase))
 
         LOGGER.debug(
             "{}:{}:{}:MARQUISE overwork on clearing #{}".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                                 clearing.area_index))
-        self.discard_card(self.marquise.cards_in_hand, card)
+        self.discard_card(self.marquise_board_logic.cards_in_hand, card)
         clearing.token_count[Token.WOOD] += 1
 
         self.prompt = "Overwork complete"
@@ -1246,7 +1220,7 @@ class Game:
         actions = []
 
         for clearing in available_clearing:
-            discardable_card = [card for card in self.marquise.cards_in_hand if card.suit == clearing.suit]
+            discardable_card = [card for card in self.marquise_board_logic.cards_in_hand if card.suit == clearing.suit]
 
             for card in discardable_card:
                 actions.append(Action('Overwork: Discard {} ({})'.format(card.name, card.suit),
@@ -1272,7 +1246,7 @@ class Game:
         self.sub_phase = 10006
 
         self.prompt = "Draw one card, plus one card per draw bonus"
-        number_of_card_to_be_drawn = self.marquise.get_reward_card() + 1
+        number_of_card_to_be_drawn = self.marquise_board_logic.get_reward_card() + 1
         self.take_card_from_draw_pile(Faction.MARQUISE, number_of_card_to_be_drawn)
 
         self.set_actions([Action('Next', perform(self.marquise_evening_discard_card))])
@@ -1283,7 +1257,7 @@ class Game:
         LOGGER.debug(
             "{}:{}:{}:Enter marquise_evening_discard_card".format(self.ui_turn_player, self.phase, self.sub_phase))
 
-        card_in_hand_count = len(self.marquise.cards_in_hand)
+        card_in_hand_count = len(self.marquise_board_logic.cards_in_hand)
         if card_in_hand_count > 5:
             self.prompt = "Select card to discard down to 5 cards (currently {} cards in hand)".format(
                 card_in_hand_count)
@@ -1298,10 +1272,10 @@ class Game:
     def count_woods_from_clearing(self, clearing):
         return self.marquise_bfs_count_wood(clearing)
 
-    def marquise_bfs_count_wood(self, clearing: Area):
+    def marquise_bfs_count_wood(self, clearing: AreaLogic):
         visited = []
-        order: list[tuple[int, tuple[int, Area]]] = []
-        queue: list[tuple[int, Area]] = [(0, clearing)]
+        order: list[tuple[int, tuple[int, AreaLogic]]] = []
+        queue: list[tuple[int, AreaLogic]] = [(0, clearing)]
 
         total_wood = 0
 
@@ -1317,7 +1291,7 @@ class Game:
                 if v.ruler() == Warrior.MARQUISE:
                     queue.append((dist + 1, v))
 
-        def hash_value(item: tuple[int, tuple[int, Area]]):
+        def hash_value(item: tuple[int, tuple[int, AreaLogic]]):
             return item[0] * 10 + item[1][0]
 
         order.sort(key=hash_value)
@@ -1325,8 +1299,8 @@ class Game:
         return order, total_wood
 
     def marquise_get_min_cost_building(self):
-        cost = self.marquise.building_cost
-        building_tracker = self.marquise.building_trackers
+        cost = self.marquise_board_logic.building_cost
+        building_tracker = self.marquise_board_logic.building_trackers
 
         min_cost = float('inf')
 
@@ -1336,7 +1310,7 @@ class Game:
 
         return min_cost
 
-    def remove_wood(self, number, orders: list[tuple[int, tuple[int, Area]]]):
+    def remove_wood(self, number, orders: list[tuple[int, tuple[int, AreaLogic]]]):
         remaining_wood = number
         for order in orders:
             clearing = order[1][1]
@@ -1351,9 +1325,9 @@ class Game:
             min(number, clearing.token_count[Token.WOOD]))
         return remaining_wood
 
-    def find_available_overwork_clearings(self) -> list[Area]:
-        clearings_with_sawmill: list[Area] = [clearing for clearing in filter(self.sawmill_clearing, self.board.areas)]
-        card_suit_list = set([card.suit for card in self.marquise.cards_in_hand])
+    def find_available_overwork_clearings(self) -> list[AreaLogic]:
+        clearings_with_sawmill: list[AreaLogic] = [clearing for clearing in filter(self.sawmill_clearing, self.board.areas)]
+        card_suit_list = set([card.suit for card in self.marquise_board_logic.cards_in_hand])
         return [clearing for clearing in clearings_with_sawmill if clearing.suit in card_suit_list]
 
     def sawmill_clearing(self, area):
@@ -1371,7 +1345,7 @@ class Game:
         return actions
 
     def generate_actions_overwork_select_card(self, clearing):
-        discardable_card = [card for card in self.marquise.cards_in_hand if card.suit == clearing.suit]
+        discardable_card = [card for card in self.marquise_board_logic.cards_in_hand if card.suit == clearing.suit]
         actions: list[Action] = []
 
         for card in discardable_card:
@@ -1381,7 +1355,7 @@ class Game:
         return actions
 
     def generate_actions_select_card_hawks_for_hire(self):
-        cards = [card for card in self.marquise.cards_in_hand if card.suit == Suit.BIRD]
+        cards = [card for card in self.marquise_board_logic.cards_in_hand if card.suit == Suit.BIRD]
         actions: list[Action] = []
 
         for card in cards:
@@ -1391,7 +1365,7 @@ class Game:
         return actions
 
     def marquise_hawks_for_hire(self, card):
-        self.discard_card(self.marquise.cards_in_hand, card)
+        self.discard_card(self.marquise_board_logic.cards_in_hand, card)
         self.marquise_action_count += 1
 
         self.marquise_daylight_2()
@@ -1403,10 +1377,10 @@ class Game:
         self.turn_count += 1
 
         self.check_win_condition(Faction.EYRIE)
-        self.eyrie.clear_activated_cards()
+        self.eyrie_board_logic.clear_activated_cards()
         self.better_burrow_bank(Faction.EYRIE)
 
-        if len(self.eyrie.cards_in_hand) == 0:
+        if len(self.eyrie_board_logic.cards_in_hand) == 0:
             LOGGER.debug("{}:{}:{}:eyrie_emergency_orders".format(self.ui_turn_player, self.phase, self.sub_phase))
             self.take_card_from_draw_pile(Faction.EYRIE)
 
@@ -1435,7 +1409,7 @@ class Game:
         actions: list[Action] = []
         if self.addable_count <= 0:
             return actions
-        for card in self.eyrie.cards_in_hand:
+        for card in self.eyrie_board_logic.cards_in_hand:
             if self.added_bird_card and card.suit == Suit.BIRD:
                 continue
             for decree_action in DecreeAction:
@@ -1451,7 +1425,7 @@ class Game:
     def generate_actions_add_to_the_decree_first(self) -> list[Action]:
         actions: list[Action] = []
         if self.addable_count > 0:
-            for card in self.eyrie.cards_in_hand:
+            for card in self.eyrie_board_logic.cards_in_hand:
                 if self.added_bird_card and card.suit == Suit.BIRD:
                     continue
                 actions.append(Action('{} ({})'.format(card.name, card.suit),
@@ -1477,8 +1451,8 @@ class Game:
         return actions
 
     def select_decree_to_add_card_to(self, decree_action: DecreeAction | str):
-        self.eyrie.decree[decree_action].append(self.selected_card)
-        self.eyrie.cards_in_hand.remove(self.selected_card)
+        self.eyrie_board_logic.decree[decree_action].append(self.selected_card)
+        self.eyrie_board_logic.cards_in_hand.remove(self.selected_card)
 
         self.addable_count -= 1
         if self.selected_card.suit == Suit.BIRD:
@@ -1500,13 +1474,13 @@ class Game:
 
         self.sub_phase = 20003
 
-        if self.eyrie.roost_tracker == 0 and len(self.get_areas_with_min_warrior_and_empty_building()) > 0:
+        if self.eyrie_board_logic.roost_tracker == 0 and len(self.get_areas_with_min_warrior_and_empty_building()) > 0:
             self.prompt = "If you have no roost, place a roost and 3 warriors in the clearing with the fewest total warriors. (Select Clearing)"
         else:
             self.eyrie_birdsong_to_daylight()
 
-    def get_areas_with_min_warrior_and_empty_building(self) -> list[Area]:
-        min_warrior_areas: list[Area] = self.board.get_min_warrior_areas()
+    def get_areas_with_min_warrior_and_empty_building(self) -> list[AreaLogic]:
+        min_warrior_areas: list[AreaLogic] = self.board.get_min_warrior_areas()
         return [area for area in min_warrior_areas if Building.EMPTY in area.buildings]
 
     def generate_actions_place_roost_and_3_warriors(self) -> list[Action]:
@@ -1517,7 +1491,7 @@ class Game:
 
         return actions
 
-    def place_roost_and_3_warriors(self, area: Area):  # 20004
+    def place_roost_and_3_warriors(self, area: AreaLogic):  # 20004
         self.sub_phase = 20004
         LOGGER.debug(
             "{}:{}:{}:place_roost_and_3_warriors at area#{}".format(self.ui_turn_player, self.phase, self.sub_phase,
@@ -1526,10 +1500,10 @@ class Game:
         self.add_warrior(Faction.EYRIE, area, 3)
         self.build_roost(area)
 
-    def build_roost(self, clearing: Area):
+    def build_roost(self, clearing: AreaLogic):
         building_slot_index = clearing.buildings.index(Building.EMPTY)
         clearing.buildings[building_slot_index] = Building.ROOST
-        self.eyrie.roost_tracker += 1
+        self.eyrie_board_logic.roost_tracker += 1
 
         LOGGER.debug(
             "{}:{}:{}:build_roost built {} in clearing #{}".format(self.ui_turn_player, self.phase, self.sub_phase,
@@ -1541,7 +1515,7 @@ class Game:
 
         self.phase = Phase.DAYLIGHT
 
-        self.eyrie.set_crafting_piece_count(self.get_building_count_by_suit(Building.ROOST))
+        self.eyrie_board_logic.set_crafting_piece_count(self.get_building_count_by_suit(Building.ROOST))
 
         self.prompt = 'Use Command Warren / Craft'
 
@@ -1568,7 +1542,7 @@ class Game:
             "{}:{}:{}:eyrie_daylight_craft_to_resolve_the_decree".format(self.ui_turn_player, self.phase,
                                                                          self.sub_phase))
 
-        self.decree_counter = deepcopy(self.eyrie.decree)
+        self.decree_counter = deepcopy(self.eyrie_board_logic.decree)
         self.eyrie_pre_recruit()
 
     def eyrie_pre_recruit(self):  # 20007
@@ -1587,7 +1561,7 @@ class Game:
         self.eyrie_turmoil_depose()
 
     def eyrie_turmoil_humiliate(self):
-        bird_card_in_decree_count = self.eyrie.count_card_in_decree_with_suit(Suit.BIRD)
+        bird_card_in_decree_count = self.eyrie_board_logic.count_card_in_decree_with_suit(Suit.BIRD)
         vp_lost = min(self.board.faction_points[Faction.EYRIE],
                       bird_card_in_decree_count)
         self.board.lose_vp(Faction.EYRIE, vp_lost)
@@ -1600,11 +1574,11 @@ class Game:
 
     def eyrie_turmoil_purge(self):
         for decree in DecreeAction:
-            for card in self.eyrie.decree[decree]:
+            for card in self.eyrie_board_logic.decree[decree]:
                 if card.name is not LOYAL_VIZIER.name:
-                    self.discard_card(self.eyrie.decree[decree], card)
+                    self.discard_card(self.eyrie_board_logic.decree[decree], card)
 
-        self.eyrie.reset_decree()
+        self.eyrie_board_logic.reset_decree()
         LOGGER.debug(
             "{}:{}:{}:turmoil:purge: discarded all decree cards except loyal viziers".format(self.ui_turn_player,
                                                                                              self.phase,
@@ -1612,13 +1586,13 @@ class Game:
 
     def eyrie_turmoil_depose(self):  # 21001
         self.sub_phase = 21001
-        current_leader = self.eyrie.get_active_leader()
+        current_leader = self.eyrie_board_logic.get_active_leader()
 
-        self.eyrie.deactivate_current_leader()
-        inactive_leaders = self.eyrie.get_inactive_leader()
+        self.eyrie_board_logic.deactivate_current_leader()
+        inactive_leaders = self.eyrie_board_logic.get_inactive_leader()
 
         if len(inactive_leaders) == 0:
-            self.eyrie.a_new_generation()
+            self.eyrie_board_logic.a_new_generation()
 
         LOGGER.debug(
             "{}:{}:{}:turmoil:depose: {} deposed".format(self.ui_turn_player, self.phase, self.sub_phase,
@@ -1635,7 +1609,7 @@ class Game:
         return actions
 
     def eyrie_select_new_leader(self, leader: EyrieLeader):
-        self.eyrie.activate_leader(leader)
+        self.eyrie_board_logic.activate_leader(leader)
         LOGGER.debug(
             "{}:{}:{}:turmoil:depose: {} selected as new leader".format(self.ui_turn_player, self.phase, self.sub_phase,
                                                                         leader))
@@ -1676,7 +1650,7 @@ class Game:
 
         return actions
 
-    def eyrie_recruit(self, area: Area):
+    def eyrie_recruit(self, area: AreaLogic):
         decree_action = DecreeAction.RECRUIT
         self.recruit(Faction.EYRIE, area)
         # remove decree counter
@@ -1790,7 +1764,7 @@ class Game:
 
         return actions
 
-    def eyrie_build(self, clearing: Area):
+    def eyrie_build(self, clearing: AreaLogic):
         self.build_roost(clearing)
         self.remove_decree_counter(DecreeAction.BUILD, clearing.suit)
 
@@ -1803,13 +1777,13 @@ class Game:
 
     def eyrie_evening(self):
         # score points
-        roost_tracker = self.eyrie.roost_tracker
-        vp = EyrieBoard.ROOST_REWARD_VP[roost_tracker]
-        card_to_draw = 1 + EyrieBoard.ROOST_REWARD_CARD[roost_tracker]
+        roost_tracker = self.eyrie_board_logic.roost_tracker
+        vp = EyrieBoardLogic.ROOST_REWARD_VP[roost_tracker]
+        card_to_draw = 1 + EyrieBoardLogic.ROOST_REWARD_CARD[roost_tracker]
         self.gain_vp(Faction.EYRIE, vp)
         LOGGER.debug(
             "{}:{}:{}:eyrie_evening: roost tracker {}, scored {} vps".format(self.ui_turn_player, self.phase,
-                                                                             self.sub_phase, self.eyrie.roost_tracker,
+                                                                             self.sub_phase, self.eyrie_board_logic.roost_tracker,
                                                                              vp))
         self.take_card_from_draw_pile(Faction.EYRIE, card_to_draw)
         self.eyrie_evening_discard()
@@ -1817,7 +1791,7 @@ class Game:
     def eyrie_evening_discard(self):  # 21002
         self.sub_phase = 21002
 
-        card_in_hand_count = len(self.eyrie.cards_in_hand)
+        card_in_hand_count = len(self.eyrie_board_logic.cards_in_hand)
         if card_in_hand_count > 5:
             self.prompt = "Select card to discard down to 5 cards (currently {} cards in hand)".format(
                 card_in_hand_count)
@@ -1841,11 +1815,11 @@ class Game:
         else:
             if len(bird_cards) == 0:
                 print(eligible_cards, decree_action.name)
-                print(self.eyrie.decree)
+                print(self.eyrie_board_logic.decree)
             return bird_cards[0]
 
     def activate_leader(self, leader: EyrieLeader):
-        if self.eyrie.activate_leader(leader):
+        if self.eyrie_board_logic.activate_leader(leader):
             LOGGER.debug(
                 "{}:{}:{}:{} selected as new leader".format(self.ui_turn_player, self.phase, self.sub_phase, leader))
 
@@ -1857,11 +1831,11 @@ class Game:
     #####
     # Neutral
 
-    def add_warrior(self, faction: Faction, area: Area, amount: int = 1):
-        faction_board = self.marquise
+    def add_warrior(self, faction: Faction, area: AreaLogic, amount: int = 1):
+        faction_board = self.marquise_board_logic
         warrior_type = Warrior.MARQUISE
         if faction == Faction.EYRIE:
-            faction_board = self.eyrie
+            faction_board = self.eyrie_board_logic
             warrior_type = Warrior.EYRIE
 
         faction_board.reserved_warriors -= amount
@@ -1886,7 +1860,7 @@ class Game:
             if card.phase == CardPhase.IMMEDIATE:
                 self.gain_vp(faction, card.reward_vp)
                 if card.reward_item is not None:
-                    self.marquise.items[card.reward_item] += 1
+                    self.marquise_board_logic.items[card.reward_item] += 1
                     self.board.remove_item_from_board(card.reward_item)
                 elif card.name == CardName.FAVOR_OF_THE_FOXES:
                     self.favor_card(faction, Suit.FOX)
@@ -1894,13 +1868,13 @@ class Game:
                     self.favor_card(faction, Suit.MOUSE)
                 elif card.name == CardName.FAVOR_OF_THE_RABBITS:
                     self.favor_card(faction, Suit.RABBIT)
-                self.discard_card(self.marquise.cards_in_hand, card)
+                self.discard_card(self.marquise_board_logic.cards_in_hand, card)
             else:
-                self.marquise.cards_in_hand.remove(card)
-                self.marquise.crafted_cards.append(card)
+                self.marquise_board_logic.cards_in_hand.remove(card)
+                self.marquise_board_logic.crafted_cards.append(card)
 
             for suit in card.craft_requirement.keys():
-                self.marquise.spend_crafting_piece(suit, card.craft_requirement[suit])
+                self.marquise_board_logic.spend_crafting_piece(suit, card.craft_requirement[suit])
 
             self.prompt = "{} has been crafted.".format(card.name)
             self.set_actions([Action("Next", self.marquise_daylight)])
@@ -1909,14 +1883,14 @@ class Game:
             if card.phase == CardPhase.IMMEDIATE:
                 # Gain VP
                 if card.reward_vp > 0:
-                    if self.eyrie.get_active_leader() == EyrieLeader.BUILDER:
+                    if self.eyrie_board_logic.get_active_leader() == EyrieLeader.BUILDER:
                         self.gain_vp(faction, card.reward_vp)
                     else:
                         self.gain_vp(faction, 1)
 
                 # Gain Item
                 if card.reward_item is not None:
-                    self.eyrie.items[card.reward_item] += 1
+                    self.eyrie_board_logic.items[card.reward_item] += 1
                     self.board.remove_item_from_board(card.reward_item)
                 elif card.name == CardName.FAVOR_OF_THE_FOXES:
                     self.favor_card(faction, Suit.FOX)
@@ -1925,13 +1899,13 @@ class Game:
                 elif card.name == CardName.FAVOR_OF_THE_RABBITS:
                     self.favor_card(faction, Suit.RABBIT)
 
-                self.discard_card(self.eyrie.cards_in_hand, card)
+                self.discard_card(self.eyrie_board_logic.cards_in_hand, card)
             else:
-                self.eyrie.cards_in_hand.remove(card)
-                self.eyrie.crafted_cards.append(card)
+                self.eyrie_board_logic.cards_in_hand.remove(card)
+                self.eyrie_board_logic.crafted_cards.append(card)
 
             for suit in card.craft_requirement.keys():
-                self.marquise.spend_crafting_piece(suit, card.craft_requirement[suit])
+                self.marquise_board_logic.spend_crafting_piece(suit, card.craft_requirement[suit])
             self.eyrie_daylight_craft()
 
     def get_craftable_cards(self, faction: Faction) -> list[Card]:
@@ -1940,9 +1914,9 @@ class Game:
         cards_in_hand: list[Card] = []
         faction_board = self.faction_to_faction_board(faction)
         if faction == Faction.MARQUISE:
-            cards_in_hand = self.marquise.cards_in_hand
+            cards_in_hand = self.marquise_board_logic.cards_in_hand
         elif faction == Faction.EYRIE:
-            cards_in_hand = self.eyrie.cards_in_hand
+            cards_in_hand = self.eyrie_board_logic.cards_in_hand
 
         for card in cards_in_hand:
             if card.craft_requirement is None:
@@ -1975,10 +1949,10 @@ class Game:
         return len(self.draw_pile) >= amount
 
     def take_card_from_draw_pile(self, faction: Faction, amount: int = 1):
-        faction_board = self.marquise
+        faction_board = self.marquise_board_logic
 
         if faction == Faction.EYRIE:
-            faction_board = self.eyrie
+            faction_board = self.eyrie_board_logic
 
         if self.can_take_card_from_draw_pile(amount):
             faction_board.cards_in_hand.extend(self.draw_pile[0:amount])
@@ -2082,7 +2056,7 @@ class Game:
         self.prompt = "Choose number of warriors to move."
         self.set_actions(actions)
 
-    def generate_actions_select_warriors(self, faction, src: Area, dest: Area, continuation_func) -> list[
+    def generate_actions_select_warriors(self, faction, src: AreaLogic, dest: AreaLogic, continuation_func) -> list[
         Action]:
         actions = []
 
@@ -2092,7 +2066,7 @@ class Game:
 
         return actions
 
-    def move_warriors(self, faction, src: Area, dest: Area, num, continuation_func):
+    def move_warriors(self, faction, src: AreaLogic, dest: AreaLogic, num, continuation_func):
         LOGGER.debug(
             "{}:{}:{}:{} move {} warrior(s) from Clearing #{} to Clearing #{}".format(self.ui_turn_player, self.phase,
                                                                                       self.sub_phase, faction,
@@ -2104,8 +2078,8 @@ class Game:
 
         continuation_func()
 
-    def find_available_source_clearings(self, faction: Faction, decree=False) -> list[Area]:
-        movable_clearings: list[Area] = []
+    def find_available_source_clearings(self, faction: Faction, decree=False) -> list[AreaLogic]:
+        movable_clearings: list[AreaLogic] = []
 
         if (faction == Faction.MARQUISE) or (faction == Faction.EYRIE and not decree):
             for area in self.board.areas:
@@ -2139,8 +2113,8 @@ class Game:
 
         return movable_clearings
 
-    def find_available_destination_clearings(self, faction: Faction, src: Area) -> list[Area]:
-        dests: list[Area] = []
+    def find_available_destination_clearings(self, faction: Faction, src: AreaLogic) -> list[AreaLogic]:
+        dests: list[AreaLogic] = []
         warrior: Warrior = faction_to_warrior(faction)
 
         if src.ruler() == warrior:
@@ -2157,23 +2131,23 @@ class Game:
 
         return dests
 
-    def recruit(self, faction: Faction, area: Area = None):
+    def recruit(self, faction: Faction, area: AreaLogic = None):
         if faction == Faction.MARQUISE:
             self.marquise_recruit_count -= 1
             self.marquise_action_count -= 1
             for area in self.board.areas:
                 total_recruiters = area.buildings.count(Building.RECRUITER)
                 if total_recruiters > 0:
-                    self.add_warrior(faction, area, min(total_recruiters, self.marquise.reserved_warriors))
+                    self.add_warrior(faction, area, min(total_recruiters, self.marquise_board_logic.reserved_warriors))
                     LOGGER.debug(
                         "{}:{}:{}:MARQUISE adds warrior in clearing #{}".format(self.ui_turn_player, self.phase,
                                                                                 self.sub_phase,
                                                                                 area.area_index))
         elif faction == Faction.EYRIE:
             amount = 1
-            if self.eyrie.get_active_leader() == EyrieLeader.CHARISMATIC:
+            if self.eyrie_board_logic.get_active_leader() == EyrieLeader.CHARISMATIC:
                 amount = 2
-            if self.eyrie.reserved_warriors >= amount:
+            if self.eyrie_board_logic.reserved_warriors >= amount:
                 self.add_warrior(faction, area, amount)
 
     def generate_actions_select_buildable_clearing(self, faction):
@@ -2208,13 +2182,13 @@ class Game:
 
         return actions
 
-    def build(self, faction, clearing: Area, building):
+    def build(self, faction, clearing: AreaLogic, building):
         if faction == Faction.MARQUISE:
             ind = clearing.buildings.index(Building.EMPTY)
             clearing.buildings[ind] = building
 
-            self.gain_vp(Faction.MARQUISE, self.marquise.get_reward(building))
-            wood_cost = self.marquise.build_action_update(building)
+            self.gain_vp(Faction.MARQUISE, self.marquise_board_logic.get_reward(building))
+            wood_cost = self.marquise_board_logic.build_action_update(building)
 
             self.remove_wood(wood_cost, self.count_woods_from_clearing(clearing)[0])
 
@@ -2227,8 +2201,8 @@ class Game:
         elif faction == Faction.EYRIE:
             self.eyrie_build(clearing)
 
-    def get_buildable_clearings(self, faction) -> list[Area]:
-        buildable_clearings: list[Area] = []
+    def get_buildable_clearings(self, faction) -> list[AreaLogic]:
+        buildable_clearings: list[AreaLogic] = []
 
         if faction == Faction.MARQUISE:
             for clearing in self.board.areas:
@@ -2243,7 +2217,7 @@ class Game:
                 decree_can_build_in[suit] = count_decree_action_static(self.decree_counter, DecreeAction.BUILD, suit)
 
             for clearing in self.board.areas:
-                if self.eyrie.roost_tracker >= 7:  # roost tracker in range [0, 7]
+                if self.eyrie_board_logic.roost_tracker >= 7:  # roost tracker in range [0, 7]
                     break
                 if clearing.ruler() != Warrior.EYRIE:
                     continue
@@ -2262,8 +2236,8 @@ class Game:
 
         if faction == Faction.MARQUISE:
             woods = self.count_woods_from_clearing(clearing)[1]
-            cost = self.marquise.building_cost
-            building_tracker = self.marquise.building_trackers
+            cost = self.marquise_board_logic.building_cost
+            building_tracker = self.marquise_board_logic.building_trackers
 
             for building, tracker in building_tracker.items():
                 if tracker < 6 and woods >= cost[tracker]:
@@ -2314,7 +2288,7 @@ class Game:
         self.prompt = "Select Enemy Faction"
         self.set_actions(actions)
 
-    def generate_actions_select_enemy_faction_battle(self, faction: Faction, clearing: Area, continuation_func) -> list[
+    def generate_actions_select_enemy_faction_battle(self, faction: Faction, clearing: AreaLogic, continuation_func) -> list[
         Action]:
         enemy_factions: list[Faction] = self.get_available_enemy_tokens_from_clearing(faction, clearing)
         actions: list[Action] = []
@@ -2354,7 +2328,7 @@ class Game:
 
         return clearings
 
-    def get_available_enemy_tokens_from_clearing(self, faction: Faction, clearing: Area) -> list[Faction]:
+    def get_available_enemy_tokens_from_clearing(self, faction: Faction, clearing: AreaLogic) -> list[Faction]:
         factions: list[Faction] = []
         our_warrior = faction_to_warrior(faction)
 
@@ -2396,7 +2370,7 @@ class Game:
 
         self.selecting_piece_to_remove_faction = None
 
-    def initiate_battle(self, attacker, defender, clearing: Area, continuation_func):
+    def initiate_battle(self, attacker, defender, clearing: AreaLogic, continuation_func):
         self.reset_battle_variables()
         self.selected_clearing = clearing
 
@@ -2489,7 +2463,7 @@ class Game:
                     self.attacking_clearing.get_warrior_count(faction_to_warrior(self.defender)) == 0) else 0
 
             self.attacker_extra_hits = ((1 if (
-                    self.attacker == Faction.EYRIE and self.eyrie.get_active_leader() == EyrieLeader.COMMANDER) else 0)
+                    self.attacker == Faction.EYRIE and self.eyrie_board_logic.get_active_leader() == EyrieLeader.COMMANDER) else 0)
                                         + self.defender_defenseless_extra_hits)
             self.defender_extra_hits = 0
 
@@ -2680,11 +2654,11 @@ class Game:
             + [Action('Next', perform(self.resolve_remaining_hits))]
         )
 
-    def marquise_field_hospital_check(self, clearing: Area):
+    def marquise_field_hospital_check(self, clearing: AreaLogic):
         return len(self.marquise_field_hospital_get_cards(clearing)) > 0
 
     def marquise_field_hospital_get_cards(self, clearing):
-        return [card for card in self.marquise.cards_in_hand if card.suit == clearing.suit]
+        return [card for card in self.marquise_board_logic.cards_in_hand if card.suit == clearing.suit]
 
     def generate_actions_field_hospital_select_card_to_discard(self):
         discardable_cards = self.marquise_field_hospital_get_cards(self.attacking_clearing)
@@ -2704,7 +2678,7 @@ class Game:
                                                                                Faction.MARQUISE,
                                                                                card.name, card.suit))
 
-        self.discard_card(self.marquise.cards_in_hand, card)
+        self.discard_card(self.marquise_board_logic.cards_in_hand, card)
         for clearing in self.board.areas:
             if clearing.token_count[Token.CASTLE] > 0:
                 clearing.add_warrior(Warrior.MARQUISE, self.marquise_removed_warrior)
@@ -2780,9 +2754,9 @@ class Game:
     def remove_piece(self, piece):
         if isinstance(piece, Building):
             if self.selecting_piece_to_remove_faction == Faction.MARQUISE:
-                self.marquise.building_trackers[piece] -= 1
+                self.marquise_board_logic.building_trackers[piece] -= 1
             elif self.selecting_piece_to_remove_faction == Faction.EYRIE:
-                self.eyrie.roost_tracker -= 1
+                self.eyrie_board_logic.roost_tracker -= 1
             self.attacking_clearing.remove_building(piece)
         elif isinstance(piece, Token):
             self.attacking_clearing.remove_token(piece)
@@ -3204,19 +3178,6 @@ class Game:
         faction_board = self.faction_to_faction_board(faction)
         faction_board.activated_card.append(card)
 
-    #####
-    # DRAW
-    def draw(self, screen: Surface):
-        # Fill Black
-        screen.fill("black")
-
-        self.board.turn_player = self.ui_turn_player
-        self.board.turn_count = self.turn_count
-
-        self.board.draw(screen)
-        self.marquise.draw(screen)
-        self.eyrie.draw(screen)
-
     def favor_card(self, faction, suit):
         for clearing in self.board.areas:
             if clearing.suit == suit:
@@ -3226,11 +3187,11 @@ class Game:
                             clearing.remove_building(Building.ROOST)
                         except ValueError:
                             break
-                        self.eyrie.roost_tracker -= 1
+                        self.eyrie_board_logic.roost_tracker -= 1
                         self.gain_vp(faction, 1)
                     num_warriors_removed = clearing.warrior_count[Warrior.EYRIE]
                     clearing.remove_warrior(Warrior.EYRIE, num_warriors_removed)
-                    self.eyrie.reserved_warriors += num_warriors_removed
+                    self.eyrie_board_logic.reserved_warriors += num_warriors_removed
                     self.gain_vp(faction, num_warriors_removed)
 
                 elif faction == Faction.EYRIE:
@@ -3239,25 +3200,77 @@ class Game:
                             clearing.remove_building(Building.SAWMILL)
                         except ValueError:
                             break
-                        self.marquise.building_trackers[Building.SAWMILL] -= 1
+                        self.marquise_board_logic.building_trackers[Building.SAWMILL] -= 1
                         self.gain_vp(faction, 1)
                     while True:
                         try:
                             clearing.remove_building(Building.RECRUITER)
                         except ValueError:
                             break
-                        self.marquise.building_trackers[Building.RECRUITER] -= 1
+                        self.marquise_board_logic.building_trackers[Building.RECRUITER] -= 1
                         self.gain_vp(faction, 1)
                     while True:
                         try:
                             clearing.remove_building(Building.WORKSHOP)
                         except ValueError:
                             break
-                        self.marquise.building_trackers[Building.WORKSHOP] -= 1
+                        self.marquise_board_logic.building_trackers[Building.WORKSHOP] -= 1
                         self.gain_vp(faction, 1)
                     num_tokens_removed = clearing.token_count[Token.WOOD]
                     num_warriors_removed = clearing.warrior_count[Warrior.MARQUISE]
                     clearing.remove_token(Token.WOOD, num_tokens_removed)
                     clearing.remove_warrior(Warrior.MARQUISE, num_warriors_removed)
-                    self.marquise.reserved_warriors += num_warriors_removed
+                    self.marquise_board_logic.reserved_warriors += num_warriors_removed
                     self.gain_vp(faction, num_tokens_removed + num_warriors_removed)
+
+
+class Game:
+    def __init__(self):
+        self.logic = GameLogic()
+        areas_offset_y = 0.05
+        areas_radius = Board.rect.width * AreaLogic.size_ratio
+        areas: list[Area] = [
+            Area(self.logic.get_area(0), Vector2(Board.rect.x + Board.rect.width * 0.12,
+                                                 Board.rect.y + Board.rect.height * (0.20 - areas_offset_y)), areas_radius),
+            Area(self.logic.get_area(1), Vector2(Board.rect.x + Board.rect.width * 0.55,
+                                                 Board.rect.y + Board.rect.height * (0.15 - areas_offset_y)), areas_radius),
+            Area(self.logic.get_area(2), Vector2(Board.rect.x + Board.rect.width * 0.88,
+                                                 Board.rect.y + Board.rect.height * (0.25 - areas_offset_y)), areas_radius),
+
+            Area(self.logic.get_area(3), Vector2(Board.rect.x + Board.rect.width * 0.43,
+                                                 Board.rect.y + Board.rect.height * (0.35 - areas_offset_y)), areas_radius),
+
+            Area(self.logic.get_area(4), Vector2(Board.rect.x + Board.rect.width * 0.10,
+                                                 Board.rect.y + Board.rect.height * (0.45 - areas_offset_y)), areas_radius),
+            Area(self.logic.get_area(5), Vector2(Board.rect.x + Board.rect.width * 0.34,
+                                                 Board.rect.y + Board.rect.height * (0.58 - areas_offset_y)), areas_radius),
+            Area(self.logic.get_area(6), Vector2(Board.rect.x + Board.rect.width * 0.66,
+                                                 Board.rect.y + Board.rect.height * (0.53 - areas_offset_y)), areas_radius),
+            Area(self.logic.get_area(7), Vector2(Board.rect.x + Board.rect.width * 0.90,
+                                                 Board.rect.y + Board.rect.height * (0.56 - areas_offset_y)), areas_radius),
+
+            Area(self.logic.get_area(8), Vector2(Board.rect.x + Board.rect.width * 0.12,
+                                                 Board.rect.y + Board.rect.height * (0.83 - areas_offset_y)), areas_radius),
+            Area(self.logic.get_area(9), Vector2(Board.rect.x + Board.rect.width * 0.39,
+                                                 Board.rect.y + Board.rect.height * (0.88 - areas_offset_y)), areas_radius),
+            Area(self.logic.get_area(10), Vector2(Board.rect.x + Board.rect.width * 0.62,
+                                                  Board.rect.y + Board.rect.height * (0.80 - areas_offset_y)), areas_radius),
+            Area(self.logic.get_area(11), Vector2(Board.rect.x + Board.rect.width * 0.84,
+                                                  Board.rect.y + Board.rect.height * (0.88 - areas_offset_y)), areas_radius),
+        ]
+
+        self.board = Board(self.logic.board, areas)
+
+        self.marquise = MarquiseBoard(self.logic.marquise_board_logic, "Marquise de Cat", Colors.ORANGE, Vector2(0, 0.0 * Config.NATIVE_SCREEN_HEIGHT))
+        self.eyrie = EyrieBoard(self.logic.eyrie_board_logic, "Eyrie Dynasties", Colors.BLUE, Vector2(0, 0.5 * Config.NATIVE_SCREEN_HEIGHT))
+
+    def draw(self, screen: Surface):
+        # Fill Black
+        screen.fill("black")
+
+        self.logic.board.turn_player = self.logic.ui_turn_player
+        self.logic.board.turn_count = self.logic.turn_count
+
+        self.board.draw(screen)
+        self.marquise.draw(screen)
+        self.eyrie.draw(screen)

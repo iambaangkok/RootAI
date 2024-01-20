@@ -4,7 +4,7 @@ import logging
 
 import numpy as np
 
-from src.game.Game import Action
+from src.game.GameLogic import Action
 
 LOGGER = logging.getLogger('mcts_logger')
 

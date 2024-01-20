@@ -8,7 +8,7 @@ import pygame
 import yaml
 
 from src.game.Faction import Faction
-from src.game.Game import Action, Game
+from src.game.GameLogic import Action, GameLogic
 from src.roottrainer.agents.MCTSNode import MCTSNode
 
 config = yaml.safe_load(open("config/config.yml"))
@@ -25,7 +25,7 @@ class MCTSOneDepth:
         self.time_limit: float = time_limit
 
     def rollout(self, node: MCTSNode) -> int:
-        def execute_random_action(game: Game):
+        def execute_random_action(game: GameLogic):
             actions = game.get_legal_actions()
 
             LOGGER.debug("rollout:execute_random_action: actions {} {}".format(len(actions), [a.name for a in actions]))
@@ -41,7 +41,7 @@ class MCTSOneDepth:
             LOGGER.debug("rollout:execute_random_action: exec {}".format(actions[rand].name))
             actions[rand].function()
 
-        def exec_seq_actions(game: Game):
+        def exec_seq_actions(game: GameLogic):
             LOGGER.debug(
                 "rollout:exec_seq_actions: len(seq_actions) {}, seq_actions {}".format(len(node.seq_actions), [a.name for a in node.seq_actions]))
 
@@ -66,8 +66,8 @@ class MCTSOneDepth:
                     # raise RuntimeError
                     break
 
-        def reward_function(game: Game) -> int:
-            root_game = Game()
+        def reward_function(game: GameLogic) -> int:
+            root_game = GameLogic()
             root_game.set_state_from_num_array(self.root_state)
             current_player = root_game.turn_player
 
@@ -90,7 +90,7 @@ class MCTSOneDepth:
                     LOGGER.error("rollout:reward_function: unknown function, reward set to 0")
                     return 0
 
-        game = Game()
+        game = GameLogic()
         game.set_state_from_num_array(self.root_state)
 
         exec_seq_actions(game)
@@ -123,7 +123,7 @@ class MCTSOneDepth:
     def run_mcts(self):
         LOGGER.info("run_mcts, rollout_no {}".format(self.rollout_no))
 
-        game: Game = Game()
+        game: GameLogic = GameLogic()
         game.set_state_from_num_array(self.root_state)
         legal_actions: list[Action] = game.get_legal_actions()
 
