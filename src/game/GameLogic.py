@@ -1740,7 +1740,7 @@ class GameLogic:
         decree_action = DecreeAction.BATTLE
 
         if not self.ignore_decree:
-            self.remove_decree_counter(decree_action, self.selected_clearing.suit)
+            self.remove_decree_counter(decree_action, self.attacking_clearing.suit)
             self.update_prompt_eyrie_decree(decree_action)
 
         self.eyrie_pre_battle()
@@ -2374,7 +2374,6 @@ class GameLogic:
 
     def initiate_battle(self, attacker, defender, clearing: AreaLogic, continuation_func):
         self.reset_battle_variables()
-        self.selected_clearing = clearing
 
         self.attacker = attacker
         self.defender = defender
