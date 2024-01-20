@@ -166,7 +166,7 @@ class MCTS:
 
         exec_seq_actions(node, game_logic)
 
-        ## Multicore / Single core Simulation
+        # Multicore / Single core Simulation
         if config['simulation']['multiprocessing']['enable']:
             start_time = time.time()
 
@@ -182,11 +182,11 @@ class MCTS:
                 [self.time_limit] * self.rollout_no,
                 [self.action_count_limit] * self.rollout_no)
             while not rewards.ready():
-                time.sleep(1)
+                time.sleep(0.00001)
             end_time = time.time()
             LOGGER.info("rollout: multiprocessing with {} cores: finished in {} s"
                         .format(core_count, end_time - start_time))
-            return sum(rewards.get(1))
+            return sum(rewards.get(0.00001))
         else:
             start_time = time.time()
 
@@ -194,8 +194,9 @@ class MCTS:
 
             rewards: dict = {}
             for i in range(self.rollout_no):
-                rewards[i] = exec_random_actions(i, game_logic, self.reward_function_type, self.root_state,
-                                                 self.time_limit, self.action_count_limit)
+                rewards[i] = exec_random_actions(
+                    i, game_logic, self.reward_function_type, self.root_state,
+                    self.time_limit, self.action_count_limit)
             end_time = time.time()
             LOGGER.info("rollout: running on single process: finished in {} s"
                         .format(end_time - start_time))

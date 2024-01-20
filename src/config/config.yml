@@ -19,7 +19,7 @@ simulation:
     dir: output # str
   multiprocessing:
     enable: false # true | false
-    core: 4
+    core: 8
 
 agent:
   require-key-hold: true # true | false
@@ -39,8 +39,8 @@ agent:
     mcts:
       type: mcts # one-depth | mcts
       reward-function: vp-difference # win | vp-difference
-      expand-count: 50 # int
-      rollout-no: 1 # int
+      expand-count: 100 # int
+      rollout-no: 100 # int
       time-limit: -1 # float (per-rollout in milliseconds) (negative for no limit)
       action-count-limit: 20 # int (negative for no limit)
 
