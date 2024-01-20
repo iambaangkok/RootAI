@@ -1,11 +1,13 @@
 import os
+import sys
 from datetime import datetime
 from typing import IO, TextIO
 
 import yaml
 from pathlib import Path
 
-config = yaml.safe_load(open("config/config.yml"))
+config_path: str = str(sys.argv[1])
+config = yaml.safe_load(open(config_path))
 
 
 class CSVOutputWriter:

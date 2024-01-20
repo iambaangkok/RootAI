@@ -1,4 +1,6 @@
 import logging
+import sys
+
 
 import pygame
 import yaml
@@ -8,7 +10,8 @@ from src.config import Config
 from src.roottrainer.RootTrainer import RootTrainer
 
 if __name__ == "__main__":
-    config = yaml.safe_load(open("config/config.yml"))
+    config_path: str = str(sys.argv[1])
+    config = yaml.safe_load(open(config_path))
 
     logging.basicConfig(level=logging.NOTSET)
     logging.getLogger('game_logger').setLevel(config['logging']['game']['level'])

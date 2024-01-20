@@ -1,8 +1,11 @@
+import sys
+
 import pygame.font
 import yaml
 from pygame.font import Font
 
-config = yaml.safe_load(open("config/config.yml"))
+config_path: str = str(sys.argv[1])
+config = yaml.safe_load(open(config_path))
 
 SCREEN_WIDTH = config['screen']['width']
 SCREEN_HEIGHT = config['screen']['height']
@@ -25,12 +28,12 @@ AGENT_REQUIRE_KEY_HOLD: bool = config['agent']['require-key-hold'] \
                                and not config['simulation']['command-line-mode']['enable']
 
 pygame.font.init()
-FONT_1 = Font("../assets/fonts/UbuntuMono-Regular.ttf", 16)
-FONT_SM = Font("../assets/fonts/UbuntuMono-Regular.ttf", 20)
-FONT_SM_BOLD = Font("../assets/fonts/UbuntuMono-Bold.ttf", 20)
-FONT_MD = Font("../assets/fonts/UbuntuMono-Regular.ttf", 28)
-FONT_MD_BOLD = Font("../assets/fonts/UbuntuMono-Bold.ttf", 28)
-FONT_LG = Font("../assets/fonts/UbuntuMono-Regular.ttf", 32)
-FONT_LG_BOLD = Font("../assets/fonts/UbuntuMono-Bold.ttf", 32)
-FONT_XL = Font("../assets/fonts/UbuntuMono-Regular.ttf", 40)
-FONT_XL_BOLD = Font("../assets/fonts/UbuntuMono-Bold.ttf", 40)
+FONT_1 = Font("./assets/fonts/UbuntuMono-Regular.ttf", 16)
+FONT_SM = Font("./assets/fonts/UbuntuMono-Regular.ttf", 20)
+FONT_SM_BOLD = Font("./assets/fonts/UbuntuMono-Bold.ttf", 20)
+FONT_MD = Font("./assets/fonts/UbuntuMono-Regular.ttf", 28)
+FONT_MD_BOLD = Font("./assets/fonts/UbuntuMono-Bold.ttf", 28)
+FONT_LG = Font("./assets/fonts/UbuntuMono-Regular.ttf", 32)
+FONT_LG_BOLD = Font("./assets/fonts/UbuntuMono-Bold.ttf", 32)
+FONT_XL = Font("./assets/fonts/UbuntuMono-Regular.ttf", 40)
+FONT_XL_BOLD = Font("./assets/fonts/UbuntuMono-Bold.ttf", 40)

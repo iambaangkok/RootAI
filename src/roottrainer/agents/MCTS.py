@@ -1,4 +1,5 @@
 import logging
+import sys
 import time
 from multiprocessing.pool import MapResult
 from random import randint
@@ -15,7 +16,8 @@ from src.game.Faction import Faction
 from src.game.GameLogic import Action, GameLogic
 from src.roottrainer.agents.MCTSNode import MCTSNode
 
-config = yaml.safe_load(open("config/config.yml"))
+config_path: str = str(sys.argv[1])
+config = yaml.safe_load(open(config_path))
 
 LOGGER = logging.getLogger('mcts_logger')
 

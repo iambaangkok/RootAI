@@ -1,4 +1,5 @@
 import logging
+import sys
 from random import randint
 
 import pygame
@@ -9,13 +10,14 @@ from pygame.time import Clock
 from src.config import Config, Colors
 from src.game.Faction import Faction
 from src.game.GameLogic import Action, GameLogic, Game
-from src.roottrainer.agents.Agent import Agent
 from src.roottrainer.CSVOutputWriter import CSVOutputWriter
+from src.roottrainer.agents.Agent import Agent
 from src.roottrainer.agents.MCTSAgent import MCTSAgent
 from src.roottrainer.agents.RandomDecisionAgent import RandomDecisionAgent
 from src.utils.draw_utils import draw_text_in_rect
 
-config = yaml.safe_load(open("config/config.yml"))
+config_path: str = str(sys.argv[1])
+config = yaml.safe_load(open(config_path))
 
 LOGGER = logging.getLogger('trainer_logger')
 
@@ -26,7 +28,7 @@ class RootTrainer:
         self.fake_screen: Surface = screen.copy() if Config.RENDER_ENABLE else None
         self.screen: Surface = \
             pygame.display.set_mode((Config.SCREEN_WIDTH, Config.SCREEN_HEIGHT)) \
-            if Config.RENDER_ENABLE else None
+                if Config.RENDER_ENABLE else None
 
         self.clock: Clock = pygame.time.Clock()
         self.running: bool = True

@@ -1,4 +1,5 @@
 import math
+import sys
 
 import pygame
 from pygame import Rect, Color, Surface
@@ -14,7 +15,8 @@ import yaml
 
 from src.utils.utils import faction_to_warrior
 
-config = yaml.safe_load(open("config/config.yml"))
+config_path: str = str(sys.argv[1])
+config = yaml.safe_load(open(config_path))
 
 FACTION_NAMES = ['Marquise de Cat', 'The Decree', 'Woodland Alliance', 'Vagabond']
 FACTION_ALIAS = {
@@ -239,7 +241,7 @@ class Board:
             row = i // 6
             col = i % 6
 
-            item_image = pygame.image.load("../assets/images/{}.png".format(ITEM_SUPPLY_RENDER[row][col]))
+            item_image = pygame.image.load("./assets/images/{}.png".format(ITEM_SUPPLY_RENDER[row][col]))
             item_image = pygame.transform.scale(item_image, img_size)
 
             if self.logic.item_supply_available[i]:
