@@ -14,7 +14,7 @@ if __name__ == "__main__":
     logging.getLogger('mcts_logger').setLevel(logging.INFO)
 
     pygame.init()
-    screen: Surface = pygame.display.set_mode((Config.SCREEN_WIDTH, Config.SCREEN_HEIGHT))
+    screen: Surface = pygame.display.set_mode((Config.NATIVE_SCREEN_WIDTH, Config.NATIVE_SCREEN_HEIGHT))
 
     trainer = RootTrainer(screen)
     trainer.run()

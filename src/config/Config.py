@@ -4,8 +4,10 @@ from pygame.font import Font
 
 config = yaml.safe_load(open("config/config.yml"))
 
-SCREEN_WIDTH = config['screen']['width']  # 1680
+SCREEN_WIDTH = config['screen']['width']
 SCREEN_HEIGHT = config['screen']['height']
+NATIVE_SCREEN_WIDTH = config['screen']['native-width']  # 1680
+NATIVE_SCREEN_HEIGHT = config['screen']['native-height']  # 960
 
 pygame.font.init()
 FONT_1 = Font("../assets/fonts/UbuntuMono-Regular.ttf", 16)

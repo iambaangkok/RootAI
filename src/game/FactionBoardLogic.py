@@ -11,7 +11,7 @@ from src.utils.draw_utils import draw_key_value, draw_cards
 
 
 class FactionBoardLogic:
-    dimension = Vector2(Config.SCREEN_WIDTH * 0.25, Config.SCREEN_HEIGHT * 0.5)
+    dimension = Vector2(Config.NATIVE_SCREEN_WIDTH * 0.25, Config.NATIVE_SCREEN_HEIGHT * 0.5)
 
     def __init__(self, reserved_warriors: int):
         self.items: {Item: int} = {
@@ -135,13 +135,13 @@ class FactionBoard:
     def draw_dominance_card(self, screen):
         size_ratio: float = 0.03
 
-        radius = size_ratio * Config.SCREEN_WIDTH / 4
+        radius = size_ratio * Config.NATIVE_SCREEN_WIDTH / 4
         color = Colors.WHITE
         width = 1
         text = ""
 
         offset: Vector2 = Vector2(-radius - 2, radius + 2)
-        position: Vector2 = Vector2(self.starting_point.x + Config.SCREEN_WIDTH / 4, self.starting_point.y) + offset
+        position: Vector2 = Vector2(self.starting_point.x + Config.NATIVE_SCREEN_WIDTH / 4, self.starting_point.y) + offset
 
         if self.logic.dominance_card is not None:
             if self.logic.dominance_card.suit is Suit.MOUSE:

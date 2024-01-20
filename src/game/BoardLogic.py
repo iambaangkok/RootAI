@@ -137,7 +137,7 @@ class BoardLogic:
 
 class Board:
     dimension: float = 800
-    rect: Rect = Rect(((Config.SCREEN_WIDTH - dimension) / 2, (Config.SCREEN_HEIGHT - dimension) / 2 - 50),
+    rect: Rect = Rect(((Config.NATIVE_SCREEN_WIDTH - dimension) / 2, (Config.NATIVE_SCREEN_HEIGHT - dimension) / 2 - 50),
                       (dimension, dimension))
 
     def __init__(self, board_logic: BoardLogic, areas: list[Area]):
@@ -171,7 +171,7 @@ class Board:
         pass
 
     def draw_board_info(self, screen):
-        starting_point = ((Config.SCREEN_WIDTH - self.dimension) / 2, (Config.SCREEN_HEIGHT - 130))
+        starting_point = ((Config.NATIVE_SCREEN_WIDTH - self.dimension) / 2, (Config.NATIVE_SCREEN_HEIGHT - 130))
 
         size = (self.dimension, 130)
         block_one_third = (size[0] / 3, size[1] / 3)

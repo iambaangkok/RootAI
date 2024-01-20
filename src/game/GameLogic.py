@@ -3261,8 +3261,8 @@ class Game:
 
         self.board = Board(self.logic.board, areas)
 
-        self.marquise = MarquiseBoard(self.logic.marquise_board_logic, "Marquise de Cat", Colors.ORANGE, Vector2(0, 0.0 * Config.SCREEN_HEIGHT))
-        self.eyrie = EyrieBoard(self.logic.eyrie_board_logic, "Eyrie Dynasties", Colors.BLUE, Vector2(0, 0.5 * Config.SCREEN_HEIGHT))
+        self.marquise = MarquiseBoard(self.logic.marquise_board_logic, "Marquise de Cat", Colors.ORANGE, Vector2(0, 0.0 * Config.NATIVE_SCREEN_HEIGHT))
+        self.eyrie = EyrieBoard(self.logic.eyrie_board_logic, "Eyrie Dynasties", Colors.BLUE, Vector2(0, 0.5 * Config.NATIVE_SCREEN_HEIGHT))
 
     def draw(self, screen: Surface):
         # Fill Black

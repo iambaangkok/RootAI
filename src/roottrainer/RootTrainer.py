@@ -22,7 +22,9 @@ LOGGER = logging.getLogger('trainer_logger')
 
 class RootTrainer:
     def __init__(self, screen: Surface):
-        self.screen: Surface = screen
+        self.fake_screen: Surface = screen.copy()
+        self.screen: Surface = pygame.display.set_mode((Config.SCREEN_WIDTH, Config.SCREEN_HEIGHT))
+
         self.clock: Clock = pygame.time.Clock()
         self.running: bool = True
 
@@ -336,58 +338,61 @@ class RootTrainer:
     #####
     # RENDER
     def render(self):
+        screen: Surface = self.fake_screen
         # Fill Black
-        self.screen.fill("black")
+        screen.fill("black")
 
         if config['game']['rendering']['enable']:
-            self.get_game().draw(self.screen)
+            self.get_game().draw(screen)
 
-        self.draw_fps_text()
-        self.draw_delta_time_text()
-        self.draw_round_text()
+        self.draw_fps_text(screen)
+        self.draw_delta_time_text(screen)
+        self.draw_round_text(screen)
         if config['simulation']['actions']['rendering']['enable']:
-            self.draw_action(self.screen)
+            self.draw_action(screen)
 
             if not self.get_game_logic().running:
-                self.draw_game_ended(self.screen)
+                self.draw_game_ended(screen)
 
-    def draw_fps_text(self):
+        self.screen.blit(pygame.transform.smoothscale(self.fake_screen, self.screen.get_rect().size), (0, 0))
+
+    def draw_fps_text(self, screen: Surface):
         margin_right = 20
         margin_top = 20
         text = "fps: {fps:.2f}".format(fps=self.fps)
 
         surface = Config.FONT_1.render(text, True, Colors.WHITE)
         surface_rect = surface.get_rect()
-        surface_rect.right = Config.SCREEN_WIDTH - margin_right
+        surface_rect.right = Config.NATIVE_SCREEN_WIDTH - margin_right
         surface_rect.top = margin_top
 
-        self.screen.blit(surface, surface_rect)
+        screen.blit(surface, surface_rect)
 
-    def draw_delta_time_text(self):
+    def draw_delta_time_text(self, screen: Surface):
         margin_right = 20
         margin_top = 40
         text = "delta_time: {delta_time:.3f}".format(delta_time=self.delta_time)
 
         surface = Config.FONT_1.render(text, True, Colors.WHITE)
         surface_rect = surface.get_rect()
-        surface_rect.right = Config.SCREEN_WIDTH - margin_right
+        surface_rect.right = Config.NATIVE_SCREEN_WIDTH - margin_right
         surface_rect.top = margin_top
 
-        self.screen.blit(surface, surface_rect)
+        screen.blit(surface, surface_rect)
 
-    def draw_round_text(self):
+    def draw_round_text(self, screen: Surface):
         margin_right = 120
         margin_top = 20
 
         text = "round: {}".format(self.round)
         surface = Config.FONT_1.render(text, True, Colors.WHITE)
         surface_rect = surface.get_rect()
-        surface_rect.right = Config.SCREEN_WIDTH - margin_right
+        surface_rect.right = Config.NATIVE_SCREEN_WIDTH - margin_right
         surface_rect.top = margin_top
         # surface_rect.centerx = Config.SCREEN_WIDTH / 2
         # surface_rect.centery = Config.SCREEN_HEIGHT - margin_bottom
 
-        self.screen.blit(surface, surface_rect)
+        screen.blit(surface, surface_rect)
 
     def draw_action(self, screen: Surface):
         # Phase
@@ -396,8 +401,8 @@ class RootTrainer:
             color = Colors.BLUE
         phase = Config.FONT_MD_BOLD.render("{} ({})".format(self.get_game_logic().phase, self.get_game_logic().sub_phase), True, color)
         phase_rect = phase.get_rect()
-        starting_point = Vector2(0.75 * Config.SCREEN_WIDTH, 0.0 * Config.SCREEN_HEIGHT)
-        shift = Vector2(10, 0.05 * Config.SCREEN_HEIGHT)
+        starting_point = Vector2(0.75 * Config.NATIVE_SCREEN_WIDTH, 0.0 * Config.NATIVE_SCREEN_HEIGHT)
+        shift = Vector2(10, 0.05 * Config.NATIVE_SCREEN_HEIGHT)
         phase_rect.topleft = starting_point + shift
         screen.blit(phase, phase_rect)
 
@@ -409,7 +414,7 @@ class RootTrainer:
         screen.blit(action, action_rect)
 
         # Prompt
-        prompt_rect = Rect(0, 0, Config.SCREEN_WIDTH - phase_rect.left, Config.SCREEN_HEIGHT * 0.1)
+        prompt_rect = Rect(0, 0, Config.NATIVE_SCREEN_WIDTH - phase_rect.left, Config.NATIVE_SCREEN_HEIGHT * 0.1)
         shift = Vector2(0, 8)
         prompt_rect.topleft = phase_rect.bottomleft + shift
         # screen.blit(prompt, prompt_rect)
@@ -420,12 +425,12 @@ class RootTrainer:
 
     def draw_arrow(self, screen, starting_point):
         arrow = Config.FONT_1.render(">", True, Colors.WHITE)
-        shift = Vector2(10, 0.15 * Config.SCREEN_HEIGHT)
+        shift = Vector2(10, 0.15 * Config.NATIVE_SCREEN_HEIGHT)
         screen.blit(arrow, starting_point + shift + Vector2(self.action_arrow_pos[0] * self.action_col_width,
                                                             self.action_arrow_pos[1] * self.action_row_width))
 
     def draw_action_list(self, screen, starting_point):
-        shift = Vector2(10 + 16, 0.15 * Config.SCREEN_HEIGHT)
+        shift = Vector2(10 + 16, 0.15 * Config.NATIVE_SCREEN_HEIGHT)
 
         ind = 0
         for action in self.actions:
@@ -436,12 +441,12 @@ class RootTrainer:
 
     def draw_game_ended(self, screen: Surface):
 
-        position = Vector2(Config.SCREEN_WIDTH / 2, Config.SCREEN_HEIGHT / 2)
+        position = Vector2(Config.NATIVE_SCREEN_WIDTH / 2, Config.NATIVE_SCREEN_HEIGHT / 2)
 
         rect = Rect(0, 0, 0, 0)
-        rect.width = 0.2 * Config.SCREEN_WIDTH
-        rect.height = 0.35 * Config.SCREEN_HEIGHT
-        rect.midtop = position + Vector2(0, -0.1 * Config.SCREEN_HEIGHT)
+        rect.width = 0.2 * Config.NATIVE_SCREEN_WIDTH
+        rect.height = 0.35 * Config.NATIVE_SCREEN_HEIGHT
+        rect.midtop = position + Vector2(0, -0.1 * Config.NATIVE_SCREEN_HEIGHT)
         surface = Surface(rect.size)
         surface.set_alpha(128)
         pygame.draw.rect(surface, Colors.BLACK, rect)
@@ -449,7 +454,7 @@ class RootTrainer:
         # pygame.draw.rect(screen, Colors.BLACK_A_128, rect)
 
         ###
-        shift = Vector2(0, -0.05 * Config.SCREEN_HEIGHT)
+        shift = Vector2(0, -0.05 * Config.NATIVE_SCREEN_HEIGHT)
         text = Config.FONT_XL.render("Round {}/{} Ended".format(self.round, self.round_limit), True, Colors.WHITE)
         rect = text.get_rect()
         rect.center = position + shift
@@ -461,10 +466,10 @@ class RootTrainer:
         rect.center = position + shift
         screen.blit(text, rect)
         ###
-        offset_x = 0.05 * Config.SCREEN_WIDTH
+        offset_x = 0.05 * Config.NATIVE_SCREEN_WIDTH
         gap_y = 0.03
         ###
-        shift = Vector2(-offset_x, 1 * gap_y * Config.SCREEN_HEIGHT)
+        shift = Vector2(-offset_x, 1 * gap_y * Config.NATIVE_SCREEN_HEIGHT)
         text = Config.FONT_SM.render("winner: {}".format(self.winning_faction), True, Colors.WHITE)
         rect = text.get_rect()
         rect.midleft = position + shift
@@ -472,37 +477,37 @@ class RootTrainer:
         ###
         gap_y = 0.03
         offset_y = 0.05
-        shift = Vector2(-offset_x, offset_y + 2 * gap_y * Config.SCREEN_HEIGHT)
+        shift = Vector2(-offset_x, offset_y + 2 * gap_y * Config.NATIVE_SCREEN_HEIGHT)
         text = Config.FONT_SM.render("condition: {}".format(self.winning_condition), True, Colors.WHITE)
         rect = text.get_rect()
         rect.midleft = position + shift
         screen.blit(text, rect)
         ###
-        shift = Vector2(-offset_x, offset_y + 3 * gap_y * Config.SCREEN_HEIGHT)
+        shift = Vector2(-offset_x, offset_y + 3 * gap_y * Config.NATIVE_SCREEN_HEIGHT)
         text = Config.FONT_SM.render("turn count: {}".format(self.turns_played), True, Colors.WHITE)
         rect = text.get_rect()
         rect.midleft = position + shift
         screen.blit(text, rect)
         ###
-        shift = Vector2(-offset_x, offset_y + 4 * gap_y * Config.SCREEN_HEIGHT)
+        shift = Vector2(-offset_x, offset_y + 4 * gap_y * Config.NATIVE_SCREEN_HEIGHT)
         text = Config.FONT_SM.render("current player: {}".format(self.turn_player), True, Colors.WHITE)
         rect = text.get_rect()
         rect.midleft = position + shift
         screen.blit(text, rect)
         ###
-        shift = Vector2(-offset_x, offset_y + 5 * gap_y * Config.SCREEN_HEIGHT)
+        shift = Vector2(-offset_x, offset_y + 5 * gap_y * Config.NATIVE_SCREEN_HEIGHT)
         text = Config.FONT_SM.render("marquise vp: {}".format(self.vp_marquise), True, Colors.WHITE)
         rect = text.get_rect()
         rect.midleft = position + shift
         screen.blit(text, rect)
         ###
-        shift = Vector2(-offset_x, offset_y + 6 * gap_y * Config.SCREEN_HEIGHT)
+        shift = Vector2(-offset_x, offset_y + 6 * gap_y * Config.NATIVE_SCREEN_HEIGHT)
         text = Config.FONT_SM.render("eyrie vp: {}".format(self.vp_eyrie), True, Colors.WHITE)
         rect = text.get_rect()
         rect.midleft = position + shift
         screen.blit(text, rect)
         ###
-        shift = Vector2(-offset_x, offset_y + 7 * gap_y * Config.SCREEN_HEIGHT)
+        shift = Vector2(-offset_x, offset_y + 7 * gap_y * Config.NATIVE_SCREEN_HEIGHT)
         text = Config.FONT_SM.render(
             "winning dominance: {}".format(self.winning_dominance.lower()),
             True,

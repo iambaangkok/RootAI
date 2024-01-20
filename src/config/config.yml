@@ -1,6 +1,8 @@
 screen:
-  width: 1680
-  height: 960
+  native-width: 1680
+  native-height: 960
+  width: 1280
+  height: 720
 
 simulation:
   rendering:
@@ -17,7 +19,7 @@ simulation:
     dir: output # str
   multiprocessing:
     enable: true # true | false
-    core: 12
+    core: 4
 
 agent:
   require-key-hold: true # true | false
@@ -27,7 +29,7 @@ agent:
     mcts:
       type: mcts # one-depth | mcts
       reward-function: vp-difference # win | vp-difference
-      expand-count: 10 # int
+      expand-count: 100 # int
       rollout-no: 1 # int
       time-limit: 1000 # float (per-rollout in milliseconds) (negative for no limit)
       action-count-limit: 20 # int (negative for no limit)
@@ -37,10 +39,10 @@ agent:
     mcts:
       type: mcts # one-depth | mcts
       reward-function: vp-difference # win | vp-difference
-      expand-count: 10 # int
-      rollout-no: 10000 # int
+      expand-count: 50 # int
+      rollout-no: 1 # int
       time-limit: -1 # float (per-rollout in milliseconds) (negative for no limit)
-      action-count-limit: -1 # int (negative for no limit)
+      action-count-limit: 20 # int (negative for no limit)
 
 game:
   rendering:
