@@ -129,6 +129,16 @@ class MCTS:
         self.depth_limit: int = depth_limit
         self.action_count_limit: int = action_count_limit
 
+    def get_game_logic_at_root_state(self) -> GameLogic:
+        game_logic: GameLogic = GameLogic()
+        game_logic.set_state_from_num_array(self.root_state)
+        return game_logic
+
+    def get_game_logic_at_node(self, node: MCTSNode) -> GameLogic:
+        game_logic: GameLogic = self.get_game_logic_at_root_state()
+        exec_seq_actions(node, game_logic)
+        return game_logic
+
     def expand_and_select_node(self, round):
         current: MCTSNode = self.root
         while not current.terminal_flag:
@@ -156,6 +166,7 @@ class MCTS:
 
         exec_seq_actions(node, game_logic)
 
+        ## Multicore / Single core Simulation
         if config['simulation']['multiprocessing']['enable']:
             start_time = time.time()
 
@@ -192,10 +203,19 @@ class MCTS:
 
     def backpropagation(self, node: MCTSNode, reward: int):
 
-        node.tries += 1
-        node.score += reward  # TODO for non-one-depth: reward only same turn player as root
+        node.tries += self.rollout_no
 
-        LOGGER.debug("backpropagation: reward {}, wins/tries {}/{}".format(reward, node.score, node.tries))
+        actual_reward: int = reward
+
+        game_logic_root: GameLogic = self.get_game_logic_at_root_state()
+        game_logic: GameLogic = self.get_game_logic_at_node(node)
+
+        if game_logic_root.turn_player != game_logic.turn_player:
+            actual_reward = -reward
+
+        node.score += actual_reward
+
+        LOGGER.debug("backpropagation: actual_reward {}, wins/tries {}/{}".format(actual_reward, node.score, node.tries))
 
         if node.parent:
             self.backpropagation(node.parent, reward)
