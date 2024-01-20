@@ -181,7 +181,7 @@ class FactionBoard:
             row = ind // 5
             col = ind % 5
 
-            img = pygame.image.load("../assets/images/{}.png".format(key))
+            img = pygame.image.load("./assets/images/{}.png".format(key))
             img = pygame.transform.scale(img, img_size)
 
             screen.blit(img,

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import random
+import sys
 from copy import deepcopy
 from enum import StrEnum
 from itertools import combinations
@@ -26,7 +27,8 @@ from src.utils.utils import perform, faction_to_warrior, faction_to_tokens, fact
 
 import yaml
 
-config = yaml.safe_load(open("config/config.yml"))
+config_path: str = str(sys.argv[1])
+config = yaml.safe_load(open(config_path))
 
 LOGGER = logging.getLogger('game_logger')
 

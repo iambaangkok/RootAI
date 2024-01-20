@@ -1,4 +1,5 @@
 import logging
+import sys
 from random import randint
 
 import pygame
@@ -9,21 +10,25 @@ from pygame.time import Clock
 from src.config import Config, Colors
 from src.game.Faction import Faction
 from src.game.GameLogic import Action, GameLogic, Game
-from src.roottrainer.agents.Agent import Agent
 from src.roottrainer.CSVOutputWriter import CSVOutputWriter
+from src.roottrainer.agents.Agent import Agent
 from src.roottrainer.agents.MCTSAgent import MCTSAgent
 from src.roottrainer.agents.RandomDecisionAgent import RandomDecisionAgent
 from src.utils.draw_utils import draw_text_in_rect
 
-config = yaml.safe_load(open("config/config.yml"))
+config_path: str = str(sys.argv[1])
+config = yaml.safe_load(open(config_path))
 
 LOGGER = logging.getLogger('trainer_logger')
 
 
 class RootTrainer:
     def __init__(self, screen: Surface):
-        self.fake_screen: Surface = screen.copy()
-        self.screen: Surface = pygame.display.set_mode((Config.SCREEN_WIDTH, Config.SCREEN_HEIGHT))
+
+        self.fake_screen: Surface = screen.copy() if Config.RENDER_ENABLE else None
+        self.screen: Surface = \
+            pygame.display.set_mode((Config.SCREEN_WIDTH, Config.SCREEN_HEIGHT)) \
+                if Config.RENDER_ENABLE else None
 
         self.clock: Clock = pygame.time.Clock()
         self.running: bool = True
@@ -42,6 +47,7 @@ class RootTrainer:
 
         self.current_action: Action | None = None
         self.actions: list[Action] = []
+        self.action_count: int = 0
         self.get_actions()
         self.reset_arrow()
 
@@ -50,7 +56,7 @@ class RootTrainer:
         self.eyrie_agent = self.init_agent(Faction.EYRIE)
 
         self.round_limit = config['simulation']['round']
-        self.round = 1
+        self.round = 0
 
         # Output
         self.collected_end_game_data = False
@@ -67,6 +73,8 @@ class RootTrainer:
         if config['simulation']['output']['enable']:
             self.output_writer.open()
             self.output_writer.write(['winner', 'condition', 'turn', 'current_player', 'vp_marquise', 'vp_eyrie', 'winning_dominance'])
+
+        self.next_round()
 
     def __del__(self):
         # self.print_game_state()
@@ -108,11 +116,10 @@ class RootTrainer:
         while self.running:
             self.init()
             self.update()
-            if config['simulation']['rendering']['enable']:
+            if Config.RENDER_ENABLE:
                 self.render()
-
-            # flip() the display to put your work on screen
-            pygame.display.flip()
+                # flip() the display to put your work on screen
+                pygame.display.flip()
 
             self.delta_time = self.clock.tick(config['simulation']['framerate']) / 1000
 
@@ -149,8 +156,8 @@ class RootTrainer:
                     self.vp_marquise, self.vp_eyrie, self.winning_dominance])
 
         if not self.get_game_logic().running:
-            if self.round + 1 <= self.round_limit:
-                if config['simulation']['auto-next-round']:
+            if self.round <= self.round_limit:
+                if Config.AUTO_NEXT_ROUND:
                     self.next_round()
                 else:
                     for event in pygame.event.get():
@@ -164,11 +171,14 @@ class RootTrainer:
                 self.running = False
 
         if self.get_game_logic().running:
-            if keys[pygame.K_a] or (not config['agent']['require-key-hold']):
+            if keys[pygame.K_a] or (not Config.AGENT_REQUIRE_KEY_HOLD):
+                LOGGER.log(21, "R{}/{}: action_count {}".format(self.round, self.round_limit, self.action_count))
                 if self.get_game_logic().turn_player == Faction.MARQUISE and config['agent']['marquise']['enable']:
                     self.execute_agent_action(Faction.MARQUISE)
                 elif self.get_game_logic().turn_player == Faction.EYRIE and config['agent']['eyrie']['enable']:
                     self.execute_agent_action(Faction.EYRIE)
+
+                self.action_count += 1
 
             # elif keys[pygame.K_f]:
             #     if config['simulation']['f-key-action'] == 'current':
@@ -217,6 +227,9 @@ class RootTrainer:
         self.round += 1
         self.get_actions()
         self.reset_arrow()
+        self.action_count = 0
+
+        LOGGER.log(21, "Simulating Round {}/{}".format(self.round, self.round_limit))
 
     ###
     # Arrows
@@ -305,7 +318,7 @@ class RootTrainer:
         return self.game
 
     def new_game(self):
-        self.game = GameLogic()
+        self.game = Game()
 
     def set_game_state(self, arr: list = None):
         self.game.logic.set_state_from_num_array(arr)
@@ -342,13 +355,13 @@ class RootTrainer:
         # Fill Black
         screen.fill("black")
 
-        if config['game']['rendering']['enable']:
+        if Config.GAME_RENDER_ENABLE:
             self.get_game().draw(screen)
 
         self.draw_fps_text(screen)
         self.draw_delta_time_text(screen)
         self.draw_round_text(screen)
-        if config['simulation']['actions']['rendering']['enable']:
+        if Config.ACTIONS_RENDER_ENABLE:
             self.draw_action(screen)
 
             if not self.get_game_logic().running:
