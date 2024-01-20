@@ -4,25 +4,35 @@ screen:
   width: 1280
   height: 720
 
+logging:
+  game:
+    level: 20 # 0, 10 DEBUG, 20 INFO, 30 WARNING, 40 ERROR, 50 CRITICAL
+  trainer:
+    level: 21 # 0, 10 DEBUG, 20 INFO, 30 WARNING, 40 ERROR, 50 CRITICAL
+  mcts:
+    level: 21 # 0, 10 DEBUG, 20 INFO, 30 WARNING, 40 ERROR, 50 CRITICAL
+
 simulation:
+  command-line-mode:
+    enable: false # true | false ## OVERRIDE by command-line-mode to false
   rendering:
-    enable: true # true | false
+    enable: true # true | false ## OVERRIDE by command-line-mode to false
   actions:
     rendering:
-      enable: true # true | false
+      enable: true # true | false ## OVERRIDE by command-line-mode to false
   f-key-action: random # current | random
   framerate: 60
-  auto-next-round: true # true | false
-  round: 50
+  auto-next-round: true # true | false ## OVERRIDE by command-line-mode to true
+  round: 1
   output:
-    enable: false # true | false
+    enable: true # true | false
     dir: output # str
   multiprocessing:
     enable: false # true | false
     core: 8
 
 agent:
-  require-key-hold: true # true | false
+  require-key-hold: true # true | false ## OVERRIDE by command-line-mode to false
   marquise:
     enable: true # true | false
     type: mcts # random | mcts | rnn
@@ -40,12 +50,12 @@ agent:
       type: mcts # one-depth | mcts
       reward-function: vp-difference # win | vp-difference
       expand-count: 100 # int
-      rollout-no: 100 # int
+      rollout-no: 10 # int
       time-limit: -1 # float (per-rollout in milliseconds) (negative for no limit)
       action-count-limit: 20 # int (negative for no limit)
 
 game:
   rendering:
-    enable: true # true | false
+    enable: true # true | false ## OVERRIDE by command-line-mode to false
   victory-point-limit: 30
   allow-dominance-card: false # true | false
