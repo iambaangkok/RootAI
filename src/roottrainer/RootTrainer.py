@@ -281,10 +281,7 @@ class RootTrainer:
     # Actions
     def execute_agent_action(self, faction: Faction):
         agent = self.faction_to_agent(faction)
-        if len(self.actions) == 1:
-            action = self.actions[0]
-        else:
-            action = agent.choose_action(self.get_game_state(), self.actions)
+        action = agent.choose_action(self.get_game_state(), self.actions)
         action_index = self.actions.index(action)
         self.set_arrow(action_index)
         decree_counter = self.get_game_logic().decree_counter

@@ -156,7 +156,7 @@ class MCTS:
                     current.untried_actions = game.get_legal_actions()
                 return current.expand()
             else:
-                (_, best_child) = current.choose_best_child('secure')
+                (_, best_child) = current.choose_best_child('UCB')
                 LOGGER.info("{}:expand_and_select_node:select best child {}".format(round, [a.name for a in
                                                                                             best_child.seq_actions]))
                 current = best_child
@@ -226,7 +226,6 @@ class MCTS:
             self.backpropagation(node.parent, reward)
 
     def run_mcts(self):
-        LOGGER.info("run_mcts, rollout_no {}".format(self.rollout_no))
 
         game: GameLogic = GameLogic()
         game.set_state_from_num_array(self.root_state)

@@ -56,7 +56,7 @@ class MCTSNode:
             ))
 
             return self.children[np.argmax(choices_most_visited)]
-        elif criteria == 'secure':
+        elif criteria == 'UCB':
             choices_weights: list[float] = [(c.score / c.tries + c_param * np.sqrt(np.log(self.tries) / c.tries)) for
                                             a, c in
                                             self.children]
