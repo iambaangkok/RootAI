@@ -121,7 +121,7 @@ def exec_random_actions(process_id: int, game: GameLogic, reward_function_type: 
 class MCTS:
     def __init__(self, state: list, actions: list[Action], reward_function: str,
                  expand_count: int, rollout_no: int,
-                 time_limit: float, action_count_limit: int, depth_limit: int = 1):
+                 time_limit: float, action_count_limit: int, best_action_policy='max', depth_limit: int = 1):
         self.root: MCTSNode = MCTSNode(0, None, None, None)
         self.root_state: list = state
         self.reward_function_type = reward_function
@@ -129,6 +129,7 @@ class MCTS:
         self.rollout_no: int = rollout_no
         self.time_limit: float = time_limit
         self.depth_limit: int = depth_limit
+        self.best_action_policy = best_action_policy
         self.action_count_limit: int = action_count_limit
 
     def get_game_logic_at_root_state(self) -> GameLogic:
@@ -155,7 +156,7 @@ class MCTS:
                     current.untried_actions = game.get_legal_actions()
                 return current.expand()
             else:
-                (_, best_child) = current.choose_best_child()
+                (_, best_child) = current.choose_best_child('secure')
                 LOGGER.info("{}:expand_and_select_node:select best child {}".format(round, [a.name for a in
                                                                                             best_child.seq_actions]))
                 current = best_child
@@ -202,7 +203,7 @@ class MCTS:
             end_time = time.time()
             LOGGER.info("rollout: running on single process: finished in {} s"
                         .format(end_time - start_time))
-            return sum(rewards)
+            return sum(rewards.values())
 
     def backpropagation(self, node: MCTSNode, reward: int):
 
@@ -218,7 +219,8 @@ class MCTS:
 
         node.score += actual_reward
 
-        LOGGER.debug("backpropagation: actual_reward {}, wins/tries {}/{}".format(actual_reward, node.score, node.tries))
+        LOGGER.debug(
+            "backpropagation: actual_reward {}, wins/tries {}/{}".format(actual_reward, node.score, node.tries))
 
         if node.parent:
             self.backpropagation(node.parent, reward)
@@ -241,12 +243,12 @@ class MCTS:
             self.backpropagation(selected_node, reward)
 
     def choose_best_action(self, actions: list[Action]) -> Action:
-        best_action_sim, best_node = self.root.choose_best_child()
-        LOGGER.debug("best_action_sim: action {}".format(best_action_sim.name))
+        best_action_sim, best_node = self.root.choose_best_child(self.best_action_policy)
+        LOGGER.info("best_action_sim: action {}".format(best_action_sim.name))
         # best_action_sim: Action = best_node.seq_actions[0]
         best_action: Action | None = None
 
-        LOGGER.debug("choose_best_action: actions {} {}".format(len(actions), [a.name for a in actions]))
+        LOGGER.info("choose_best_action: actions {} {}".format(len(actions), [a.name for a in actions]))
 
         for action in actions:
             if best_action_sim == action:

@@ -29,18 +29,46 @@ class MCTSNode:
         child.seq_actions = self.seq_actions + [action]
         # NOTE: seq_actions: action closer to leaf is added at the BACK of the list
 
-    def choose_best_child(self, c_param=2) -> (Action, MCTSNode):
-        choices_weights: list[float] = [(c.score / c.tries + c_param * np.sqrt(np.log(self.tries) / c.tries)) for a, c in
-                                        self.children]
-        LOGGER.info(
-            "choose_best_child: child actions {} {}".format(len(self.children), [a.name for a, c in self.children]))
-        LOGGER.info("choose_best_child: choices_weights {}".format(str(choices_weights)))
-        LOGGER.info("choose_best_child: params <score, tries> {}".format(str(
-            ["<{}, {}>".format(c.score, c.tries) for a, c in
-             self.children] + ["<{}, {}>".format(self.score, self.tries)]
-        )
-        ))
-        return self.children[np.argmax(choices_weights)]
+    def choose_best_child(self, criteria='max', c_param=2) -> (Action, MCTSNode):
+        if criteria == 'max':
+            choices_reward = [c.score for _, c in self.children]
+
+            LOGGER.info(
+                "choose_best_child: child actions {} {}".format(len(self.children), [a.name for a, c in self.children]))
+            LOGGER.info("choose_best_child: choices_reward {}".format(str(choices_reward)))
+            LOGGER.info("choose_best_child: params <score, tries> {}".format(str(
+                ["<{}, {}>".format(c.score, c.tries) for a, c in
+                 self.children] + ["<{}, {}>".format(self.score, self.tries)]
+            )
+            ))
+
+            return self.children[np.argmax(choices_reward)]
+        elif criteria == 'robust':
+            choices_most_visited = [c.tries for _, c in self.children]
+
+            LOGGER.info(
+                "choose_best_child: child actions {} {}".format(len(self.children), [a.name for a, c in self.children]))
+            LOGGER.info("choose_best_child: choices_most_visited {}".format(str(choices_most_visited)))
+            LOGGER.info("choose_best_child: params <score, tries> {}".format(str(
+                ["<{}, {}>".format(c.score, c.tries) for a, c in
+                 self.children] + ["<{}, {}>".format(self.score, self.tries)]
+            )
+            ))
+
+            return self.children[np.argmax(choices_most_visited)]
+        elif criteria == 'secure':
+            choices_weights: list[float] = [(c.score / c.tries + c_param * np.sqrt(np.log(self.tries) / c.tries)) for
+                                            a, c in
+                                            self.children]
+            LOGGER.info(
+                "choose_best_child: child actions {} {}".format(len(self.children), [a.name for a, c in self.children]))
+            LOGGER.info("choose_best_child: choices_weights {}".format(str(choices_weights)))
+            LOGGER.info("choose_best_child: params <score, tries> {}".format(str(
+                ["<{}, {}>".format(c.score, c.tries) for a, c in
+                 self.children] + ["<{}, {}>".format(self.score, self.tries)]
+            )
+            ))
+            return self.children[np.argmax(choices_weights)]
 
     def is_fully_expanded(self):
         if self.untried_actions is None:

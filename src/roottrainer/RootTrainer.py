@@ -91,6 +91,7 @@ class RootTrainer:
                 rollout_no = 1
                 time_limit = -1.0
                 action_count_limit = -1
+                best_action_policy = 'max'
 
                 if config['agent'][faction.lower()]['mcts']['type']:
                     mcts_type = config['agent'][faction.lower()]['mcts']['type']
@@ -110,7 +111,10 @@ class RootTrainer:
                 if config['agent'][faction.lower()]['mcts']['action-count-limit']:
                     action_count_limit = config['agent'][faction.lower()]['mcts']['action-count-limit']
 
-                return MCTSAgent(faction, mcts_type, reward_function, expand_count, rollout_no, time_limit, action_count_limit)
+                if config['agent'][faction.lower()]['mcts']['best-action-policy']:
+                    best_action_policy = config['agent'][faction.lower()]['mcts']['best-action-policy']
+
+                return MCTSAgent(faction, mcts_type, reward_function, expand_count, rollout_no, time_limit, action_count_limit, best_action_policy)
 
     def run(self):
         while self.running:
@@ -277,7 +281,10 @@ class RootTrainer:
     # Actions
     def execute_agent_action(self, faction: Faction):
         agent = self.faction_to_agent(faction)
-        action = agent.choose_action(self.get_game_state(), self.actions)
+        if len(self.actions) == 1:
+            action = self.actions[0]
+        else:
+            action = agent.choose_action(self.get_game_state(), self.actions)
         action_index = self.actions.index(action)
         self.set_arrow(action_index)
         decree_counter = self.get_game_logic().decree_counter

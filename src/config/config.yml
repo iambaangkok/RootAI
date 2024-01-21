@@ -43,6 +43,10 @@ agent:
       rollout-no: 1 # int
       time-limit: 1000 # float (per-rollout in milliseconds) (negative for no limit)
       action-count-limit: 20 # int (negative for no limit)
+      best-action-policy: max
+        # max - Select the root child with the highest reward
+        # robust - Select the most visited root child.
+        # secure - Select the child which maximises a lower confidence bound.
   eyrie:
     enable: true
     type: mcts
@@ -53,6 +57,10 @@ agent:
       rollout-no: 10 # int
       time-limit: -1 # float (per-rollout in milliseconds) (negative for no limit)
       action-count-limit: 20 # int (negative for no limit)
+      best-action-policy: max
+        # max - Select the root child with the highest reward
+        # robust - Select the most visited root child.
+        # secure - Select the child which maximises a lower confidence bound.
 
 game:
   rendering:
