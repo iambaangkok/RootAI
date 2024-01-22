@@ -774,6 +774,12 @@ class GameLogic:
                 actions.extend(
                     self.generate_actions_select_piece_to_remove()
                 )
+
+            case 40007:
+                actions.extend(
+                    [Action('Next', perform(self.attacker_activate_battle_ability_card))]
+                )
+
         LOGGER.debug("get_legal_actions:{}: len(actions) {}, actions {}".format(self.sub_phase, len(actions),
                                                                                 [a.name for a in actions]))
         return actions
@@ -1092,7 +1098,8 @@ class GameLogic:
         LOGGER.debug("{}:{}:{}:MARQUISE recruit.".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.prompt = "Recruit warrior"
 
-        if self.marquise_board_logic.reserved_warriors >= self.marquise_board_logic.building_trackers[Building.RECRUITER]:
+        if self.marquise_board_logic.reserved_warriors >= self.marquise_board_logic.building_trackers[
+            Building.RECRUITER]:
             self.recruit(Faction.MARQUISE)
             self.marquise_daylight_2()
         else:
@@ -1139,12 +1146,14 @@ class GameLogic:
         if self.marquise_recruit_count == 0:
             return actions
 
-        if self.marquise_board_logic.reserved_warriors >= self.marquise_board_logic.building_trackers[Building.RECRUITER]:
+        if self.marquise_board_logic.reserved_warriors >= self.marquise_board_logic.building_trackers[
+            Building.RECRUITER]:
             actions.append(Action("Recruit", perform(self.marquise_daylight_recruit)))
         else:
             clearing_with_recruiter = [clearing for clearing in self.board.areas for _ in
                                        range(clearing.buildings.count(Building.RECRUITER))]
-            all_possible_clearing_combinations = combinations(clearing_with_recruiter, self.marquise_board_logic.reserved_warriors)
+            all_possible_clearing_combinations = combinations(clearing_with_recruiter,
+                                                              self.marquise_board_logic.reserved_warriors)
             for combination in list(all_possible_clearing_combinations):
                 actions.append(Action("Recruit in clearing {}".format([c.area_index for c in combination]),
                                       perform(self.recruit_many_clearings, combination)))
@@ -1328,7 +1337,8 @@ class GameLogic:
         return remaining_wood
 
     def find_available_overwork_clearings(self) -> list[AreaLogic]:
-        clearings_with_sawmill: list[AreaLogic] = [clearing for clearing in filter(self.sawmill_clearing, self.board.areas)]
+        clearings_with_sawmill: list[AreaLogic] = [clearing for clearing in
+                                                   filter(self.sawmill_clearing, self.board.areas)]
         card_suit_list = set([card.suit for card in self.marquise_board_logic.cards_in_hand])
         return [clearing for clearing in clearings_with_sawmill if clearing.suit in card_suit_list]
 
@@ -1785,7 +1795,8 @@ class GameLogic:
         self.gain_vp(Faction.EYRIE, vp)
         LOGGER.debug(
             "{}:{}:{}:eyrie_evening: roost tracker {}, scored {} vps".format(self.ui_turn_player, self.phase,
-                                                                             self.sub_phase, self.eyrie_board_logic.roost_tracker,
+                                                                             self.sub_phase,
+                                                                             self.eyrie_board_logic.roost_tracker,
                                                                              vp))
         self.take_card_from_draw_pile(Faction.EYRIE, card_to_draw)
         self.eyrie_evening_discard()
@@ -2290,8 +2301,9 @@ class GameLogic:
         self.prompt = "Select Enemy Faction"
         self.set_actions(actions)
 
-    def generate_actions_select_enemy_faction_battle(self, faction: Faction, clearing: AreaLogic, continuation_func) -> list[
-        Action]:
+    def generate_actions_select_enemy_faction_battle(self, faction: Faction, clearing: AreaLogic, continuation_func) -> \
+            list[
+                Action]:
         enemy_factions: list[Faction] = self.get_available_enemy_tokens_from_clearing(faction, clearing)
         actions: list[Action] = []
 
@@ -2450,7 +2462,9 @@ class GameLogic:
         self.discard_card(attacker_board.cards_in_hand, ambush_discarded)
         self.roll_dice()
 
-    def roll_dice(self):
+    def roll_dice(self):  # 40007
+        self.sub_phase = 40007
+        self.prompt = "The dices has been rolled."
 
         # After ambush, check if there are remaining attacker's warrior.
         if self.attacking_clearing.warrior_count[faction_to_warrior(self.attacker)] == 0:
@@ -2473,7 +2487,23 @@ class GameLogic:
                                                                   self.attacker, self.attacker_roll, self.defender,
                                                                   self.defender_roll))
 
-            self.attacker_activate_battle_ability_card()
+            # self.attacker_activate_battle_ability_card()
+
+    def set_dice_values(self, attacker_dice, defender_dice):
+        self.prompt = "The dices has been rolled."
+
+        if attacker_dice < defender_dice:
+            attacker_dice, defender_dice = defender_dice, attacker_dice
+
+        self.attacker_roll = attacker_dice
+        self.defender_roll = defender_dice
+
+        LOGGER.debug(
+            "{}:{}:{}:battle:set_dice_values:{} rolls {}, {} rolls {}".format(self.ui_turn_player, self.phase,
+                                                                              self.sub_phase,
+                                                                              self.attacker, self.attacker_roll,
+                                                                              self.defender,
+                                                                              self.defender_roll))
 
     def attacker_activate_battle_ability_card(self):  # 40003
         LOGGER.debug(
@@ -2487,6 +2517,8 @@ class GameLogic:
                                                                                      self.defender_roll + self.defender_extra_hits,
                                                                                      self.defender_roll,
                                                                                      self.defender_extra_hits))
+
+
 
         attacker_faction_board = self.faction_to_faction_board(self.attacker)
 
@@ -3232,38 +3264,52 @@ class Game:
         areas_radius = Board.rect.width * AreaLogic.size_ratio
         areas: list[Area] = [
             Area(self.logic.get_area(0), Vector2(Board.rect.x + Board.rect.width * 0.12,
-                                                 Board.rect.y + Board.rect.height * (0.20 - areas_offset_y)), areas_radius),
+                                                 Board.rect.y + Board.rect.height * (0.20 - areas_offset_y)),
+                 areas_radius),
             Area(self.logic.get_area(1), Vector2(Board.rect.x + Board.rect.width * 0.55,
-                                                 Board.rect.y + Board.rect.height * (0.15 - areas_offset_y)), areas_radius),
+                                                 Board.rect.y + Board.rect.height * (0.15 - areas_offset_y)),
+                 areas_radius),
             Area(self.logic.get_area(2), Vector2(Board.rect.x + Board.rect.width * 0.88,
-                                                 Board.rect.y + Board.rect.height * (0.25 - areas_offset_y)), areas_radius),
+                                                 Board.rect.y + Board.rect.height * (0.25 - areas_offset_y)),
+                 areas_radius),
 
             Area(self.logic.get_area(3), Vector2(Board.rect.x + Board.rect.width * 0.43,
-                                                 Board.rect.y + Board.rect.height * (0.35 - areas_offset_y)), areas_radius),
+                                                 Board.rect.y + Board.rect.height * (0.35 - areas_offset_y)),
+                 areas_radius),
 
             Area(self.logic.get_area(4), Vector2(Board.rect.x + Board.rect.width * 0.10,
-                                                 Board.rect.y + Board.rect.height * (0.45 - areas_offset_y)), areas_radius),
+                                                 Board.rect.y + Board.rect.height * (0.45 - areas_offset_y)),
+                 areas_radius),
             Area(self.logic.get_area(5), Vector2(Board.rect.x + Board.rect.width * 0.34,
-                                                 Board.rect.y + Board.rect.height * (0.58 - areas_offset_y)), areas_radius),
+                                                 Board.rect.y + Board.rect.height * (0.58 - areas_offset_y)),
+                 areas_radius),
             Area(self.logic.get_area(6), Vector2(Board.rect.x + Board.rect.width * 0.66,
-                                                 Board.rect.y + Board.rect.height * (0.53 - areas_offset_y)), areas_radius),
+                                                 Board.rect.y + Board.rect.height * (0.53 - areas_offset_y)),
+                 areas_radius),
             Area(self.logic.get_area(7), Vector2(Board.rect.x + Board.rect.width * 0.90,
-                                                 Board.rect.y + Board.rect.height * (0.56 - areas_offset_y)), areas_radius),
+                                                 Board.rect.y + Board.rect.height * (0.56 - areas_offset_y)),
+                 areas_radius),
 
             Area(self.logic.get_area(8), Vector2(Board.rect.x + Board.rect.width * 0.12,
-                                                 Board.rect.y + Board.rect.height * (0.83 - areas_offset_y)), areas_radius),
+                                                 Board.rect.y + Board.rect.height * (0.83 - areas_offset_y)),
+                 areas_radius),
             Area(self.logic.get_area(9), Vector2(Board.rect.x + Board.rect.width * 0.39,
-                                                 Board.rect.y + Board.rect.height * (0.88 - areas_offset_y)), areas_radius),
+                                                 Board.rect.y + Board.rect.height * (0.88 - areas_offset_y)),
+                 areas_radius),
             Area(self.logic.get_area(10), Vector2(Board.rect.x + Board.rect.width * 0.62,
-                                                  Board.rect.y + Board.rect.height * (0.80 - areas_offset_y)), areas_radius),
+                                                  Board.rect.y + Board.rect.height * (0.80 - areas_offset_y)),
+                 areas_radius),
             Area(self.logic.get_area(11), Vector2(Board.rect.x + Board.rect.width * 0.84,
-                                                  Board.rect.y + Board.rect.height * (0.88 - areas_offset_y)), areas_radius),
+                                                  Board.rect.y + Board.rect.height * (0.88 - areas_offset_y)),
+                 areas_radius),
         ]
 
         self.board = Board(self.logic.board, areas)
 
-        self.marquise = MarquiseBoard(self.logic.marquise_board_logic, "Marquise de Cat", Colors.ORANGE, Vector2(0, 0.0 * Config.NATIVE_SCREEN_HEIGHT))
-        self.eyrie = EyrieBoard(self.logic.eyrie_board_logic, "Eyrie Dynasties", Colors.BLUE, Vector2(0, 0.5 * Config.NATIVE_SCREEN_HEIGHT))
+        self.marquise = MarquiseBoard(self.logic.marquise_board_logic, "Marquise de Cat", Colors.ORANGE,
+                                      Vector2(0, 0.0 * Config.NATIVE_SCREEN_HEIGHT))
+        self.eyrie = EyrieBoard(self.logic.eyrie_board_logic, "Eyrie Dynasties", Colors.BLUE,
+                                Vector2(0, 0.5 * Config.NATIVE_SCREEN_HEIGHT))
 
     def draw(self, screen: Surface):
         # Fill Black

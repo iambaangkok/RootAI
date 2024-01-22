@@ -4,12 +4,14 @@ import time
 from multiprocessing.pool import MapResult
 from random import randint
 from threading import Thread
+from typing import Union, Tuple
 
 import pathos.pools
 import yaml
 from pathos.pools import ParallelPool, ProcessPool
 from pathos.serial import SerialPool
 
+from src.game.EyrieBoard import DecreeAction
 # from pathos.multiprocessing import ProcessingPool
 
 from src.game.Faction import Faction
@@ -22,30 +24,51 @@ config = yaml.safe_load(open(config_path))
 LOGGER = logging.getLogger('mcts_logger')
 
 
+def show_action(a: Union[Action, Tuple[int, int, Action]]):
+    if isinstance(a, Action):
+        return a.name
+    else:
+        return a[0], a[1], a[2].name
+
+
 def exec_seq_actions(node: MCTSNode, game_logic: GameLogic):
     LOGGER.debug(
         "expand_and_select_node:execute_actions: len(seq_actions) {}, seq_actions {}".format(len(node.seq_actions),
-                                                                                             [a.name for a in
+                                                                                             [show_action(a) for a in
                                                                                               node.seq_actions]))
+
     for seq_action in node.seq_actions:
         actions: list[Action] = game_logic.get_legal_actions()
-        LOGGER.debug("expand_and_select_node:execute_actions: seq_action {}".format(seq_action.name))
-        LOGGER.debug(
-            "expand_and_select_node:execute_actions: len(actions) {}, actions {}".format(len(actions),
-                                                                                         [a.name for a in actions]))
+        LOGGER.debug("expand_and_select_node:execute_actions: seq_action {}".format(show_action(seq_action)))
+        # LOGGER.info(
+        #     "expand_and_select_node:execute_actions: len(actions) {}, actions {}".format(len(actions),
+        #                                                                                  [a.name for a in actions]))
+        # print("game_logic_state:" + str(game_logic.decree_counter))
+        # LOGGER.info("{}".format([card.suit for card in game_logic.decree_counter[DecreeAction.BATTLE]]))
 
         legal_action: Action | None = None
 
-        for action in actions:
-            if seq_action == action:
-                legal_action = action
-                break
+        if isinstance(seq_action, Action):
+            for action in actions:
+                if seq_action == action:
+                    legal_action = action
+                    break
+        else:
+            attacker_roll = seq_action[0]
+            defender_roll = seq_action[1]
+
+            game_logic.set_dice_values(attacker_roll, defender_roll)
+            # print(game_logic.attacker_roll)
+            # print(game_logic.defender_roll)
+
+            legal_action = actions[0]
 
         if legal_action:
             LOGGER.debug("expand_and_select_node:execute_actions: exec {}".format(legal_action.name))
+            # LOGGER.debug("expand_and_select_node:execute_actions: decree counter {}".format([[card.suit for card in game_logic.decree_counter[decree]] for decree in game_logic.decree_counter]))
             legal_action.function()
-        else:  # TODO for non-one-depth
-            LOGGER.warning(
+        else:
+            LOGGER.debug(
                 "expand_and_select_node:execute_actions: no matching legal action for {}".format(seq_action.name))
             # raise RuntimeError
             break
@@ -147,17 +170,22 @@ class MCTS:
         while not current.terminal_flag:
             # LOGGER.info(current.is_fully_expanded())
             if not current.is_fully_expanded():
-                LOGGER.info("{}:expand_and_select_node:expand {}".format(round, [a.name for a in
+                LOGGER.info("{}:expand_and_select_node:expand {}".format(round, [show_action(a) for a in
                                                                                  current.seq_actions]))
                 if current.untried_actions is None:
                     game: GameLogic = GameLogic()
                     game.set_state_from_num_array(self.root_state)
                     exec_seq_actions(current, game)
                     current.untried_actions = game.get_legal_actions()
-                return current.expand()
+
+                    if game.sub_phase == 40007:
+                        return current.expand(True, game.attacker_roll,
+                                              game.defender_roll)  # check if state is roll dice state.
+
+                return current.expand()  # check if state is roll dice state.
             else:
                 (_, best_child) = current.choose_best_child('UCB')
-                LOGGER.info("{}:expand_and_select_node:select best child {}".format(round, [a.name for a in
+                LOGGER.info("{}:expand_and_select_node:select best child {}".format(round, [show_action(a) for a in
                                                                                             best_child.seq_actions]))
                 current = best_child
         return current
@@ -236,6 +264,7 @@ class MCTS:
             selected_node = self.expand_and_select_node(i)
             # Rollout
             LOGGER.info("{}:rollout".format(i))
+            LOGGER.info("{}".format(selected_node))
             reward = self.rollout(selected_node)
             # Backpropagation
             LOGGER.info("{}:backpropagation".format(i))
