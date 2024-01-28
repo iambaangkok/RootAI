@@ -1,0 +1,8 @@
+round,marquise,marquise_reward_function,marquise_expand_count,marquise_rollout_no,marquise_time_limit(ms),marquise_action_time_limit,marquise_best_action_policy,eyrie,eyrie_reward_function,eyrie_expand_count,eyrie_rollout_no,eyrie_time_limit(ms),eyrie_action_time_limit,eyrie_best_action_policy,marquise_wins,eyrie_wins,marquise_avg_turn_to_win,eyrie_avg_turn_to_win,marquise_vp_lost_mean,eyrie_vp_lost_mean
+100,random,None,None,None,None,None,None,mcts,vp-difference,100,1,1000,20,robust,0,101,inf,15.01980198019802,31.445544554455445,0
+100,random,None,None,None,None,None,None,mcts,vp-difference,100,5,1000,20,robust,1,100,19.0,15.37,32.3,28.0
+100,random,None,None,None,None,None,None,mcts,vp-difference,100,10,1000,20,robust,0,101,inf,15.425742574257425,32.306930693069305,0
+100,mcts,vp-difference,100,1,1000,20,robust,random,None,None,None,None,None,None,101,0,15.128712871287128,inf,0,3.4257425742574257
+100,mcts,vp-difference,100,5,1000,20,robust,random,None,None,None,None,None,None,101,0,14.247524752475247,inf,0,2.742574257425743
+100,mcts,vp-difference,100,10,1000,20,robust,random,None,None,None,None,None,None,101,0,15.029702970297029,inf,0,2.8514851485148514
+100,mcts,vp-difference,200,1,1000,20,robust,random,None,None,None,None,None,None,101,0,14.415841584158416,inf,0,2.8613861386138613
