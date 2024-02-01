@@ -108,6 +108,16 @@ def reward_function(game: GameLogic, root_state: list, reward_function_type: str
                 return vp_marquise - vp_eyrie
             if current_player == Faction.EYRIE:
                 return vp_eyrie - vp_marquise
+        case "vp-difference-bin":
+            if current_player == Faction.MARQUISE:
+                return 1 if (vp_marquise - vp_eyrie) > 0 else 0
+            if current_player == Faction.EYRIE:
+                return 1 if (vp_eyrie - vp_marquise) > 0 else 0
+        case "vp-difference-relu":
+            if current_player == Faction.MARQUISE:
+                return vp_marquise - vp_eyrie if (vp_marquise - vp_eyrie) > 0 else 0
+            if current_player == Faction.EYRIE:
+                return vp_eyrie - vp_marquise if (vp_eyrie - vp_marquise) > 0 else 0
         case _:
             LOGGER.error("rollout:reward_function: unknown function, reward set to 0")
             return 0
