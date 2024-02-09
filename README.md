@@ -24,7 +24,10 @@
 2. Go to Settings > CodeStyle > Cogs icon > Import scheme > import `codestyle.xml` 
 
 ### Running the Game
+#### Option 1 - Run inside IntelliJ
 1. Run `Run main.py` to run the game
+#### Option 2 - Run via command line
+1. run python with config file path as arg `python -m src.main ".\src\config\config.yml"`
 
 ## Controls
 - Press UP/DOWN --- change action

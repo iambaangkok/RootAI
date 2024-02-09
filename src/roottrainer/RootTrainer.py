@@ -72,7 +72,7 @@ class RootTrainer:
         self.output_writer = CSVOutputWriter(config['simulation']['output']['dir'])
         if config['simulation']['output']['enable']:
             self.output_writer.open()
-            self.output_writer.write(['winner', 'condition', 'turn', 'current_player', 'vp_marquise', 'vp_eyrie', 'winning_dominance'])
+            self.output_writer.write(['winner', 'turn', 'current_player', 'vp_marquise', 'vp_eyrie'])
 
         self.next_round()
 
@@ -156,8 +156,11 @@ class RootTrainer:
             self.collected_end_game_data = True
             if config['simulation']['output']['enable']:
                 self.output_writer.write([
-                    self.winning_faction, self.winning_condition, self.turns_played, self.turn_player,
-                    self.vp_marquise, self.vp_eyrie, self.winning_dominance])
+                    self.winning_faction,
+                    self.turns_played,
+                    self.turn_player,
+                    self.vp_marquise,
+                    self.vp_eyrie])
 
         if not self.get_game_logic().running:
             if self.round <= self.round_limit:
