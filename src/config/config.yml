@@ -52,7 +52,7 @@ agent:
     type: random
     mcts:
       type: mcts # one-depth | mcts
-      reward-function: vp-difference # win | vp-difference
+      reward-function: vp-difference # win | vp-difference | vp-difference-relu
       expand-count: 100 # int
       rollout-no: 10 # int
       time-limit: -1 # float (per-rollout in milliseconds) (negative for no limit)
