@@ -6,7 +6,10 @@ from typing import IO, TextIO
 import yaml
 from pathlib import Path
 
+from src.utils.utils import get_filename_from_path
+
 config_path: str = str(sys.argv[1])
+config_filename: str = get_filename_from_path(config_path)
 config = yaml.safe_load(open(config_path))
 
 
@@ -22,9 +25,8 @@ class CSVOutputWriter:
             print(os.path.realpath(self.file.name))
 
     def open(self,
-             file_name: str = "{}-{}-{}-{}.csv".format(
-                 config['agent']['marquise']['type'],
-                 config['agent']['eyrie']['type'],
+             file_name: str = "{}-{}-{}.csv".format(
+                 config_filename,
                  config['simulation']['round'],
                  datetime.now().strftime("%Y-%m-%d-%H-%M-%S")),
              truncate: bool = True):

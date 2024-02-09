@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import ntpath
+import os
+
 from src.game.Building import Building
 from src.game.Card import Card
 from src.game.Faction import Faction
@@ -9,6 +12,13 @@ from src.game.Warrior import Warrior
 
 def perform(function: any, *args):
     return lambda: function(*args)
+
+
+def get_filename_from_path(path: str, extension: bool = False) -> str:
+    head, tail = ntpath.split(path)
+    if extension:
+        return tail or ntpath.basename(head)
+    return os.path.splitext(tail)[0] or os.path.splitext(ntpath.basename(head))[0]
 
 
 def get_card(card_id: int, cards: list[Card]):
