@@ -163,7 +163,7 @@ class RootTrainer:
                     self.vp_eyrie])
 
         if not self.get_game_logic().running:
-            if self.round <= self.round_limit:
+            if self.round < self.round_limit:
                 if Config.AUTO_NEXT_ROUND:
                     self.next_round()
                 else:
