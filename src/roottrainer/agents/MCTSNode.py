@@ -4,6 +4,7 @@ import logging
 from typing import Union
 
 import numpy as np
+import scipy.stats as st
 
 from src.game.GameLogic import Action
 
@@ -26,6 +27,7 @@ class MCTSNode:
         self.depth: int = depth
         self.tries: int = 0
         self.score: int = 0
+        self.score_list: list[int] = []
         self.parent = parent
         self.children: list[(Action, MCTSNode)] = []
         self.seq_actions: list[Union[Action, (int, int, Action)]] = prev_actions if prev_actions else []
@@ -87,6 +89,26 @@ class MCTSNode:
             )
             ))
             return self.children[np.argmax(choices_weights)]
+        elif criteria == 'secure':
+            rewards = [self.mean_confidence_interval(c.score_list) for _, c in self.children]
+            rewards_lower_bound = [r[1] for r in rewards]
+
+            LOGGER.info(
+                "choose_best_child: child actions {} {}".format(len(self.children), [a.name for a, c in self.children]))
+            LOGGER.info("choose_best_child: rewards_lower_bound {}".format(str(rewards_lower_bound)))
+            LOGGER.info("choose_best_child: params <score, tries> {}".format(str(
+                ["<{}, {}>".format(c.score, c.tries) for a, c in
+                 self.children] + ["<{}, {}>".format(self.score, self.tries)]
+            )
+            ))
+            return self.children[np.argmax(rewards_lower_bound)]
+
+    def mean_confidence_interval(self, data, confidence=0.95):
+        a = 1.0 * np.array(data)
+        n = len(a)
+        m, se = np.mean(a), st.sem(a)
+        h = se * st.t.ppf((1 + confidence) / 2., n - 1)
+        return m, m - h, m + h
 
     def is_fully_expanded(self):
         if self.untried_actions is None:

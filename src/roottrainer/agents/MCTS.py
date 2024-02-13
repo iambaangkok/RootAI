@@ -256,6 +256,7 @@ class MCTS:
             actual_reward = -reward
 
         node.score += actual_reward
+        node.score_list.append(actual_reward)
 
         LOGGER.debug(
             "backpropagation: actual_reward {}, wins/tries {}/{}".format(actual_reward, node.score, node.tries))
