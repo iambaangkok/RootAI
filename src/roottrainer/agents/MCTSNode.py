@@ -108,6 +108,8 @@ class MCTSNode:
             m = data[0]
             h = (1 - confidence) * m
             return m, m - h, m + h
+        elif len(data) == 0:
+            return float('-inf'), float('-inf'), float('-inf')
         else:  # confidence interval
             a = 1.0 * np.array(data)
             n = len(a)
