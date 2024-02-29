@@ -17,10 +17,10 @@ def write_params(
 
 
 NON_BASE_FACTIONS = ["ma", "ey"]
-EXPAND_COUNTS = [50, 100, 200, 400]
-ACTION_COUNT_LIMITS = [20, 100, 200, 400, -1]
+EXPAND_COUNTS = [50, 100, 200]
+ACTION_COUNT_LIMITS = [20, 100, 200, -1]
 REWARD_FUNCTIONS = ["win", "vp-difference", "vp-difference-relu"]
-BEST_ACTION_POLICIES = ["max", "robust", "UCB", "secure"]
+BEST_ACTION_POLICIES = ["max", "robust", "secure"]
 
 writer: CSVOutputWriter = CSVOutputWriter("src/config/experiment")
 for non_base_faction in NON_BASE_FACTIONS:
@@ -39,11 +39,11 @@ screen:
 
 logging:
   game:
-    level: 20
+    level: 50
   trainer:
-    level: 21
+    level: 50
   mcts:
-    level: 21
+    level: 50
 
 simulation:
   command-line-mode:
@@ -56,7 +56,7 @@ simulation:
   f-key-action: random
   framerate: 60
   auto-next-round: true
-  round: 1000
+  round: 100
   output:
     enable: true
     dir: output/experiment
