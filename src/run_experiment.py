@@ -1,7 +1,6 @@
 import subprocess
 import sys
 import time
-import datetime
 from datetime import datetime, timedelta
 
 ALL_CONFIGS_FILE = 216
@@ -68,14 +67,14 @@ if __name__ == "__main__":
             now = time.time()
             print(
                 "Run {}/{} | Elapsed time: {} | Total time: {} | Estimated remaining time: {}\n".format(
-                completed, ALL_CONFIGS_FILE 
+                completed, len(SPECIFIC_FILE)
                 , str(timedelta(seconds = now-start_time_batch))
                 , str(timedelta(seconds = now-start_time))
                 , str(timedelta(seconds = ((now-start_time)/completed) * (ALL_CONFIGS_FILE - completed)))
                 )
             )
             file.write("Run {}/{} | Elapsed time: {} | Total time: {} | Estimated remaining time: {}\n".format(
-                completed, ALL_CONFIGS_FILE 
+                completed, len(SPECIFIC_FILE)
                 , str(timedelta(seconds = now-start_time_batch))
                 , str(timedelta(seconds = now-start_time))
                 , str(timedelta(seconds = ((now-start_time)/completed) * (ALL_CONFIGS_FILE - completed)))

@@ -7,11 +7,11 @@ screen:
 
 logging:
   game:
-    level: 20
+    level: 50
   trainer:
-    level: 21
+    level: 50
   mcts:
-    level: 21
+    level: 50
 
 simulation:
   command-line-mode:
@@ -24,7 +24,7 @@ simulation:
   f-key-action: random
   framerate: 60
   auto-next-round: true
-  round: 1000
+  round: 100
   output:
     enable: true
     dir: output/experiment
@@ -46,12 +46,12 @@ agent:
     type: mcts
     mcts:
       type: mcts
-      expand-count: 50
+      expand-count: 100
       rollout-no: 1
-      action-count-limit: -1
+      action-count-limit: 100
       time-limit: -1
-      reward-function: win
-      best-action-policy: UCB
+      reward-function: vp-difference
+      best-action-policy: secure
 
   eyrie:
     enable: true
