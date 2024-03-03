@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 ALL_CONFIGS_FILE = 216
 BATCH_SIZE = 20
-SPECIFIC_FILE = [102, 107, 177, 208, 215]
+SPECIFIC_FILE = [107]
 
 if __name__ == "__main__":
     procs = []
