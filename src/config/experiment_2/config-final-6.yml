@@ -46,21 +46,21 @@ agent:
     type: mcts
     mcts:
       type: mcts
-      expand-count: 50
+      expand-count: 200
       rollout-no: 1
       action-count-limit: 20
       time-limit: -1
-      reward-function: vp-difference-relu
-      best-action-policy: max
+      reward-function: vp-difference
+      best-action-policy: robust
 
   eyrie:
     enable: true
     type: mcts
     mcts:
       type: mcts
-      expand-count: 100
+      expand-count: 200
       rollout-no: 1
-      action-count-limit: 20
+      action-count-limit: 200
       time-limit: -1
       reward-function: vp-difference
-      best-action-policy: robust
+      best-action-policy: secure
