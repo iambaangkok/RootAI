@@ -35,32 +35,31 @@ agent:
   require-key-hold: false # true | false ## OVERRIDE by command-line-mode to false
   marquise:
     enable: true # true | false
-    type: mcts # random | mcts | rnn
+    type: mcts # random | mcts ## random ignores all fields under mcts
     mcts:
-      type: mcts # one-depth | mcts
-      reward-function: vp-difference # win | vp-difference
-      expand-count: 100 # int
+      type: mcts # one-depth | mcts ## one-depth is janky, don't use
+      reward-function: vp-difference # win | vp-difference | vp-difference-relu | vp-difference-bin
+      expand-count: 200 # int
       rollout-no: 1 # int
-      time-limit: 1000 # float (per-rollout in milliseconds) (negative for no limit)
-      action-count-limit: 20 # int (negative for no limit)
-      best-action-policy: UCB
+      time-limit: -1 # float (per-rollout in milliseconds) (negative for no limit)
+      action-count-limit: 100 # int (negative for no limit)
+      best-action-policy: max
         # max - Select the root child with the highest reward
         # robust - Select the most visited root child.
-        # UCB - Select the child which maximises a lower confidence bound.
+        # UCB - Select the child which maximises the upper confidence bound.
+        ## secure - Select the child which maximises the lower confidence bound.
   eyrie:
     enable: true
-    type: random
+    type: mcts
     mcts:
-      type: mcts # one-depth | mcts
-      reward-function: vp-difference # win | vp-difference | vp-difference-relu
-      expand-count: 100 # int
-      rollout-no: 10 # int
-      time-limit: -1 # float (per-rollout in milliseconds) (negative for no limit)
-      action-count-limit: 20 # int (negative for no limit)
-      best-action-policy: UCB
-        # max - Select the root child with the highest reward
-        # robust - Select the most visited root child.
-        # UCB - Select the child which maximises upper confidence bound.
+      type: mcts
+      reward-function: vp-difference
+      expand-count: 00
+      rollout-no: 1
+      time-limit: -1
+      action-count-limit: 20
+      best-action-policy: robust
+
 
 game:
   rendering:
