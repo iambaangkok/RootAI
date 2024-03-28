@@ -18,6 +18,21 @@ def map_dice_roll_to_child(d1, d2):
     return f[max(d1, d2)] + g[min(d1, d2)]
 
 
+def mean_confidence_interval(data, confidence=0.95):
+    if len(data) == 1:  # approximation error
+        m = data[0]
+        h = (1 - confidence) * m
+        return m, m - h, m + h
+    elif len(data) == 0:
+        return float('-inf'), float('-inf'), float('-inf')
+    else:  # confidence interval
+        a = 1.0 * np.array(data)
+        n = len(a)
+        m, se = np.mean(a), st.sem(a)
+        h = se * st.t.ppf((1 + confidence) / 2., n - 1)
+        return m, m - h, m + h
+
+
 class MCTSNode:
     def __init__(self, depth: int = 0, parent: MCTSNode = None, prev_actions: list[Action] = None,
                  untried_actions: list[Action] = None, roll_dice_state=False, attacker_roll=-1, defender_roll=-1):
@@ -90,7 +105,7 @@ class MCTSNode:
             ))
             return self.children[np.argmax(choices_weights)]
         elif criteria == 'secure':
-            rewards = [self.mean_confidence_interval(c.score_list) for _, c in self.children]
+            rewards = [mean_confidence_interval(c.score_list) for _, c in self.children]
             rewards_lower_bound = [r[1] for r in rewards]
 
             LOGGER.info(
@@ -103,20 +118,6 @@ class MCTSNode:
             ))
             return self.children[np.argmax(rewards_lower_bound)]
 
-    def mean_confidence_interval(self, data, confidence=0.95):
-        if len(data) == 1:  # approximation error
-            m = data[0]
-            h = (1 - confidence) * m
-            return m, m - h, m + h
-        elif len(data) == 0:
-            return float('-inf'), float('-inf'), float('-inf')
-        else:  # confidence interval
-            a = 1.0 * np.array(data)
-            n = len(a)
-            m, se = np.mean(a), st.sem(a)
-            h = se * st.t.ppf((1 + confidence) / 2., n - 1)
-            return m, m - h, m + h
-
     def is_fully_expanded(self):
         if self.untried_actions is None:
             return False
@@ -127,10 +128,7 @@ class MCTSNode:
 
     def expand(self, roll_dice_state=False, attacker_roll=-1, defender_roll=-1):
 
-        # LOGGER.info("untried_actions: {}".format([n.name for n in self.untried_actions]))
         action = self.untried_actions.pop()
-
-        # LOGGER.info("action: {}".format(action.name))
 
         if roll_dice_state:
             for i in range(0, 4):
@@ -141,10 +139,8 @@ class MCTSNode:
             return self.roll_dice_state_child(attacker_roll, defender_roll)[1]
 
         else:
-            # LOGGER.info("pre-add-children: {}".format([(n[0].name,n[1]) for n in self.children]))
             child = MCTSNode(self.depth + 1, self, self.seq_actions + [action], None)
             self.add_child(action, child)
-            # LOGGER.info("post-add-children: {}".format([(n[0].name,n[1]) for n in self.children]))
             LOGGER.debug("add child: {}".format([n for n in self.seq_actions + [action]]))
 
             return child

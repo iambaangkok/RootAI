@@ -4,7 +4,6 @@ import logging
 import sys
 from random import randint
 
-import numpy as np
 import pygame
 import yaml
 
@@ -27,8 +26,8 @@ class MCTSOneDepth:
         self.time_limit: float = time_limit
 
     def rollout(self, node: MCTSNode) -> int:
-        def execute_random_action(game: GameLogic):
-            actions = game.get_legal_actions()
+        def execute_random_action(game_state: GameLogic):
+            actions = game_state.get_legal_actions()
 
             LOGGER.debug("rollout:execute_random_action: actions {} {}".format(len(actions), [a.name for a in actions]))
 
@@ -43,12 +42,12 @@ class MCTSOneDepth:
             LOGGER.debug("rollout:execute_random_action: exec {}".format(actions[rand].name))
             actions[rand].function()
 
-        def exec_seq_actions(game: GameLogic):
+        def exec_seq_actions(game_state: GameLogic):
             LOGGER.debug(
                 "rollout:exec_seq_actions: len(seq_actions) {}, seq_actions {}".format(len(node.seq_actions), [a.name for a in node.seq_actions]))
 
             for seq_action in node.seq_actions:
-                actions: list[Action] = game.get_legal_actions()
+                actions: list[Action] = game_state.get_legal_actions()
                 LOGGER.debug("rollout:exec_seq_actions: seq_action {}".format(seq_action.name))
                 LOGGER.debug(
                     "rollout:exec_seq_actions: len(actions) {}, actions {}".format(len(actions), [a.name for a in actions]))
@@ -63,12 +62,11 @@ class MCTSOneDepth:
                 if legal_action:
                     LOGGER.debug("rollout:exec_seq_actions: exec {}".format(legal_action.name))
                     legal_action.function()
-                else:  # TODO for non-one-depth
+                else:
                     LOGGER.warning("rollout:exec_seq_actions: no matching legal action for {}".format(seq_action.name))
-                    # raise RuntimeError
                     break
 
-        def reward_function(game: GameLogic) -> int:
+        def reward_function(game_state: GameLogic) -> int:
             root_game = GameLogic()
             root_game.set_state_from_num_array(self.root_state)
             current_player = root_game.turn_player
@@ -79,7 +77,7 @@ class MCTSOneDepth:
                 turn_player, \
                 vp_marquise, \
                 vp_eyrie, \
-                winning_dominance = game.get_end_game_data()
+                winning_dominance = game_state.get_end_game_data()
             match self.reward_function:
                 case "win":
                     return 1 if current_player == winning_faction else 0
@@ -99,12 +97,9 @@ class MCTSOneDepth:
 
         acc_time: float = 0
         clock = pygame.time.Clock()
-        # framerate = config['simulation']['framerate']
-        delta_time = clock.tick()
         while game.running:
             delta_time = clock.tick()
             acc_time += delta_time
-            # print(acc_time)
             if self.time_limit > 0:
                 if acc_time >= self.time_limit:
                     break
@@ -115,7 +110,7 @@ class MCTSOneDepth:
     def backpropagation(self, node: MCTSNode, reward: int):
 
         node.tries += 1
-        node.score += reward  # TODO for non-one-depth: reward only same turn player as root
+        node.score += reward
 
         LOGGER.debug("backpropagation: reward {}, wins/tries {}/{}".format(reward, node.score, node.tries))
 
@@ -148,7 +143,6 @@ class MCTSOneDepth:
     def choose_best_action(self, actions: list[Action]) -> Action:
         best_action_sim, best_node = self.root.choose_best_child()
         LOGGER.debug("best_action_sim: action {}".format(best_action_sim.name))
-        # best_action_sim: Action = best_node.seq_actions[0]
         best_action: Action | None = None
 
         LOGGER.debug("choose_best_action: actions {} {}".format(len(actions), [a.name for a in actions]))
