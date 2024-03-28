@@ -4,7 +4,7 @@ from src.game.Item import Item
 from src.game.Suit import Suit
 
 
-class CardName  (StrEnum):
+class CardName(StrEnum):
     AMBUSH = "Ambush"
 
     BIRDY_HANDLE = "Birdy Handle"
@@ -61,7 +61,8 @@ class Card:
     DOMINANCE_CARD_NAMES = [CardName.DOMINANCE_BIRD, CardName.DOMINANCE_FOX, CardName.DOMINANCE_RABBIT,
                             CardName.DOMINANCE_MOUSE]
 
-    def __init__(self, card_id: int, name: CardName | str, suit: Suit, phase: CardPhase, craft_requirement: {Suit: int} = None,
+    def __init__(self, card_id: int, name: CardName | str, suit: Suit, phase: CardPhase,
+                 craft_requirement: {Suit: int} = None,
                  reward_vp: int = 0, reward_item: Item | None = None):
         self.card_id: int = card_id
         self.name: CardName | str = name

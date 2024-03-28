@@ -56,7 +56,8 @@ class BoardLogic:
             Faction.MARQUISE: 0,
             Faction.EYRIE: 0
         }
-        self.item_supply_available: list[bool] = [True, True, True, True, True, True, True, True, True, True, True, True]
+        self.item_supply_available: list[bool] = [True, True, True, True, True, True, True, True, True, True, True,
+                                                  True]
         self.turn_player: Faction | None = None
         self.turn_count: int = 0
 
@@ -139,8 +140,9 @@ class BoardLogic:
 
 class Board:
     dimension: float = 800
-    rect: Rect = Rect(((Config.NATIVE_SCREEN_WIDTH - dimension) / 2, (Config.NATIVE_SCREEN_HEIGHT - dimension) / 2 - 50),
-                      (dimension, dimension))
+    rect: Rect = Rect(
+        ((Config.NATIVE_SCREEN_WIDTH - dimension) / 2, (Config.NATIVE_SCREEN_HEIGHT - dimension) / 2 - 50),
+        (dimension, dimension))
 
     def __init__(self, board_logic: BoardLogic, areas: list[Area]):
         self.name: str = "Forest"

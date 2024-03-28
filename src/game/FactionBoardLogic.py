@@ -90,7 +90,6 @@ class FactionBoardLogic:
 
     def spend_crafting_piece(self, suit: Suit | str, amount: int):
         if suit == Suit.BIRD:
-            # TODO: which suit to spend for ROYAL CLAIM BIRD suit requirement??, this is only a makeshift temporary implementation
             for _suit in self.crafting_pieces_count.keys():
                 if amount != 0 and amount <= self.crafting_pieces_count[_suit]:
                     self.crafting_pieces_count[_suit] -= amount
@@ -113,7 +112,8 @@ class FactionBoard:
 
     def draw(self, screen: Surface):
         pygame.draw.rect(screen, self.color, Rect(self.starting_point,
-                                                  (FactionBoardLogic.dimension.x, FactionBoardLogic.dimension.y)), width=3)
+                                                  (FactionBoardLogic.dimension.x, FactionBoardLogic.dimension.y)),
+                         width=3)
 
         # Text
         shift: Vector2 = Vector2(10, 10)
@@ -123,12 +123,15 @@ class FactionBoard:
         self.draw_crafted_items(screen, self.starting_point + Vector2(5, 45 * 0 + self.text_surface.get_height() + 20))
 
         self.draw_crafted_cards(screen, self.starting_point + Vector2(5, 45 * 2 + self.text_surface.get_height() + 20))
-        self.draw_crafted_cards_count(screen, self.starting_point + Vector2(5, 45 * 3 + self.text_surface.get_height() + 20))
+        self.draw_crafted_cards_count(screen,
+                                      self.starting_point + Vector2(5, 45 * 3 + self.text_surface.get_height() + 20))
 
         self.draw_cards_in_hand(screen, self.starting_point + Vector2(5, 45 * 4 + self.text_surface.get_height() + 20))
-        self.draw_cards_in_hand_count(screen, self.starting_point + Vector2(5, 45 * 5 + self.text_surface.get_height() + 20))
+        self.draw_cards_in_hand_count(screen,
+                                      self.starting_point + Vector2(5, 45 * 5 + self.text_surface.get_height() + 20))
 
-        self.draw_reserved_warriors(screen, self.starting_point + Vector2(5, 45 * 5 + 25 + self.text_surface.get_height() + 20))
+        self.draw_reserved_warriors(screen,
+                                    self.starting_point + Vector2(5, 45 * 5 + 25 + self.text_surface.get_height() + 20))
 
         self.draw_dominance_card(screen)
 
@@ -141,7 +144,8 @@ class FactionBoard:
         text = ""
 
         offset: Vector2 = Vector2(-radius - 2, radius + 2)
-        position: Vector2 = Vector2(self.starting_point.x + Config.NATIVE_SCREEN_WIDTH / 4, self.starting_point.y) + offset
+        position: Vector2 = Vector2(self.starting_point.x + Config.NATIVE_SCREEN_WIDTH / 4,
+                                    self.starting_point.y) + offset
 
         if self.logic.dominance_card is not None:
             if self.logic.dominance_card.suit is Suit.MOUSE:
@@ -185,27 +189,32 @@ class FactionBoard:
             img = pygame.transform.scale(img, img_size)
 
             screen.blit(img,
-                        (starting_point.x + (img_size.x + 10) * col + 10 + 150, starting_point.y + (img_size.x + 5) * row))
+                        (starting_point.x + (img_size.x + 10) * col + 10 + 150,
+                         starting_point.y + (img_size.x + 5) * row))
 
             quantity = Config.FONT_SM_BOLD.render("x{}".format(value), True, (206, 215, 132))
             quantity = text_utils.add_outline(quantity, 2, Colors.GREY_DARK_2)
-            screen.blit(quantity, (starting_point.x + (img_size.x + 10) * col + 10 + 150, starting_point.y + (img_size.x + 5) * row))
+            screen.blit(quantity, (
+                starting_point.x + (img_size.x + 10) * col + 10 + 150, starting_point.y + (img_size.x + 5) * row))
             ind = ind + 1
 
     def draw_crafted_cards(self, screen: Surface, starting_point: Vector2):
         draw_cards(screen, starting_point, self.color, "Crafted Cards:", self.logic.crafted_cards)
 
     def draw_crafted_cards_count(self, screen: Surface, starting_point):
-        draw_key_value(screen, Config.FONT_SM_BOLD, starting_point, Vector2(10, 10), self.color, "Crafted Cards Count", len(self.logic.crafted_cards))
+        draw_key_value(screen, Config.FONT_SM_BOLD, starting_point, Vector2(10, 10), self.color, "Crafted Cards Count",
+                       len(self.logic.crafted_cards))
 
     def draw_cards_in_hand(self, screen: Surface, starting_point: Vector2):
         draw_cards(screen, starting_point, self.color, "Cards In-Hand:", self.logic.cards_in_hand)
 
     def draw_cards_in_hand_count(self, screen: Surface, starting_point):
-        draw_key_value(screen, Config.FONT_SM_BOLD, starting_point, Vector2(10, 10), self.color, "Cards In-Hand Count", len(self.logic.cards_in_hand))
+        draw_key_value(screen, Config.FONT_SM_BOLD, starting_point, Vector2(10, 10), self.color, "Cards In-Hand Count",
+                       len(self.logic.cards_in_hand))
 
     def draw_reserved_warriors(self, screen: Surface, starting_point: Vector2):
-        title_text = Config.FONT_SM_BOLD.render("Reserved Warriors: {}".format(self.logic.reserved_warriors), True, self.color)
+        title_text = Config.FONT_SM_BOLD.render("Reserved Warriors: {}".format(self.logic.reserved_warriors), True,
+                                                self.color)
         shift: Vector2 = Vector2(10, 10)
         screen.blit(title_text, starting_point + shift)
 
