@@ -945,8 +945,7 @@ class GameLogic:
         else:
             self.prompt = "Want to craft something, squire?"
             self.set_actions(self.generate_actions_craft_cards(Faction.MARQUISE) +
-                             self.generate_actions_cards_daylight(Faction.MARQUISE
-                                                                  , self.marquise_daylight) + [
+                             self.generate_actions_cards_daylight(Faction.MARQUISE, self.marquise_daylight) + [
                                  Action('Next', perform(self.marquise_daylight_2))])
 
     def marquise_daylight_2(self):  # 10004
@@ -979,13 +978,6 @@ class GameLogic:
                 actions.append(Action('Overwork', perform(self.marquise_daylight_overwork_select_clearing)))
             if self.marquise_battle_check():
                 actions.append(Action('Battle', perform(self.marquise_daylight_battle)))
-            agent_actions += (
-                # self.generate_actions_agent_marquise_march(self.marquise_daylight_agent_resolve_march) +
-                    self.generate_actions_agent_marquise_build() +
-                    self.generate_actions_agent_marquise_recruit() +
-                    self.generate_actions_agent_marquise_overwork()
-                # self.generate_actions_agent_marquise_battle()
-            )
 
         self.set_actions(actions
                          + self.generate_actions_activate_dominance_card(Faction.MARQUISE,
@@ -1098,8 +1090,8 @@ class GameLogic:
         LOGGER.debug("{}:{}:{}:MARQUISE recruit.".format(self.ui_turn_player, self.phase, self.sub_phase))
         self.prompt = "Recruit warrior"
 
-        if self.marquise_board_logic.reserved_warriors >= self.marquise_board_logic.building_trackers[
-            Building.RECRUITER]:
+        if (self.marquise_board_logic.reserved_warriors >=
+                self.marquise_board_logic.building_trackers[Building.RECRUITER]):
             self.recruit(Faction.MARQUISE)
             self.marquise_daylight_2()
         else:
@@ -1146,8 +1138,8 @@ class GameLogic:
         if self.marquise_recruit_count == 0:
             return actions
 
-        if self.marquise_board_logic.reserved_warriors >= self.marquise_board_logic.building_trackers[
-            Building.RECRUITER]:
+        if (self.marquise_board_logic.reserved_warriors >=
+                self.marquise_board_logic.building_trackers[Building.RECRUITER]):
             actions.append(Action("Recruit", perform(self.marquise_daylight_recruit)))
         else:
             clearing_with_recruiter = [clearing for clearing in self.board.areas for _ in
@@ -1487,7 +1479,8 @@ class GameLogic:
         self.sub_phase = 20003
 
         if self.eyrie_board_logic.roost_tracker == 0 and len(self.get_areas_with_min_warrior_and_empty_building()) > 0:
-            self.prompt = "If you have no roost, place a roost and 3 warriors in the clearing with the fewest total warriors. (Select Clearing)"
+            self.prompt = ("If you have no roost, place a roost and 3 warriors in the clearing with the " +
+                           "fewest total warriors. (Select Clearing)")
         else:
             self.eyrie_birdsong_to_daylight()
 
@@ -2020,7 +2013,7 @@ class GameLogic:
         actions: list[Action] = []
 
         can_move_from_clearing = self.find_available_source_clearings(faction,
-                                                                      decree=False)  # TODO: investigate this generating 0 actions
+                                                                      decree=False)
         for src in can_move_from_clearing:
             dests = self.find_available_destination_clearings(faction, src)
             for dest in dests:
@@ -2069,8 +2062,8 @@ class GameLogic:
         self.prompt = "Choose number of warriors to move."
         self.set_actions(actions)
 
-    def generate_actions_select_warriors(self, faction, src: AreaLogic, dest: AreaLogic, continuation_func) -> list[
-        Action]:
+    def generate_actions_select_warriors(self, faction, src: AreaLogic, dest: AreaLogic, continuation_func) \
+            -> list[Action]:
         actions = []
 
         for num_of_warriors in range(1, src.warrior_count[faction_to_warrior(faction)] + 1):
@@ -2102,8 +2095,8 @@ class GameLogic:
                     movable_clearings.append(area)
                 else:
                     for connected_area in area.connected_clearings:
-                        if area.warrior_count[
-                            faction_to_warrior(faction)] > 0 and connected_area.ruler() == faction_to_warrior(faction):
+                        if (area.warrior_count[faction_to_warrior(faction)] > 0
+                                and connected_area.ruler() == faction_to_warrior(faction)):
                             movable_clearings.append(area)
                             break
         elif faction == Faction.EYRIE and decree:
@@ -2301,9 +2294,8 @@ class GameLogic:
         self.prompt = "Select Enemy Faction"
         self.set_actions(actions)
 
-    def generate_actions_select_enemy_faction_battle(self, faction: Faction, clearing: AreaLogic, continuation_func) -> \
-            list[
-                Action]:
+    def generate_actions_select_enemy_faction_battle(self, faction: Faction, clearing: AreaLogic, continuation_func) \
+            -> list[Action]:
         enemy_factions: list[Faction] = self.get_available_enemy_tokens_from_clearing(faction, clearing)
         actions: list[Action] = []
 
@@ -2321,8 +2313,7 @@ class GameLogic:
                 total_enemy_warriors = area.warrior_count[Warrior.EYRIE] + area.warrior_count[Warrior.ALLIANCE] + \
                                        area.warrior_count[Warrior.VAGABOND]
                 total_enemy_buildings = area.buildings.count(Building.ROOST)
-                if area.warrior_count[
-                    Warrior.MARQUISE] > 0 and total_enemy_warriors + total_enemy_buildings > 0:
+                if area.warrior_count[Warrior.MARQUISE] > 0 and total_enemy_warriors + total_enemy_buildings > 0:
                     clearings.append(area)
         elif faction == Faction.EYRIE:
             decree_can_battle_in: {Suit: bool} = {}
@@ -2334,8 +2325,8 @@ class GameLogic:
                     continue
                 if area.warrior_count[Warrior.EYRIE] == 0:
                     continue
-                if area.warrior_count[Warrior.MARQUISE] + area.warrior_count[Warrior.ALLIANCE] + area.warrior_count[
-                    Warrior.VAGABOND] == 0:
+                if (area.warrior_count[Warrior.MARQUISE] + area.warrior_count[Warrior.ALLIANCE]
+                        + area.warrior_count[Warrior.VAGABOND] == 0):
                     continue
 
                 clearings.append(area)
@@ -2487,8 +2478,6 @@ class GameLogic:
                                                                   self.attacker, self.attacker_roll, self.defender,
                                                                   self.defender_roll))
 
-            # self.attacker_activate_battle_ability_card()
-
     def set_dice_values(self, attacker_dice, defender_dice):
         self.prompt = "The dices has been rolled."
 
@@ -2517,8 +2506,6 @@ class GameLogic:
                                                                                      self.defender_roll + self.defender_extra_hits,
                                                                                      self.defender_roll,
                                                                                      self.defender_extra_hits))
-
-
 
         attacker_faction_board = self.faction_to_faction_board(self.attacker)
 
@@ -3108,7 +3095,6 @@ class GameLogic:
 
         self.command_warren_attacker = faction
         self.command_warren_continuation_func = continuation_func
-        # self.select_clearing_battle(faction, continuation_func, False)
 
     def tax_collector_check(self, faction):
         available = False

@@ -1,7 +1,5 @@
 from enum import Enum
 
-from src.game.Faction import Faction
-
 
 class Warrior(Enum):
     MARQUISE = 1

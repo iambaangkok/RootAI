@@ -40,7 +40,8 @@ class MarquiseBoardLogic(FactionBoardLogic):
         n_features: int = 1
         arr: list = prev_arr + [[]] * n_features
 
-        arr[7] = [self.building_trackers[building] for building in [Building.SAWMILL, Building.WORKSHOP, Building.RECRUITER]]
+        arr[7] = [self.building_trackers[building] for building in
+                  [Building.SAWMILL, Building.WORKSHOP, Building.RECRUITER]]
 
         return arr
 
@@ -81,8 +82,6 @@ class MarquiseBoard(FactionBoard):
             self.draw_tracker(screen, BUILDING_TRACKER_NAME[i],
                               self.starting_point + Vector2(5, 45 * (i + 6) + 25 + self.text_surface.get_height() + 20))
 
-        # self.marquise_action.draw(screen)
-
     def draw_tracker(self, screen: Surface, title: Building, starting_point: Vector2):
 
         # Text
@@ -113,7 +112,8 @@ class MarquiseBoard(FactionBoard):
                         (starting_point.x + (img_size.x + gap) * j + gap + offset_x, starting_point.y))
 
             if self.logic.building_reward[title][j] > 0:
-                reward = Config.FONT_SM_BOLD.render("+" + str(self.logic.building_reward[title][j]), True, (206, 215, 132))
+                reward = Config.FONT_SM_BOLD.render("+" + str(self.logic.building_reward[title][j]), True,
+                                                    (206, 215, 132))
                 reward = text_utils.add_outline(reward, 2, Colors.GREY_DARK_2)
 
                 screen.blit(reward, (starting_point.x + (img_size.x + gap) * j + gap + offset_x, starting_point.y))
