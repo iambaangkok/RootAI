@@ -1,7 +1,7 @@
 import os
 import sys
 from datetime import datetime
-from typing import IO, TextIO
+from typing import TextIO
 
 import yaml
 from pathlib import Path

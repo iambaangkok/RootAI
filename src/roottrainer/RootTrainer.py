@@ -77,7 +77,6 @@ class RootTrainer:
         self.next_round()
 
     def __del__(self):
-        # self.print_game_state()
         pass
 
     def init_agent(self, faction: Faction) -> Agent:
@@ -114,7 +113,8 @@ class RootTrainer:
                 if config['agent'][faction.lower()]['mcts']['best-action-policy']:
                     best_action_policy = config['agent'][faction.lower()]['mcts']['best-action-policy']
 
-                return MCTSAgent(faction, mcts_type, reward_function, expand_count, rollout_no, time_limit, action_count_limit, best_action_policy)
+                return MCTSAgent(faction, mcts_type, reward_function, expand_count, rollout_no, time_limit,
+                                 action_count_limit, best_action_policy)
 
     def run(self):
         while self.running:
@@ -187,12 +187,6 @@ class RootTrainer:
 
                 self.action_count += 1
 
-            # elif keys[pygame.K_f]:
-            #     if config['simulation']['f-key-action'] == 'current':
-            #         self.current_action.function()
-            #         self.actions = self.get_game().get_actions()
-            #         self.reset_arrow()
-            #
             if keys[pygame.K_f] and config['simulation']['f-key-action'] == 'random':
                 if self.get_game_logic().turn_player == Faction.MARQUISE and not config['agent']['marquise']['enable']:
                     self.random_arrow()
@@ -259,8 +253,6 @@ class RootTrainer:
         update_arrow = {
             pygame.K_UP: Vector2(0, -1),
             pygame.K_DOWN: Vector2(0, 1)
-            # pygame.K_LEFT: Vector2(-1, 0),
-            # pygame.K_RIGHT: Vector2(1, 0)
         }
 
         row = len(self.actions) // self.action_col + 1
@@ -409,8 +401,6 @@ class RootTrainer:
         surface_rect = surface.get_rect()
         surface_rect.right = Config.NATIVE_SCREEN_WIDTH - margin_right
         surface_rect.top = margin_top
-        # surface_rect.centerx = Config.SCREEN_WIDTH / 2
-        # surface_rect.centery = Config.SCREEN_HEIGHT - margin_bottom
 
         screen.blit(surface, surface_rect)
 
@@ -419,7 +409,8 @@ class RootTrainer:
         color = Colors.ORANGE
         if self.get_game_logic().turn_player == Faction.EYRIE:
             color = Colors.BLUE
-        phase = Config.FONT_MD_BOLD.render("{} ({})".format(self.get_game_logic().phase, self.get_game_logic().sub_phase), True, color)
+        phase = Config.FONT_MD_BOLD.render(
+            "{} ({})".format(self.get_game_logic().phase, self.get_game_logic().sub_phase), True, color)
         phase_rect = phase.get_rect()
         starting_point = Vector2(0.75 * Config.NATIVE_SCREEN_WIDTH, 0.0 * Config.NATIVE_SCREEN_HEIGHT)
         shift = Vector2(10, 0.05 * Config.NATIVE_SCREEN_HEIGHT)
@@ -437,8 +428,8 @@ class RootTrainer:
         prompt_rect = Rect(0, 0, Config.NATIVE_SCREEN_WIDTH - phase_rect.left, Config.NATIVE_SCREEN_HEIGHT * 0.1)
         shift = Vector2(0, 8)
         prompt_rect.topleft = phase_rect.bottomleft + shift
-        # screen.blit(prompt, prompt_rect)
-        draw_text_in_rect(screen, "{}".format(self.get_game_logic().prompt), Colors.WHITE, prompt_rect, Config.FONT_1, True)
+        draw_text_in_rect(screen, "{}".format(self.get_game_logic().prompt), Colors.WHITE, prompt_rect, Config.FONT_1,
+                          True)
 
         self.draw_arrow(screen, starting_point)
         self.draw_action_list(screen, starting_point)
@@ -471,7 +462,6 @@ class RootTrainer:
         surface.set_alpha(128)
         pygame.draw.rect(surface, Colors.BLACK, rect)
         screen.blit(surface, rect.topleft)
-        # pygame.draw.rect(screen, Colors.BLACK_A_128, rect)
 
         ###
         shift = Vector2(0, -0.05 * Config.NATIVE_SCREEN_HEIGHT)

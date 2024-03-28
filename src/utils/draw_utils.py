@@ -6,12 +6,14 @@ from src.game.Card import Card
 from src.utils import text_utils
 
 
-def draw_key_value(screen: Surface, font: Font, starting_point: Vector2, shift: Vector2, color: Color, key: str, value: any):
+def draw_key_value(screen: Surface, font: Font, starting_point: Vector2, shift: Vector2, color: Color, key: str,
+                   value: any):
     text = font.render("{}: {}".format(key, value), True, color)
     screen.blit(text, starting_point + shift)
 
 
-def draw_key_multi_value(screen: Surface, font: Font, starting_point: Vector2, shift: Vector2, gap: int, color: Color, key: str, values: [str]):
+def draw_key_multi_value(screen: Surface, font: Font, starting_point: Vector2, shift: Vector2, gap: int, color: Color,
+                         key: str, values: [str]):
     key_text = font.render("{}:".format(key), True, color)
     screen.blit(key_text, starting_point + shift)
 
@@ -37,12 +39,14 @@ def draw_cards(screen: Surface, starting_point: Vector2, color: Color, text: str
 
         card_ind = Config.FONT_SM_BOLD.render('{0:02d}'.format(key.card_id), True, (206, 215, 132))
         card_ind = text_utils.add_outline(card_ind, 2, Colors.GREY_DARK_2)
-        screen.blit(card_ind, (starting_point.x + (block_size.x + 10) * col + 10 + 150, starting_point.y + (block_size.x + 5) * row))
+        screen.blit(card_ind, (
+        starting_point.x + (block_size.x + 10) * col + 10 + 150, starting_point.y + (block_size.x + 5) * row))
         ind = ind + 1
 
 
 # This one has text-wrapping
-def draw_text_in_rect(surface: Surface, text: str, color: Color, rect: Rect, font: Font, aa: bool = False, bkg: Color | None = None) -> str:
+def draw_text_in_rect(surface: Surface, text: str, color: Color, rect: Rect, font: Font, aa: bool = False,
+                      bkg: Color | None = None) -> str:
     rect = Rect(rect)
     y = rect.top
     line_spacing = -2

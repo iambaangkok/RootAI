@@ -1,7 +1,6 @@
 import logging
 import sys
 
-
 import pygame
 import yaml
 from pygame import Surface

@@ -47,7 +47,7 @@ agent:
         # max - Select the root child with the highest reward
         # robust - Select the most visited root child.
         # UCB - Select the child which maximises the upper confidence bound.
-        ## secure - Select the child which maximises the lower confidence bound.
+        # secure - Select the child which maximises the lower confidence bound.
   eyrie:
     enable: true
     type: mcts

@@ -9,7 +9,8 @@ def sm_bold_outline(plain_text, color, antialias=True, background=None):
     return outlined
 
 
-def add_outline(image: pygame.Surface, thickness: int, color: tuple, color_key: tuple = (255, 0, 255)) -> pygame.Surface:
+def add_outline(image: pygame.Surface, thickness: int, color: tuple,
+                color_key: tuple = (255, 0, 255)) -> pygame.Surface:
     mask = pygame.mask.from_surface(image)
     mask_surf = mask.to_surface(setcolor=color)
     mask_surf.set_colorkey((0, 0, 0))

@@ -9,7 +9,9 @@ BATCH_SIZE = 25
 if __name__ == "__main__":
     procs = []
     completed = 0
-    file = open('src/experiment_2-elapsed_time-{}.txt'.format(datetime.now().strftime("%Y-%m-%d-%H-%M-%S")), 'w')
+    file = open(
+        'output/elapsed_time/experiment_2_elapsed_time-{}.txt'.format(datetime.now().strftime("%Y-%m-%d-%H-%M-%S")),
+        'w')
 
     start_time = time.time()
 
@@ -44,7 +46,6 @@ if __name__ == "__main__":
             , str(timedelta(seconds=now - start_time))
             , str(timedelta(seconds=((now - start_time) / completed) * (ALL_CONFIGS_FILE - completed)))
         ))
-
 
 #  Run by using this cmd
 #       python -m src.run_experiment_2
