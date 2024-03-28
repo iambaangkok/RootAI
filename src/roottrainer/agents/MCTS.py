@@ -3,16 +3,10 @@ import sys
 import time
 from multiprocessing.pool import MapResult
 from random import randint
-from threading import Thread
 from typing import Union, Tuple
 
-import pathos.pools
 import yaml
-from pathos.pools import ParallelPool, ProcessPool
-from pathos.serial import SerialPool
-
-from src.game.EyrieBoard import DecreeAction
-# from pathos.multiprocessing import ProcessingPool
+from pathos.pools import ProcessPool
 
 from src.game.Faction import Faction
 from src.game.GameLogic import Action, GameLogic
@@ -40,11 +34,6 @@ def exec_seq_actions(node: MCTSNode, game_logic: GameLogic):
     for seq_action in node.seq_actions:
         actions: list[Action] = game_logic.get_legal_actions()
         LOGGER.debug("expand_and_select_node:execute_actions: seq_action {}".format(show_action(seq_action)))
-        # LOGGER.info(
-        #     "expand_and_select_node:execute_actions: len(actions) {}, actions {}".format(len(actions),
-        #                                                                                  [a.name for a in actions]))
-        # print("game_logic_state:" + str(game_logic.decree_counter))
-        # LOGGER.info("{}".format([card.suit for card in game_logic.decree_counter[DecreeAction.BATTLE]]))
 
         legal_action: Action | None = None
 
@@ -58,25 +47,20 @@ def exec_seq_actions(node: MCTSNode, game_logic: GameLogic):
             defender_roll = seq_action[1]
 
             game_logic.set_dice_values(attacker_roll, defender_roll)
-            # print(game_logic.attacker_roll)
-            # print(game_logic.defender_roll)
 
             legal_action = actions[0]
 
         if legal_action:
             LOGGER.debug("expand_and_select_node:execute_actions: exec {}".format(legal_action.name))
-            # LOGGER.debug("expand_and_select_node:execute_actions: decree counter {}".format([[card.suit for card in game_logic.decree_counter[decree]] for decree in game_logic.decree_counter]))
             legal_action.function()
         else:
             LOGGER.debug(
                 "expand_and_select_node:execute_actions: no matching legal action for {}".format(seq_action.name))
-            # raise RuntimeError
             break
 
 
 def execute_random_action(game: GameLogic):
     actions = game.get_legal_actions()
-    # LOGGER.debug("rollout:execute_random_action: actions {} {}".format(len(actions), [a.name for a in actions]))
     if len(actions) > 1:
         rand = randint(0, len(actions) - 1)
     elif len(actions) == 1:
@@ -84,7 +68,6 @@ def execute_random_action(game: GameLogic):
     else:
         rand = 0
         LOGGER.error("execute_random_action: len(actions) == {}".format(len(actions)))
-    # LOGGER.debug("rollout:execute_random_action: exec {}".format(actions[rand].name))
     actions[rand].function()
 
 
@@ -147,7 +130,6 @@ def exec_random_actions(process_id: int, game: GameLogic, reward_function_type: 
         action_count += 1
         time_0 = time_1
 
-    # rewards[process_id] = reward_function(game, root_state, reward_function_type)
     return reward_function(game, root_state, reward_function_type)
 
 
@@ -178,7 +160,6 @@ class MCTS:
     def expand_and_select_node(self, round):
         current: MCTSNode = self.root
         while not current.terminal_flag:
-            # LOGGER.info(current.is_fully_expanded())
             if not current.is_fully_expanded():
                 LOGGER.info("{}:expand_and_select_node:expand {}".format(round, [show_action(a) for a in
                                                                                  current.seq_actions]))
@@ -284,7 +265,6 @@ class MCTS:
     def choose_best_action(self, actions: list[Action]) -> Action:
         best_action_sim, best_node = self.root.choose_best_child(self.best_action_policy)
         LOGGER.info("best_action_sim: action {}".format(best_action_sim.name))
-        # best_action_sim: Action = best_node.seq_actions[0]
         best_action: Action | None = None
 
         LOGGER.info("choose_best_action: actions {} {}".format(len(actions), [a.name for a in actions]))
