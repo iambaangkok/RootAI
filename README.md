@@ -1,6 +1,6 @@
 # RootAI
 
-[//]: # (Write description here)
+![preview of the program](readme/RootAI.png)
 
 ## Table of Contents
 - [RootAI](#rootai)
@@ -17,6 +17,7 @@
   - [Download and Running the exe](#download-and-running-the-exe)
   - [Controls](#controls)
   - [Technical](#technical)
+    - [The AI agent](#the-ai-agent)
     - [Action generation](#action-generation)
 
 ## Running the Project
@@ -69,6 +70,9 @@ It is RECOMMENDED that you:
    1. double click `RootAI.exe`
    2. run via command line `./RootAI.exe`
 3. config file is in `/config/config.yml`, change to match your needs.
+   1. Eyrie is set to be the mcts AI agent
+   2. Marquise is the player
+   3. Eyrie starts first
 
 
 ## Controls
@@ -84,6 +88,9 @@ No mouse controls
 - Press Q in game-end state --- quit game
 
 ## Technical
+### The AI agent
+The AI agent uses Monte Carlo Tree Search (MCTS) to simulate into to future and pick the "best" possible action at the current game state.
+
 ### Action generation
 Each action generation sequence corresponds to a 5 digit-number.
 - Digit 0: faction = 1 (Marquise) | 2 (Eyrie) | 9 (Neutral)
