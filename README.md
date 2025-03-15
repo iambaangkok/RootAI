@@ -15,7 +15,6 @@
       - [Option 2 - Run via command line](#option-2---run-via-command-line)
     - [Exporting](#exporting)
   - [Download and Running the exe](#download-and-running-the-exe)
-  - [Config](#config)
   - [Controls](#controls)
   - [Technical](#technical)
     - [Action generation](#action-generation)
@@ -65,16 +64,15 @@ It is RECOMMENDED that you:
 
 ## Download and Running the exe
 
-1. download the RootAI from the releases tab
+1. download the RootAI from the releases tab: https://github.com/iambaangkok/RootAI/releases
 2. either:
    1. double click `RootAI.exe`
    2. run via command line `./RootAI.exe`
-
-## Config
-The config file is in `/src/config/config.yml`, change to match your needs.
+3. config file is in `/config/config.yml`, change to match your needs.
 
 
 ## Controls
+No mouse controls
 - Press UP/DOWN --- change selected action
 - Press R --- random action
 - Press RETURN/SPACE --- execute selected action
