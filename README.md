@@ -2,12 +2,35 @@
 
 [//]: # (Write description here)
 
+## Table of Contents
+- [RootAI](#rootai)
+  - [Table of Contents](#table-of-contents)
+  - [Running the Project](#running-the-project)
+    - [Prerequisite](#prerequisite)
+    - [Setup](#setup)
+      - [For IntelliJ](#for-intellij)
+      - [For VSCode](#for-vscode)
+    - [Running the Game](#running-the-game)
+      - [Option 1 - Run inside IntelliJ](#option-1---run-inside-intellij)
+      - [Option 2 - Run via command line](#option-2---run-via-command-line)
+    - [Exporting](#exporting)
+  - [Download and Running the exe](#download-and-running-the-exe)
+  - [Config](#config)
+  - [Controls](#controls)
+  - [Technical](#technical)
+    - [Action generation](#action-generation)
+
 ## Running the Project
+
+It is RECOMMENDED that you:
+- know Root boardgame's rules
+- or have played before
+- or have a rule book with you
+
 
 ### Prerequisite
 
 - python 11.3+
-  - select from conda navigator when creating environment
 - libraries
   - `pygame 2.4.0+` — `pip install pygame`
     - (not recommended, un-maintained) `conda install -c conda-forge pygame`
@@ -38,10 +61,17 @@
 1. cd to root of project
 2. Run `pyinstaller .\src\main.py`
 3. Copy `.\src\assets` to `.\dist\main` and `\.src\config\config.yml` to `.\dist\main\config`
-### Running the exe
-either
-1. double click the exe
-2. run via command line
+
+
+## Download and Running the exe
+
+1. download the RootAI from the releases tab
+2. either:
+   1. double click `RootAI.exe`
+   2. run via command line `./RootAI.exe`
+
+## Config
+The config file is in `/src/config/config.yml`, change to match your needs.
 
 
 ## Controls
@@ -54,9 +84,6 @@ either
 - Hold A --- continuously run agent
 - Press N in game-end state --- new game
 - Press Q in game-end state --- quit game
-
-## Config
-The config file is in `/src/config/config.yml`, change to match your needs.
 
 ## Technical
 ### Action generation
