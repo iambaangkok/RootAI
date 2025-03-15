@@ -6,7 +6,7 @@ from typing import Union
 import numpy as np
 import scipy.stats as st
 
-from src.game.GameLogic import Action
+from game.GameLogic import Action
 
 LOGGER = logging.getLogger('mcts_logger')
 

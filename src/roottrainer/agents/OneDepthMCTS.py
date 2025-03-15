@@ -7,11 +7,15 @@ from random import randint
 import pygame
 import yaml
 
-from src.game.Faction import Faction
-from src.game.GameLogic import Action, GameLogic
-from src.roottrainer.agents.MCTSNode import MCTSNode
+from game.Faction import Faction
+from game.GameLogic import Action, GameLogic
+from roottrainer.agents.MCTSNode import MCTSNode
 
-config_path: str = str(sys.argv[1])
+config_path: str = ""
+if len(sys.argv) > 1:
+    config_path = str(sys.argv[1])
+if config_path == "":
+    config_path = "./config/config.yml"
 config = yaml.safe_load(open(config_path))
 
 LOGGER = logging.getLogger('mcts_logger')

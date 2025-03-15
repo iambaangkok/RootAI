@@ -3,11 +3,11 @@ import math
 import pygame
 from pygame import Color, Vector2, Surface, Rect
 
-from src.config import Config, Colors
-from src.game.Building import Building
-from src.game.Suit import Suit
-from src.game.Token import Token
-from src.game.Warrior import Warrior
+from config import Config, Colors
+from game.Building import Building
+from game.Suit import Suit
+from game.Token import Token
+from game.Warrior import Warrior
 
 
 class AreaLogic:

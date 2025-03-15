@@ -5,11 +5,15 @@ import pygame
 import yaml
 from pygame import Surface
 
-from src.config import Config
-from src.roottrainer.RootTrainer import RootTrainer
+from config import Config
+from roottrainer.RootTrainer import RootTrainer
 
 if __name__ == "__main__":
-    config_path: str = str(sys.argv[1])
+    config_path: str = ""
+    if len(sys.argv) > 1:
+        config_path = str(sys.argv[1])
+    if config_path == "":
+        config_path = "./config/config.yml"
     config = yaml.safe_load(open(config_path))
 
     logging.basicConfig(level=logging.NOTSET)

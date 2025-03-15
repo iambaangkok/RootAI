@@ -1,8 +1,8 @@
 from random import randint
 
-from src.game.Faction import Faction
-from src.game.GameLogic import Action, GameLogic
-from src.roottrainer.agents.Agent import Agent
+from game.Faction import Faction
+from game.GameLogic import Action, GameLogic
+from roottrainer.agents.Agent import Agent
 
 
 class RandomDecisionAgent(Agent):

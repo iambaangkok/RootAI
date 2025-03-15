@@ -6,12 +6,12 @@ from enum import StrEnum
 import pygame
 from pygame import Color, Vector2, Surface
 
-from src.config import Config, Colors
-from src.game.FactionBoardLogic import FactionBoardLogic, FactionBoard
-from src.game.Card import Card, CardPhase
-from src.utils.utils import get_card
-from src.game.Suit import Suit
-from src.utils import text_utils
+from config import Config, Colors
+from game.FactionBoardLogic import FactionBoardLogic, FactionBoard
+from game.Card import Card, CardPhase
+from utils.utils import get_card
+from game.Suit import Suit
+from utils import text_utils
 
 LOGGER = logging.getLogger('logger')
 

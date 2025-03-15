@@ -7,16 +7,20 @@ import yaml
 from pygame import Surface, Vector2, Rect
 from pygame.time import Clock
 
-from src.config import Config, Colors
-from src.game.Faction import Faction
-from src.game.GameLogic import Action, GameLogic, Game
-from src.roottrainer.CSVOutputWriter import CSVOutputWriter
-from src.roottrainer.agents.Agent import Agent
-from src.roottrainer.agents.MCTSAgent import MCTSAgent
-from src.roottrainer.agents.RandomDecisionAgent import RandomDecisionAgent
-from src.utils.draw_utils import draw_text_in_rect
+from config import Config, Colors
+from game.Faction import Faction
+from game.GameLogic import Action, GameLogic, Game
+from roottrainer.CSVOutputWriter import CSVOutputWriter
+from roottrainer.agents.Agent import Agent
+from roottrainer.agents.MCTSAgent import MCTSAgent
+from roottrainer.agents.RandomDecisionAgent import RandomDecisionAgent
+from utils.draw_utils import draw_text_in_rect
 
-config_path: str = str(sys.argv[1])
+config_path: str = ""
+if len(sys.argv) > 1:
+    config_path = str(sys.argv[1])
+if config_path == "":
+    config_path = "./config/config.yml"
 config = yaml.safe_load(open(config_path))
 
 LOGGER = logging.getLogger('trainer_logger')

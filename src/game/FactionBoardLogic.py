@@ -1,13 +1,13 @@
 import pygame
 from pygame import Rect, Color, Surface, Vector2
 
-from src.config import Config, Colors
-from src.utils.utils import get_card
-from src.game.Item import Item
-from src.game.Card import Card
-from src.game.Suit import Suit
-from src.utils import text_utils
-from src.utils.draw_utils import draw_key_value, draw_cards
+from config import Config, Colors
+from utils.utils import get_card
+from game.Item import Item
+from game.Card import Card
+from game.Suit import Suit
+from utils import text_utils
+from utils.draw_utils import draw_key_value, draw_cards
 
 
 class FactionBoardLogic:

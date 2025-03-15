@@ -4,18 +4,22 @@ import sys
 import pygame
 from pygame import Rect, Color, Surface
 
-from src.config import Config, Colors
-from src.game.AreaLogic import AreaLogic, Area
-from src.game.Faction import Faction
-from src.game.Item import Item
-from src.game.Suit import Suit
-from src.utils.geometry_utils import get_path_points
+from config import Config, Colors
+from game.AreaLogic import AreaLogic, Area
+from game.Faction import Faction
+from game.Item import Item
+from game.Suit import Suit
+from utils.geometry_utils import get_path_points
 
 import yaml
 
-from src.utils.utils import faction_to_warrior
+from utils.utils import faction_to_warrior
 
-config_path: str = str(sys.argv[1])
+config_path: str = ""
+if len(sys.argv) > 1:
+    config_path = str(sys.argv[1])
+if config_path == "":
+    config_path = "./config/config.yml"
 config = yaml.safe_load(open(config_path))
 
 FACTION_NAMES = ['Marquise de Cat', 'The Decree', 'Woodland Alliance', 'Vagabond']

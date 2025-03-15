@@ -1,4 +1,4 @@
-from src.roottrainer.CSVOutputWriter import CSVOutputWriter
+from roottrainer.CSVOutputWriter import CSVOutputWriter
 
 config_count = 0
 

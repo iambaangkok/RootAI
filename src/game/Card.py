@@ -1,7 +1,7 @@
 from enum import StrEnum
 
-from src.game.Item import Item
-from src.game.Suit import Suit
+from game.Item import Item
+from game.Suit import Suit
 
 
 class CardName(StrEnum):

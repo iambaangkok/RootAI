@@ -1,6 +1,6 @@
 import pygame
 
-from src.config import Colors, Config
+from config import Colors, Config
 
 
 def sm_bold_outline(plain_text, color, antialias=True, background=None):

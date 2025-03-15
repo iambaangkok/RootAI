@@ -3,11 +3,11 @@ from __future__ import annotations
 import ntpath
 import os
 
-from src.game.Building import Building
-from src.game.Card import Card
-from src.game.Faction import Faction
-from src.game.Token import Token
-from src.game.Warrior import Warrior
+from game.Building import Building
+from game.Card import Card
+from game.Faction import Faction
+from game.Token import Token
+from game.Warrior import Warrior
 
 
 def perform(function: any, *args):

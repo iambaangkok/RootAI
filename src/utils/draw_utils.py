@@ -1,9 +1,9 @@
 from pygame import Surface, Vector2, Color, Rect
 from pygame.font import Font
 
-from src.config import Config, Colors
-from src.game.Card import Card
-from src.utils import text_utils
+from config import Config, Colors
+from game.Card import Card
+from utils import text_utils
 
 
 def draw_key_value(screen: Surface, font: Font, starting_point: Vector2, shift: Vector2, color: Color, key: str,

@@ -1,11 +1,11 @@
 import pygame
 from pygame import Color, Vector2, Surface
 
-from src.config import Config, Colors
-from src.game.Building import Building
-from src.game.Card import Card
-from src.game.FactionBoardLogic import FactionBoardLogic, FactionBoard
-from src.utils import text_utils
+from config import Config, Colors
+from game.Building import Building
+from game.Card import Card
+from game.FactionBoardLogic import FactionBoardLogic, FactionBoard
+from utils import text_utils
 
 BUILDING_TRACKER_NAME = [Building.SAWMILL, Building.WORKSHOP, Building.RECRUITER]
 

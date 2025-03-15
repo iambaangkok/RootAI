@@ -32,9 +32,9 @@ simulation:
     core: 8
 
 agent:
-  require-key-hold: false # true | false ## OVERRIDE by command-line-mode to false
+  require-key-hold: true # true | false ## OVERRIDE by command-line-mode to false
   marquise:
-    enable: true # true | false
+    enable: false # true | false
     type: mcts # random | mcts ## random ignores all fields under mcts
     mcts:
       type: mcts # one-depth | mcts ## one-depth is janky, don't use
@@ -54,12 +54,11 @@ agent:
     mcts:
       type: mcts
       reward-function: vp-difference
-      expand-count: 00
+      expand-count: 0
       rollout-no: 1
       time-limit: -1
       action-count-limit: 20
       best-action-policy: robust
-
 
 game:
   rendering:

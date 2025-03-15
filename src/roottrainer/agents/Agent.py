@@ -1,5 +1,5 @@
-from src.game.Faction import Faction
-from src.game.GameLogic import Action
+from game.Faction import Faction
+from game.GameLogic import Action
 
 
 class Agent:

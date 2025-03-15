@@ -1,10 +1,10 @@
 import logging
 
-from src.game.Faction import Faction
-from src.game.GameLogic import Action
-from src.roottrainer.agents.Agent import Agent
-from src.roottrainer.agents.MCTS import MCTS
-from src.roottrainer.agents.OneDepthMCTS import MCTSOneDepth
+from game.Faction import Faction
+from game.GameLogic import Action
+from roottrainer.agents.Agent import Agent
+from roottrainer.agents.MCTS import MCTS
+from roottrainer.agents.OneDepthMCTS import MCTSOneDepth
 
 LOGGER = logging.getLogger('mcts_logger')
 

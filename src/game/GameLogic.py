@@ -10,24 +10,28 @@ from random import shuffle, randint
 
 from pygame import Vector2, Surface
 
-from src.config import Config, Colors
-from src.game.AreaLogic import AreaLogic, Area
-from src.game.BoardLogic import BoardLogic, Board
-from src.game.Building import Building
-from src.game.EyrieBoard import EyrieBoardLogic, DecreeAction, EyrieLeader, LOYAL_VIZIER, \
+from config import Config, Colors
+from game.AreaLogic import AreaLogic, Area
+from game.BoardLogic import BoardLogic, Board
+from game.Building import Building
+from game.EyrieBoard import EyrieBoardLogic, DecreeAction, EyrieLeader, LOYAL_VIZIER, \
     count_decree_action_static, EyrieBoard
-from src.game.Faction import Faction
-from src.game.FactionBoardLogic import FactionBoardLogic
-from src.game.MarquiseBoard import MarquiseBoardLogic, MarquiseBoard
-from src.game.Card import Card, CardName, CardPhase, build_card
-from src.game.Suit import Suit
-from src.game.Token import Token
-from src.game.Warrior import Warrior
-from src.utils.utils import perform, faction_to_warrior, faction_to_tokens, faction_to_buildings, get_card
+from game.Faction import Faction
+from game.FactionBoardLogic import FactionBoardLogic
+from game.MarquiseBoard import MarquiseBoardLogic, MarquiseBoard
+from game.Card import Card, CardName, CardPhase, build_card
+from game.Suit import Suit
+from game.Token import Token
+from game.Warrior import Warrior
+from utils.utils import perform, faction_to_warrior, faction_to_tokens, faction_to_buildings, get_card
 
 import yaml
 
-config_path: str = str(sys.argv[1])
+config_path: str = ""
+if len(sys.argv) > 1:
+    config_path = str(sys.argv[1])
+if config_path == "":
+    config_path = "./config/config.yml"
 config = yaml.safe_load(open(config_path))
 
 LOGGER = logging.getLogger('game_logger')
